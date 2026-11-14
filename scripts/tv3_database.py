@@ -35,7 +35,8 @@ def main():
         return result.stdout.strip()
     if args.action=="migrate":
         sql((ROOT/"docs/database/V002__orders_request_fingerprint.sql").read_text(encoding="utf-8"),args.database)
-        print("Applied additive V002 fingerprint migration to isolated DB "+args.database+".")
+        sql((ROOT/"docs/database/V003__shipments_idempotency.sql").read_text(encoding="utf-8"),args.database)
+        print("Applied additive V002 and V003 migrations to isolated DB "+args.database+".")
         return
     if args.action=="create":
         bootstrap=(ROOT/"docs/database/V001__create_furniture_shop.sql").read_text(encoding="utf-8")
@@ -43,7 +44,8 @@ def main():
         bootstrap=bootstrap.replace("CREATE DATABASE furniture_shop ",f"CREATE DATABASE {args.database} ").replace("USE furniture_shop;",f"USE {args.database};")
         sql(bootstrap)
         sql((ROOT/"docs/database/V002__orders_request_fingerprint.sql").read_text(encoding="utf-8"),args.database)
-        print("Created "+args.database+" with approved 45-table schema and V002 migration. Existing DBs were not overwritten.")
+        sql((ROOT/"docs/database/V003__shipments_idempotency.sql").read_text(encoding="utf-8"),args.database)
+        print("Created "+args.database+" with approved 45-table schema and V002/V003 migrations. Existing DBs were not overwritten.")
         return
     if len(os.environ.get("TV3_DEMO_PASSWORD",""))<10:
         parser.error("Supply TV3_DEMO_PASSWORD with at least 10 characters; it is not printed.")

@@ -37,6 +37,8 @@ class CommerceSecurityTest {
         @GetMapping("/api/admin/coupons") Object admin() { return java.util.Map.of("ok",true); }
         @GetMapping("/api/admin/inventory/warehouses") Object inventory() { return java.util.Map.of("ok",true); }
         @PostMapping("/api/admin/inventory/receipts") Object receive() { return java.util.Map.of("ok",true); }
+        @GetMapping("/api/admin/inventory/orders") Object dispatchQueue() { return java.util.Map.of("ok",true); }
+        @PostMapping("/api/admin/inventory/orders/42/dispatch") Object dispatch() { return java.util.Map.of("ok",true); }
         @PostMapping("/api/cart/items") Object cart() { return java.util.Map.of("ok",true); }
         @PostMapping("/api/cart/merge") Object merge() { return java.util.Map.of("ok",true); }
     }
@@ -85,13 +87,18 @@ class CommerceSecurityTest {
         var session = (MockHttpSession)login.getRequest().getSession();
         mvc.perform(get("/api/admin/coupons").session(session)).andExpect(status().isOk());
         mvc.perform(get("/api/admin/inventory/warehouses").session(session)).andExpect(status().isOk());
+        mvc.perform(get("/api/admin/inventory/orders").session(session)).andExpect(status().isOk());
         mvc.perform(post("/api/admin/inventory/receipts").session(session)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/admin/inventory/orders/42/dispatch").session(session)).andExpect(status().isForbidden());
         var staffToken = csrf(session);
         mvc.perform(post("/api/admin/inventory/receipts").session(staffToken.session()).header(staffToken.header(),staffToken.value())).andExpect(status().isOk());
+        mvc.perform(post("/api/admin/inventory/orders/42/dispatch").session(staffToken.session()).header(staffToken.header(),staffToken.value())).andExpect(status().isOk());
         account = new CommerceUserAccount(77L,"alice","Alice",null,"ACTIVE",Set.of("CUSTOMER"));
         mvc.perform(get("/api/admin/coupons").session(session)).andExpect(status().isForbidden());
         mvc.perform(get("/api/admin/inventory/warehouses").session(session)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/inventory/orders").session(session)).andExpect(status().isForbidden());
         mvc.perform(post("/api/admin/inventory/receipts").session(staffToken.session()).header(staffToken.header(),staffToken.value())).andExpect(status().isForbidden());
+        mvc.perform(post("/api/admin/inventory/orders/42/dispatch").session(staffToken.session()).header(staffToken.header(),staffToken.value())).andExpect(status().isForbidden());
         account = new CommerceUserAccount(77L,"alice","Alice",null,"DISABLED",Set.of("ADMIN"));
         mvc.perform(get("/api/session").session(session)).andExpect(status().isUnauthorized());
     }

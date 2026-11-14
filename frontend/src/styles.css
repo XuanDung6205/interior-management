@@ -612,6 +612,14 @@ input[type='radio'] { accent-color: var(--teal); width: 18px; height: 18px; min-
 .stock-balances>div { display: grid; gap: 4px; min-width: 190px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 6px; font-size: 12px; }
 .stock-balances strong { color: var(--teal); }
 .stock-balances span { color: var(--muted); }
+.dispatch-queue-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 27px; border-bottom: 1px solid var(--line); }
+.dispatch-queue-row:last-child { border-bottom: 0; }
+.dispatch-queue-row>div, .dispatch-holds>div { display: grid; gap: 5px; font-size: 12px; }
+.dispatch-queue-row strong, .dispatch-holds strong { color: var(--teal); }
+.dispatch-queue-row span, .dispatch-holds span { color: var(--muted); }
+.dispatch-holds { display: flex; flex-wrap: wrap; gap: 14px; padding: 22px 30px 0; }
+.dispatch-holds>div { min-width: 190px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 6px; }
+@media (max-width: 600px) { .dispatch-queue-row { align-items: flex-start; flex-direction: column; padding: 18px; } .dispatch-holds { padding: 18px 18px 0; } }
 @media (max-width: 560px) {
   .inventory-receipt-panel form { padding: 20px 18px; }
   .inventory-receipt-row { grid-template-columns: 1fr 1fr; padding: 18px; }
