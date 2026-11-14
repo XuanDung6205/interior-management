@@ -18,4 +18,8 @@ export const inventoryApi = api => ({
   dispatch: (orderId, body, key) => api.request(`/admin/inventory/orders/${orderId}/dispatch`, {
     method: 'POST', body, headers: { 'Idempotency-Key': key },
   }),
+  shipments: (page, status) => api.request(`/admin/inventory/shipments?${new URLSearchParams({ page, size: 20, ...(status ? { status } : {}) })}`),
+  shipmentStatus: (shipmentId, body, key) => api.request(`/admin/inventory/shipments/${shipmentId}/status`, {
+    method: 'POST', body, headers: { 'Idempotency-Key': key },
+  }),
 });

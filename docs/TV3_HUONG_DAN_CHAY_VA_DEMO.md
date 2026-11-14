@@ -33,7 +33,7 @@ python scripts/tv3_database.py seed --database furniture_shop_tv3_dev
 Remove-Item Env:TV3_DEMO_PASSWORD
 ```
 
-`create` cố ý thất bại nếu DB đã tồn tại; không xóa/ghi đè DB. DB mới gồm45 bảng V001 và migration V002 thêm request fingerprint. DB demo đã có từ Task01–03 cần chạy `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev` một lần trước khi chạy checkout. Seed tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU và tồn MAIN; mật khẩu lấy từ environment và hash bằng BCrypt, không in ra. Không dùng chung mật khẩu tài khoản thật. Script từ chối database `furniture_shop` chính.
+`create` cố ý thất bại nếu DB đã tồn tại; không xóa/ghi đè DB. DB mới gồm 45 bảng V001 và các migration V002–V004. DB demo đã có từ Task01–03 cần chạy `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev` trước khi dùng các API mới. Seed tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU và tồn MAIN; mật khẩu lấy từ environment và hash bằng BCrypt, không in ra. Không dùng chung mật khẩu tài khoản thật. Script từ chối database `furniture_shop` chính.
 
 Khi DB demo trên máy đã được chuẩn bị, không cần tạo lại. Có thể đặt lại mật khẩu demo bằng cách chạy `seed` với environment do bạn chọn. Script chỉ chấp nhận `furniture_shop_tv3_dev` hoặc `furniture_shop_test_*`.
 

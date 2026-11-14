@@ -53,7 +53,21 @@ public class OrderQueryService {
             """,id);
         order.put("shippingAddress",addresses.isEmpty()?null:addresses.get(0));
         order.put("payments",store.rows("SELECT id,method,status,amount,currency,paid_at AS paidAt FROM payments WHERE order_id=? ORDER BY id",id));
-        order.put("shipments",store.rows("SELECT id,status,tracking_number AS trackingNumber,carrier FROM shipments WHERE order_id=? ORDER BY id",id));
+        order.put("shipments",store.rows("""
+            SELECT id,status,tracking_number AS trackingNumber,carrier,
+              shipped_at AS shippedAt,delivered_at AS deliveredAt
+            FROM shipments WHERE order_id=? ORDER BY id
+            """,id));
+        order.put("shipmentEvents",store.rows("""
+            SELECT s.id AS shipmentId,
+              JSON_UNQUOTE(JSON_EXTRACT(a.before_data,'$.status')) AS fromStatus,
+              JSON_UNQUOTE(JSON_EXTRACT(a.after_data,'$.status')) AS toStatus,
+              JSON_UNQUOTE(JSON_EXTRACT(a.after_data,'$.reason')) AS reason,
+              a.created_at AS changedAt
+            FROM audit_logs a JOIN shipments s ON a.entity_id=CAST(s.id AS CHAR)
+            WHERE a.entity_type='SHIPMENT' AND a.action='SHIPMENT_STATUS' AND s.order_id=?
+            ORDER BY a.created_at,a.id
+            """,id));
         order.put("history",store.rows("SELECT from_status AS fromStatus,to_status AS toStatus,note,changed_at AS changedAt FROM order_status_history WHERE order_id=? ORDER BY changed_at,id",id));
         order.put("refunds",store.rows("SELECT id,payment_id AS paymentId,status,amount,currency,reason FROM refunds WHERE order_id=? ORDER BY id",id));
         boolean canCancel=Set.of("PENDING_CONFIRMATION","CONFIRMED").contains(order.get("status"))&&!store.dispatched(id);

@@ -12,7 +12,7 @@ npm ci
 npm run dev
 ```
 
-Mở `http://127.0.0.1:5173/cart`, `/login`, `/checkout`, `/orders`, `/orders/:id`, `/admin/coupons`, `/admin/inventory/receipts`, `/admin/inventory/operations` hoặc `/admin/inventory/dispatch`. Vite chuyển tiếp `/api` đến backend; luôn gọi API với cookie phiên và CSRF. Không cấu hình token/password trong frontend. Dùng tài khoản thật hoặc dữ liệu test cô lập do backend cung cấp; frontend không tạo tài khoản, sản phẩm hay kho. Các trang kho dành cho STAFF/ADMIN; hợp đồng API ở `docs/api/TV4_INVENTORY_RECEIPTS.md`, `docs/api/TV4_STOCK_OPERATIONS.md` và `docs/api/TV4_ORDER_DISPATCH.md`.
+Mở `http://127.0.0.1:5173/cart`, `/login`, `/checkout`, `/orders`, `/orders/:id`, `/admin/coupons`, `/admin/inventory/receipts`, `/admin/inventory/operations`, `/admin/inventory/dispatch` hoặc `/admin/inventory/shipments`. Vite chuyển tiếp `/api` đến backend; luôn gọi API với cookie phiên và CSRF. Không cấu hình token/password trong frontend. Dùng tài khoản thật hoặc dữ liệu test cô lập do backend cung cấp; frontend không tạo tài khoản, sản phẩm hay kho. Các trang kho dành cho STAFF/ADMIN; hợp đồng API ở `docs/api/TV4_INVENTORY_RECEIPTS.md`, `docs/api/TV4_STOCK_OPERATIONS.md`, `docs/api/TV4_ORDER_DISPATCH.md` và `docs/api/TV4_SHIPMENT_LIFECYCLE.md`.
 
 Nếu npm báo lỗi chứng chỉ trên Windows có chứng chỉ doanh nghiệp, có thể dùng kho chứng chỉ hệ điều hành của Node:
 

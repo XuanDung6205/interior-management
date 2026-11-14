@@ -13,6 +13,7 @@ Mật khẩu không được ghi trong repository, SQL hay tài liệu này. Kh�
 ## Các file
 
 - `V001__create_furniture_shop.sql`: bootstrap một lần, tạo database và 45 bảng, seed 3 quyền và 1 kho chính.
+- `V002__orders_request_fingerprint.sql`, `V003__shipments_idempotency.sql`, `V004__shipment_audit_index.sql`: migration cộng thêm sau V001; V004 dùng `audit_logs` đã có nên tổng số bảng vẫn là 45.
 - `verify_schema.py`: kiểm tra tích hợp bằng MariaDB CLI, chỉ chấp nhận tên `furniture_shop` hoặc `furniture_shop_test_*`.
 - `verification-fixture.sql`: dữ liệu kiểm thử bên trong transaction; script kiểm tra sẽ rollback, không phải dữ liệu mẫu để import.
 

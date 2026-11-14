@@ -39,7 +39,7 @@ class OrderDispatchTest {
 
     @TestConfiguration
     @EnableTransactionManagement
-    @Import(OrderDispatchService.class)
+    @Import({OrderDispatchService.class, ShipmentLifecycleService.class})
     static class Config {
         @Bean DataSource dataSource() {
             return new DriverManagerDataSource(System.getenv("TV3_TEST_DB_URL"),
@@ -60,6 +60,7 @@ class OrderDispatchTest {
 
     @Autowired JdbcTemplate jdbc;
     @Autowired OrderDispatchService service;
+    @Autowired ShipmentLifecycleService lifecycle;
 
     @BeforeEach void fixture() {
         assertThat(jdbc.queryForObject("SELECT DATABASE()", String.class)).startsWith("furniture_shop_test_");
@@ -78,6 +79,7 @@ class OrderDispatchTest {
 
     @AfterEach void cleanup() {
         if (jdbc == null) return;
+        jdbc.update("DELETE FROM audit_logs WHERE entity_type='SHIPMENT' AND entity_id IN (SELECT CAST(id AS CHAR) FROM shipments WHERE order_id=?)", ORDER);
         jdbc.update("DELETE FROM inventory_movements WHERE variant_id=?", VARIANT);
         jdbc.update("DELETE FROM shipment_items WHERE order_id=?", ORDER);
         jdbc.update("DELETE FROM shipments WHERE order_id=?", ORDER);
@@ -87,7 +89,7 @@ class OrderDispatchTest {
         jdbc.update("DELETE FROM order_items WHERE order_id=?", ORDER);
         jdbc.update("DELETE FROM orders WHERE id=?", ORDER);
         jdbc.update("DELETE FROM inventory_balances WHERE variant_id=?", VARIANT);
-        jdbc.update("DELETE FROM warehouses WHERE id=?", WAREHOUSE);
+        jdbc.update("DELETE FROM warehouses WHERE id IN (931001,931002)");
         jdbc.update("DELETE FROM product_variants WHERE id=?", VARIANT);
         jdbc.update("DELETE FROM products WHERE id=931001");
         jdbc.update("DELETE FROM categories WHERE id=931001");
@@ -145,5 +147,77 @@ class OrderDispatchTest {
         jdbc.update("UPDATE inventory_balances SET reserved_quantity=0 WHERE warehouse_id=? AND variant_id=?", WAREHOUSE, VARIANT);
         assertThatThrownBy(() -> service.dispatch(ORDER, request(), "dispatch-request-004"))
                 .isInstanceOfSatisfying(CommerceException.class, error -> assertThat(error.getCode()).isEqualTo("NO_HELD_STOCK"));
+    }
+
+    @Test void deliveryCompletesOrderOnceAndPreservesInventory() {
+        long shipment = service.dispatch(ORDER, request(), "dispatch-request-006").shipmentId();
+        var delivered = lifecycle.changeStatus(shipment,
+                new ShipmentStatusRequest("DELIVERED", "Khách đã nhận hàng"), "delivery-request-001");
+        assertThat(delivered.status()).isEqualTo("DELIVERED");
+        assertThat(delivered.deliveredAt()).isNotNull();
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, ORDER)).isEqualTo("COMPLETED");
+        assertThat(lifecycle.changeStatus(shipment,
+                new ShipmentStatusRequest("DELIVERED", "Khách đã nhận hàng"), "delivery-request-001").replayed()).isTrue();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_logs WHERE entity_type='SHIPMENT' AND entity_id=?", Integer.class, Long.toString(shipment))).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_status_history WHERE order_id=? AND to_status='COMPLETED'", Integer.class, ORDER)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT on_hand_quantity FROM inventory_balances WHERE warehouse_id=? AND variant_id=?", Integer.class, WAREHOUSE, VARIANT)).isEqualTo(6);
+    }
+
+    @Test void failedDeliveryCanBeRetriedThenDelivered() {
+        long shipment = service.dispatch(ORDER, request(), "dispatch-request-007").shipmentId();
+        assertThat(lifecycle.changeStatus(shipment,
+                new ShipmentStatusRequest("FAILED", "Không liên lạc được"), "delivery-request-002").status()).isEqualTo("FAILED");
+        assertThat(lifecycle.changeStatus(shipment,
+                new ShipmentStatusRequest("IN_TRANSIT", "Hẹn giao lại"), "delivery-request-003").status()).isEqualTo("IN_TRANSIT");
+        assertThat(lifecycle.changeStatus(shipment,
+                new ShipmentStatusRequest("DELIVERED", "Đã giao lần hai"), "delivery-request-004").status()).isEqualTo("DELIVERED");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_logs WHERE entity_type='SHIPMENT' AND entity_id=?", Integer.class, Long.toString(shipment))).isEqualTo(3);
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, ORDER)).isEqualTo("COMPLETED");
+    }
+
+    @Test void returnedShipmentRestocksOnceAndLeavesOrderForAfterSales() {
+        long shipment = service.dispatch(ORDER, request(), "dispatch-request-008").shipmentId();
+        lifecycle.changeStatus(shipment, new ShipmentStatusRequest("FAILED", "Khách từ chối nhận"), "delivery-request-005");
+        var returned = lifecycle.changeStatus(shipment,
+                new ShipmentStatusRequest("RETURNED", "Hàng đã về kho"), "delivery-request-006");
+        assertThat(returned.status()).isEqualTo("RETURNED");
+        assertThat(jdbc.queryForObject("SELECT on_hand_quantity FROM inventory_balances WHERE warehouse_id=? AND variant_id=?", Integer.class, WAREHOUSE, VARIANT)).isEqualTo(10);
+        assertThat(jdbc.queryForObject("SELECT reserved_quantity FROM inventory_balances WHERE warehouse_id=? AND variant_id=?", Integer.class, WAREHOUSE, VARIANT)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE order_item_id=? AND movement_type='RETURN'", Integer.class, ITEM)).isEqualTo(1);
+        assertThat(lifecycle.changeStatus(shipment,
+                new ShipmentStatusRequest("RETURNED", "Hàng đã về kho"), "delivery-request-006").replayed()).isTrue();
+        assertThat(jdbc.queryForObject("SELECT on_hand_quantity FROM inventory_balances WHERE warehouse_id=? AND variant_id=?", Integer.class, WAREHOUSE, VARIANT)).isEqualTo(10);
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, ORDER)).isEqualTo("PROCESSING");
+        assertThatThrownBy(() -> lifecycle.changeStatus(shipment,
+                new ShipmentStatusRequest("DELIVERED", "Không hợp lệ"), "delivery-request-007"))
+                .isInstanceOfSatisfying(CommerceException.class, error -> assertThat(error.getCode()).isEqualTo("SHIPMENT_STATUS_CONFLICT"));
+    }
+
+    @Test void deliveryOfOneWarehouseDoesNotCompleteAnotherWarehouseShipment() {
+        jdbc.update("UPDATE inventory_reservations SET quantity=2 WHERE order_item_id=?", ITEM);
+        jdbc.update("UPDATE inventory_balances SET reserved_quantity=2 WHERE warehouse_id=? AND variant_id=?", WAREHOUSE, VARIANT);
+        jdbc.update("INSERT INTO warehouses(id,code,name,is_active) VALUES(931002,'TV4-DISPATCH-2','Second',1)");
+        jdbc.update("INSERT INTO inventory_balances(warehouse_id,variant_id,on_hand_quantity,reserved_quantity) VALUES(931002,931001,5,2)");
+        jdbc.update("INSERT INTO inventory_reservations(order_item_id,warehouse_id,variant_id,quantity) VALUES(931001,931002,931001,2)");
+        long first = service.dispatch(ORDER, request(), "dispatch-request-009").shipmentId();
+        long second = service.dispatch(ORDER, new OrderDispatchRequest(931002L,"Nội bộ","TV4-VAN-002","Đợt hai"), "dispatch-request-010").shipmentId();
+        lifecycle.changeStatus(first, new ShipmentStatusRequest("DELIVERED", "Đợt một đã giao"), "delivery-request-008");
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, ORDER)).isEqualTo("PROCESSING");
+        lifecycle.changeStatus(second, new ShipmentStatusRequest("DELIVERED", "Đợt hai đã giao"), "delivery-request-009");
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, ORDER)).isEqualTo("COMPLETED");
+    }
+
+    @Test void failedRestockRollsBackStatusAndCanRetrySameKey() {
+        long shipment = service.dispatch(ORDER, request(), "dispatch-request-011").shipmentId();
+        lifecycle.changeStatus(shipment, new ShipmentStatusRequest("FAILED", "Khách vắng nhà"), "delivery-request-010");
+        jdbc.update("UPDATE inventory_balances SET on_hand_quantity=2147483647 WHERE warehouse_id=? AND variant_id=?", WAREHOUSE, VARIANT);
+        var returned = new ShipmentStatusRequest("RETURNED", "Hàng đã về kho");
+        assertThatThrownBy(() -> lifecycle.changeStatus(shipment, returned, "delivery-request-011"))
+                .isInstanceOfSatisfying(CommerceException.class, error -> assertThat(error.getCode()).isEqualTo("STOCK_LIMIT"));
+        assertThat(jdbc.queryForObject("SELECT status FROM shipments WHERE id=?", String.class, shipment)).isEqualTo("FAILED");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inventory_movements WHERE order_item_id=? AND movement_type='RETURN'", Integer.class, ITEM)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_logs WHERE entity_type='SHIPMENT' AND request_id LIKE '%delivery-request-011'", Integer.class)).isZero();
+        jdbc.update("UPDATE inventory_balances SET on_hand_quantity=6 WHERE warehouse_id=? AND variant_id=?", WAREHOUSE, VARIANT);
+        assertThat(lifecycle.changeStatus(shipment, returned, "delivery-request-011").status()).isEqualTo("RETURNED");
     }
 }
