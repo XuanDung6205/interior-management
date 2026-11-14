@@ -5,4 +5,12 @@ export const inventoryApi = api => ({
   receive: (body, key) => api.request('/admin/inventory/receipts', {
     method: 'POST', body, headers: { 'Idempotency-Key': key },
   }),
+  balance: (warehouseId, variantId) => api.request(`/admin/inventory/balances?${new URLSearchParams({ warehouseId, variantId })}`),
+  movements: page => api.request(`/admin/inventory/movements?${new URLSearchParams({ page, size: 20 })}`),
+  adjust: (body, key) => api.request('/admin/inventory/adjustments', {
+    method: 'POST', body, headers: { 'Idempotency-Key': key },
+  }),
+  transfer: (body, key) => api.request('/admin/inventory/transfers', {
+    method: 'POST', body, headers: { 'Idempotency-Key': key },
+  }),
 });
