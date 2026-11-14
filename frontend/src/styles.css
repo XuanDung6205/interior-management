@@ -595,6 +595,25 @@ input[type='radio'] { accent-color: var(--teal); width: 18px; height: 18px; min-
   .payment-record p { font-size: 11px; }
   .cancel-actions .button { font-size: 12px; }
 }
+.inventory-receipt-panel { margin-bottom: 28px; }
+.inventory-receipt-panel form { padding: 28px 30px; }
+.inventory-receipt-panel .search-form { width: 100%; max-width: 520px; }
+.inventory-receipt-panel textarea { width: 100%; resize: vertical; min-height: 85px; }
+.inventory-field-errors { margin: 0 0 20px; padding: 0 22px; }
+.inventory-history { margin-bottom: 30px; }
+.inventory-receipt-list { display: grid; }
+.inventory-receipt-row { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, .8fr) minmax(0, 1.5fr); gap: 18px; align-items: start; padding: 18px 27px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.inventory-receipt-row:last-child { border-bottom: 0; }
+.inventory-receipt-row>div { display: grid; gap: 5px; }
+.inventory-receipt-row strong { color: var(--teal); }
+.inventory-receipt-row span, .inventory-receipt-row p { color: var(--muted); overflow-wrap: anywhere; }
+.inventory-history>.muted { padding: 25px 27px; }
+@media (max-width: 560px) {
+  .inventory-receipt-panel form { padding: 20px 18px; }
+  .inventory-receipt-row { grid-template-columns: 1fr 1fr; padding: 18px; }
+  .inventory-receipt-row p { grid-column: 1 / -1; }
+  .main-nav { flex-wrap: wrap; justify-content: flex-start; }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *:before, *:after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
   html { scroll-behavior: auto; }

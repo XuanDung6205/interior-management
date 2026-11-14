@@ -43,7 +43,7 @@ public class CommerceSecurityConfiguration {
         http.authenticationProvider(provider)
             .csrf(csrf -> csrf.csrfTokenRepository(new HttpSessionCsrfTokenRepository()).csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/admin/coupons","/api/admin/coupons/**").hasAnyRole("ADMIN","STAFF")
+                .requestMatchers("/api/admin/coupons","/api/admin/coupons/**","/api/admin/inventory","/api/admin/inventory/**").hasAnyRole("ADMIN","STAFF")
                 .requestMatchers("/api/cart/merge","/api/checkout","/api/checkout/**","/api/orders","/api/orders/**").authenticated()
                 .anyRequest().permitAll())
             .exceptionHandling(errors -> errors
