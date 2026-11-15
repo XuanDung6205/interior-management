@@ -1,4 +1,4 @@
-# Chạy TV3-01–06 — React + Spring Boot + MariaDB
+# Chạy TV3-01–07 — React + Spring Boot + MariaDB
 
 ## Phần đã có
 
@@ -7,6 +7,7 @@
 - Quản trị coupon: phân trang/tìm kiếm/tạo/sửa một phần/bật tắt/xóa mã chưa dùng, xung đột cho mã đã dùng; tính thử phần trăm/số tiền/cap/minimum/thời hạn.
 - Giao diện React cho khách và quản trị, desktop/mobile, loading/rỗng/lỗi, hiển thị số tiền do server tính.
 - TV3-04/05/06: báo giá checkout, đặt đơn thật có snapshot/giữ tồn và lượt coupon/chống gửi trùng; lịch sử, chi tiết và hủy đơn của khách. COD/chuyển khoản tạo payment PENDING. Hủy đơn đã thu tạo refund PENDING để Task10 xử lý; chưa kết nối cổng thanh toán hoặc thực hiện hoàn tiền.
+- TV3-07: quản trị đơn cho STAFF/ADMIN tại `/admin/orders`: tìm/lọc/phân trang, chi tiết snapshot, ghi chú nội bộ có phát hiện sửa đồng thời, chuyển trạng thái có kiểm tra bằng chứng và audit trong cùng transaction.
 
 ## Cấu trúc và phối hợp
 
@@ -15,6 +16,7 @@
 - Code legacy còn tại package/controller cũ và được tách khỏi commerce. Có thể gọi main class EshopApplication riêng khi làm regression với schema legacy; không dùng nó để chạy schema mới.
 - Contract máy đọc: `docs/api/tv3-commerce.yaml`; thỏa thuận adapter: `docs/api/TV3_IMPLEMENTATION_CONTRACT.md`.
 - TV1/TV2/TV4 chưa cung cấp module mới: adapter chỉ đọc tài khoản/địa chỉ/catalog; InventoryPort có implementation MariaDB giữ và trả phần reserved trong cùng transaction đặt/hủy đơn. Không thay đổi on_hand hoặc ghi movement cho thao tác giữ hàng. Khi ghép TV4 phải dùng cùng thứ tự khóa, kiểm tra trạng thái đơn và phần giữ còn lại; xem TV3_CHECKOUT_CONTRACT.md. Chưa có xác nhận của từng thành viên nhóm.
+- OrderAuditPort nối vào bảng audit_logs sẵn có của TV1, chỉ append cùng transaction và ghi UTC tường minh. Không tạo module quản lý người dùng/audit mới. Contract TV3-07: `docs/api/TV3_ADMIN_ORDERS_CONTRACT.md`.
 - Session dùng userId do DB cấp, roles/status được nạp lại theo request. Không có tài khoản mặc định hoặc lối đăng nhập giả trong app. Dev seed được chạy riêng, chỉ vào DB cô lập.
 
 ## Chuẩn bị
@@ -33,7 +35,7 @@ python scripts/tv3_database.py seed --database furniture_shop_tv3_dev
 Remove-Item Env:TV3_DEMO_PASSWORD
 ```
 
-`create` cố ý thất bại nếu DB đã tồn tại; không xóa/ghi đè DB. DB mới gồm45 bảng V001 và migration V002 thêm request fingerprint. DB demo đã có từ Task01–03 cần chạy `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev` một lần trước khi chạy checkout. Seed tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU và tồn MAIN; mật khẩu lấy từ environment và hash bằng BCrypt, không in ra. Không dùng chung mật khẩu tài khoản thật. Script từ chối database `furniture_shop` chính.
+`create` cố ý thất bại nếu DB đã tồn tại; không xóa/ghi đè DB. DB mới gồm45 bảng V001 và V002/V003 thêm request fingerprint/lựa chọn lắp đặt. DB demo đã có cần chạy `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev` trước khi chạy bản mới. Seed tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU và tồn MAIN; mật khẩu lấy từ environment và hash bằng BCrypt, không in ra. Không dùng chung mật khẩu tài khoản thật. Script từ chối database `furniture_shop` chính.
 
 Khi DB demo trên máy đã được chuẩn bị, không cần tạo lại. Có thể đặt lại mật khẩu demo bằng cách chạy `seed` với environment do bạn chọn. Script chỉ chấp nhận `furniture_shop_tv3_dev` hoặc `furniture_shop_test_*`.
 
@@ -64,7 +66,17 @@ Phí mặc định là chính sách demo cấu hình ở server: giao50.000đ, m
 
 Giữ hàng/coupon chưa có tự động hết hạn (Task11): tồn giữ chỉ được trả qua hủy hoặc fulfillment TV4, không bỏ qua reservation khi chỉ hết timestamp. Khi mất kết nối lúc đặt, frontend lưu request/key theo user trong sessionStorage để gửi lại đúng nội dung, kể cả sau tải lại trang. Không sửa nội dung hoặc tạo key mới để retry một kết quả chưa rõ.
 
-Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy file `docs/database/V002__orders_request_fingerprint.sql`; migration chỉ thêm cột nullable và không xóa lịch sử. Không chạy lại V001 trên database đã tồn tại.
+Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy lần lượt `docs/database/V002__orders_request_fingerprint.sql` và `V003__orders_assembly_requested.sql`. V003 backfill đơn cũ đã thu phí lắp thành có chọn dịch vụ; đơn mới lưu lựa chọn kể cả phí0. Không xóa lịch sử và không chạy lại V001 trên database đã tồn tại.
+
+## Quản trị đơn hàng TV3-07
+
+Đăng nhập tài khoản STAFF/ADMIN rồi mở `/admin/orders`. Tìm mã đơn, tên/email tài khoản hoặc tên/số điện thoại người nhận; lọc trạng thái và phân trang. Màn hình chi tiết hiển thị thanh toán, vận chuyển, lắp đặt, hoàn tiền và lịch sử riêng nhau.
+
+Luồng trạng thái: Chờ xác nhận → Đã xác nhận → Đang xử lý → Hoàn thành. Có thể hủy ở ba trạng thái đầu nếu chưa xuất giao; hủy khi Đang xử lý chỉ dành cho nhân viên. Bấm lặp một chuyển trạng thái đã áp dụng không ghi lịch sử/audit thêm. Nếu người khác đổi trạng thái, tải lại trước khi thao tác tiếp.
+
+Hoàn thành cần đủ khoản thu thực sau khi trừ khoản hoàn đang chờ/đã hoàn, giao đủ số lượng, reservation đã xuất hết, movement xuất kho đúng và hoàn tất lắp đặt đã chọn. Nếu thiếu, UI hiển thị lý do và server từ chối chuyển. Màn hình này không có nút giả lập đã thu tiền/đã giao hàng; TV3-08 và TV4 cung cấp bằng chứng đó sau.
+
+Ghi chú nội bộ chỉ nhân viên đọc được, không xuất hiện trong lịch sử khách. Thông báo chuyển trạng thái/lý do hủy là nội dung khách nhìn thấy. Khi ghi chú bị sửa đồng thời, bản nháp được giữ; đọc bản mới rồi quyết định lưu lại, không ghi đè im lặng.
 
 Nếu máy Windows có CA doanh nghiệp và gặp lỗi chứng chỉ npm, có thể đặt `NODE_OPTIONS=--use-system-ca` tạm thời. Maven có thể dùng truststore Windows `-Djavax.net.ssl.trustStoreType=Windows-ROOT -Djavax.net.ssl.trustStore=NONE` trong MAVEN_OPTS. Không tắt xác minh TLS; không cần thay truststore máy lâu dài.
 
@@ -82,9 +94,9 @@ npm run build
 Integration API/MariaDB thật (database riêng, test sẽ xóa fixture bên trong nó; tuyệt đối không trỏ vào dữ liệu cần giữ):
 
 ```powershell
-python scripts/tv3_database.py create --database furniture_shop_test_tv3_local
-$env:TV3_TEST_DB_URL = 'jdbc:mariadb://localhost:3306/furniture_shop_test_tv3_local'
-.\mvnw.cmd '-Dtest=CommerceDatabaseTest,CheckoutTransactionTest,CheckoutAdaptersTest,InventoryReservationTest' test
+python scripts/tv3_database.py create --database furniture_shop_test_tv3_policy_local
+$env:TV3_TEST_DB_URL = 'jdbc:mariadb://localhost:3306/furniture_shop_test_tv3_policy_local'
+.\mvnw.cmd '-Dtest=CommerceDatabaseTest,CheckoutTransactionTest,CheckoutAdaptersTest,InventoryReservationTest,OrderLifecycleTest,OrderCompletionPolicyTest' test
 Remove-Item Env:TV3_TEST_DB_URL
 ```
 
@@ -112,4 +124,4 @@ Full regression suite còn chứa legacy SpringBoot smoke test, cần schema leg
 4. Với khách, vào checkout, nhập/chọn địa chỉ, thêm mã giảm, chọn dịch vụ/phương thức rồi xem trước. Kiểm tra từng khoản tiền và xác nhận đặt. Xem sản phẩm/địa chỉ snapshot tại `/orders/{id}` và lọc lịch sử tại `/orders`.
 5. Hủy đơn còn chờ xác nhận, xem payment chuyển CANCELLED và tồn/lượt mã được trả. Gửi hủy lần nữa không có hiệu ứng thứ hai. Không thể xem/hủy đơn của tài khoản khác. Đơn đã xuất giao cần hỗ trợ từ cửa hàng.
 6. Quay lại admin: xóa coupon chưa dùng; coupon đã được đơn tham chiếu trả COUPON_IN_USE, có thể tắt mã. Tổng/snapshot của đơn cũ vẫn giữ nguyên.
-7. Giới thiệu OpenAPI, test quyền/CSRF/đặt trùng/tranh lượt mã/đặt–hủy đồng thời và ảnh desktop/mobile. Bước tiếp theo là TV3-07 quản trị đơn, TV3-08 xác minh thu tiền.
+7. Với admin, tìm đơn mới, thêm ghi chú nội bộ, xác nhận/đưa vào xử lý; xem lý do chưa thể hoàn thành rồi hủy trước xuất giao. Đăng nhập khách kiểm tra không thấy ghi chú nội bộ. Bước tiếp theo là TV3-08 xác minh thu tiền.

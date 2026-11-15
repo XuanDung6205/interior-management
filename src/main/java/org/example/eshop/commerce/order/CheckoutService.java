@@ -36,9 +36,9 @@ public class CheckoutService {
         var now=LocalDateTime.ofInstant(clock.instant(),ZoneOffset.UTC);
         String number="NN-"+UUID.randomUUID().toString().replace("-","").toUpperCase(Locale.ROOT);
         long id=store.insert("""
-            INSERT INTO orders(order_number,user_id,idempotency_key,request_fingerprint,status,currency,subtotal,discount_amount,shipping_fee,assembly_fee,tax_amount,grand_total,coupon_id,coupon_code_snapshot,customer_note,placed_at,updated_at)
-            VALUES(?,?,?,?,'PENDING_CONFIRMATION','VND',?,?,?,?,?,?,?,?,?,?,?)
-            """,number,user,scopedKey,requestHash,q.subtotal(),q.discountAmount(),q.shippingFee(),q.assemblyFee(),q.taxAmount(),q.grandTotal(),calculation.couponId(),q.couponCode(),request.customerNote(),now,now);
+            INSERT INTO orders(order_number,user_id,idempotency_key,request_fingerprint,status,currency,subtotal,discount_amount,shipping_fee,assembly_fee,tax_amount,grand_total,coupon_id,coupon_code_snapshot,customer_note,placed_at,updated_at,assembly_requested)
+            VALUES(?,?,?,?,'PENDING_CONFIRMATION','VND',?,?,?,?,?,?,?,?,?,?,?,?)
+            """,number,user,scopedKey,requestHash,q.subtotal(),q.discountAmount(),q.shippingFee(),q.assemblyFee(),q.taxAmount(),q.grandTotal(),calculation.couponId(),q.couponCode(),request.customerNote(),now,now,q.assemblyRequested());
         var holds=new ArrayList<InventoryPort.ReservationLine>();
         for(var line:q.items()){
             long itemId=store.insert("""

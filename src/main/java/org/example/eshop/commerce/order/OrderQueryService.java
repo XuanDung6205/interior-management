@@ -39,7 +39,10 @@ public class OrderQueryService {
     }
     public Map<String,Object> detail(long id){return detailFor(id,quote.actorId());}
     public Map<String,Object> detailFor(long id,long user){
-        var order=store.owned(id,user,false);
+        return snapshots(id,store.owned(id,user,false));
+    }
+    Map<String,Object> detailForAdmin(long id){return snapshots(id,store.find(id,false));}
+    private Map<String,Object> snapshots(long id,Map<String,Object> order){
         order.put("items",store.rows("""
             SELECT id,variant_id AS variantId,product_id AS productId,sku,product_name AS productName,variant_name AS variantName,
              image_url AS imageUrl,color_name AS colorName,dimensions_snapshot AS dimensionsSnapshot,materials_snapshot AS materialsSnapshot,
@@ -53,7 +56,7 @@ public class OrderQueryService {
             """,id);
         order.put("shippingAddress",addresses.isEmpty()?null:addresses.get(0));
         order.put("payments",store.rows("SELECT id,method,status,amount,currency,paid_at AS paidAt FROM payments WHERE order_id=? ORDER BY id",id));
-        order.put("shipments",store.rows("SELECT id,status,tracking_number AS trackingNumber,carrier FROM shipments WHERE order_id=? ORDER BY id",id));
+        order.put("shipments",store.rows("SELECT id,status,tracking_number AS trackingNumber,carrier,shipped_at AS shippedAt,delivered_at AS deliveredAt,installation_required AS installationRequired,installation_status AS installationStatus,installation_completed_at AS installationCompletedAt FROM shipments WHERE order_id=? ORDER BY id",id));
         order.put("history",store.rows("SELECT from_status AS fromStatus,to_status AS toStatus,note,changed_at AS changedAt FROM order_status_history WHERE order_id=? ORDER BY changed_at,id",id));
         order.put("refunds",store.rows("SELECT id,payment_id AS paymentId,status,amount,currency,reason FROM refunds WHERE order_id=? ORDER BY id",id));
         boolean canCancel=Set.of("PENDING_CONFIRMATION","CONFIRMED").contains(order.get("status"))&&!store.dispatched(id);
