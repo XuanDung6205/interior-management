@@ -30,13 +30,17 @@ public class OrderStore {
         }return row;
     },args);}
     public Map<String,Object> owned(long id,long user,boolean lock){
+        return selected("id=? AND user_id=?",lock,id,user);
+    }
+    public Map<String,Object> find(long id,boolean lock){return selected("id=?",lock,id);}
+    private Map<String,Object> selected(String predicate,boolean lock,Object... parameters){
         var rows=rows("""
             SELECT id,order_number AS orderNumber,status,currency,subtotal,discount_amount AS discountAmount,
               shipping_fee AS shippingFee,assembly_fee AS assemblyFee,tax_amount AS taxAmount,grand_total AS grandTotal,
               coupon_code_snapshot AS couponCode,customer_note AS customerNote,placed_at AS placedAt,
-              cancelled_at AS cancelledAt,cancel_reason AS cancelReason
-            FROM orders WHERE id=? AND user_id=?
-            """+(lock?" FOR UPDATE":""),id,user);
+              cancelled_at AS cancelledAt,cancel_reason AS cancelReason,assembly_requested AS assemblyRequested
+            FROM orders WHERE
+            """+predicate+(lock?" FOR UPDATE":""),parameters);
         if(rows.isEmpty())throw CommerceException.notFound("Không tìm thấy đơn hàng của bạn.");return rows.get(0);
     }
     public boolean dispatched(long id){return Boolean.TRUE.equals(db.queryForObject("""

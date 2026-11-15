@@ -2,6 +2,8 @@ package org.example.eshop.commerce.inventory;
 
 import org.example.eshop.commerce.common.CommerceException;
 import org.example.eshop.commerce.port.CurrentActorPort;
+import org.example.eshop.commerce.order.OrderCompletionPolicy;
+import org.example.eshop.commerce.order.OrderLifecycleService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -21,11 +23,16 @@ public class ShipmentLifecycleService {
     private final JdbcTemplate jdbc;
     private final CurrentActorPort actors;
     private final Clock clock;
+    private final OrderCompletionPolicy completion;
+    private final OrderLifecycleService orders;
 
-    public ShipmentLifecycleService(JdbcTemplate jdbc, CurrentActorPort actors, Clock clock) {
+    public ShipmentLifecycleService(JdbcTemplate jdbc, CurrentActorPort actors, Clock clock,
+            OrderCompletionPolicy completion, OrderLifecycleService orders) {
         this.jdbc = jdbc;
         this.actors = actors;
         this.clock = clock;
+        this.completion = completion;
+        this.orders = orders;
     }
 
     public record ShipmentView(long id, long orderId, String orderNumber, long warehouseId,
@@ -33,7 +40,7 @@ public class ShipmentLifecycleService {
             String shippedAt, String deliveredAt, boolean replayed) {}
     public record ShipmentPage(List<ShipmentView> items, int page, int size, long totalElements, int totalPages) {}
     private record Shipment(long id, long orderId, long warehouseId, String status) {}
-    private record Owner(long id, Long userId, String status) {}
+    private record Owner(long id, Long userId, String status, Long couponId) {}
     private record Previous(long shipmentId, String targetStatus, String reason) {}
     private record Line(long itemId, long variantId, int quantity) {}
     private record Balance(long variantId, int onHand, long version) {}
@@ -77,6 +84,10 @@ public class ShipmentLifecycleService {
         }
         Owner lockedOrder = findOwner(snapshot.orderId(), true);
         if (!owner.userId().equals(lockedOrder.userId())) throw CommerceException.conflict("ORDER_CHANGED", "Chủ đơn vừa thay đổi.");
+        // Match shared lifecycle locking: users -> order -> coupon -> fulfillment evidence.
+        if (lockedOrder.couponId() != null) {
+            jdbc.queryForList("SELECT id FROM coupons WHERE id=? FOR UPDATE", Long.class, lockedOrder.couponId());
+        }
         Shipment shipment = findShipment(shipmentId, true);
         if (shipment.orderId() != lockedOrder.id()) throw CommerceException.conflict("SHIPMENT_CHANGED", "Vận đơn vừa thay đổi.");
         Previous previous = previous(key);
@@ -106,13 +117,11 @@ public class ShipmentLifecycleService {
                     JSON_OBJECT('status',?,'reason',?),?,?)
                 """, actor, Long.toString(shipmentId), shipment.status(), request.targetStatus(),
                 request.reason().trim(), key, now);
-        if ("DELIVERED".equals(request.targetStatus()) && allDelivered(shipment.orderId())) {
-            jdbc.update("UPDATE orders SET status='COMPLETED',completed_at=?,updated_at=? WHERE id=? AND status='PROCESSING'",
-                    now, now, shipment.orderId());
-            jdbc.update("""
-                    INSERT INTO order_status_history(order_id,from_status,to_status,changed_by,note,changed_at)
-                    VALUES(?,'PROCESSING','COMPLETED',?,?,?)
-                    """, shipment.orderId(), actor, "Đã giao đủ các vận đơn", now);
+        // Delivery evidence commits even while payment or requested installation is pending.
+        // Only the shared lifecycle service may complete the order and append its audit/history.
+        if ("DELIVERED".equals(request.targetStatus()) && completion.evaluate(shipment.orderId()).eligible()) {
+            orders.transition(shipment.orderId(), "PROCESSING", "COMPLETED",
+                    "Đã giao đủ hàng và hoàn tất thanh toán, lắp đặt theo yêu cầu.");
         }
         return current(shipmentId, false);
     }
@@ -157,22 +166,6 @@ public class ShipmentLifecycleService {
         }
     }
 
-    private boolean allDelivered(long orderId) {
-        Long incomplete = jdbc.queryForObject("""
-                SELECT COUNT(*) FROM shipments WHERE order_id=? AND status<>'DELIVERED'
-                """, Long.class, orderId);
-        Long remaining = jdbc.queryForObject("""
-                SELECT COALESCE(SUM(r.remaining_quantity),0) FROM inventory_reservations r
-                JOIN order_items oi ON oi.id=r.order_item_id WHERE oi.order_id=?
-                """, Long.class, orderId);
-        Long pendingAssembly = jdbc.queryForObject("""
-                SELECT COUNT(*) FROM shipments WHERE order_id=? AND installation_required=1
-                  AND installation_status<>'COMPLETED'
-                """, Long.class, orderId);
-        return incomplete != null && incomplete == 0 && remaining != null && remaining == 0
-                && pendingAssembly != null && pendingAssembly == 0;
-    }
-
     private ShipmentView current(long id, boolean replayed) {
         return jdbc.query("""
                 SELECT s.id,s.order_id,o.order_number,s.warehouse_id,w.code,s.carrier,s.tracking_number,
@@ -191,8 +184,8 @@ public class ShipmentLifecycleService {
     }
 
     private Owner findOwner(long orderId, boolean lock) {
-        return jdbc.query("SELECT id,user_id,status FROM orders WHERE id=?" + (lock ? " FOR UPDATE" : ""),
-                (rs, row) -> new Owner(rs.getLong(1), (Long) rs.getObject(2), rs.getString(3)), orderId)
+        return jdbc.query("SELECT id,user_id,status,coupon_id FROM orders WHERE id=?" + (lock ? " FOR UPDATE" : ""),
+                (rs, row) -> new Owner(rs.getLong(1), (Long) rs.getObject(2), rs.getString(3), (Long) rs.getObject(4)), orderId)
                 .stream().findFirst().orElseThrow(() -> CommerceException.notFound("Không tìm thấy đơn."));
     }
 

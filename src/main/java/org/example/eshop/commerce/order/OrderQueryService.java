@@ -39,7 +39,10 @@ public class OrderQueryService {
     }
     public Map<String,Object> detail(long id){return detailFor(id,quote.actorId());}
     public Map<String,Object> detailFor(long id,long user){
-        var order=store.owned(id,user,false);
+        return snapshots(id,store.owned(id,user,false));
+    }
+    Map<String,Object> detailForAdmin(long id){return snapshots(id,store.find(id,false));}
+    private Map<String,Object> snapshots(long id,Map<String,Object> order){
         order.put("items",store.rows("""
             SELECT id,variant_id AS variantId,product_id AS productId,sku,product_name AS productName,variant_name AS variantName,
              image_url AS imageUrl,color_name AS colorName,dimensions_snapshot AS dimensionsSnapshot,materials_snapshot AS materialsSnapshot,
@@ -55,7 +58,9 @@ public class OrderQueryService {
         order.put("payments",store.rows("SELECT id,method,status,amount,currency,paid_at AS paidAt FROM payments WHERE order_id=? ORDER BY id",id));
         order.put("shipments",store.rows("""
             SELECT id,status,tracking_number AS trackingNumber,carrier,
-              shipped_at AS shippedAt,delivered_at AS deliveredAt
+              shipped_at AS shippedAt,delivered_at AS deliveredAt,
+              installation_required AS installationRequired,installation_status AS installationStatus,
+              installation_completed_at AS installationCompletedAt
             FROM shipments WHERE order_id=? ORDER BY id
             """,id));
         order.put("shipmentEvents",store.rows("""

@@ -4,7 +4,7 @@ import { ErrorNotice, Icon, Loading } from '../../components/ui';
 import { useCommerce } from '../../lib/session';
 import { formatDate, formatMoney } from '../../lib/format';
 import { orderApi } from './orderApi';
-import { AddressSnapshot, MoneyBreakdown, OrderItems, OrderNote, paymentMethods, Status } from './OrderParts';
+import { AddressSnapshot, AssemblySelection, MoneyBreakdown, OrderItems, OrderNote, paymentMethods, Status } from './OrderParts';
 
 export default function OrderDetailPage() {
   const { api } = useCommerce();
@@ -50,7 +50,7 @@ export default function OrderDetailPage() {
       </div><aside className="order-detail-aside"><section className="panel order-summary"><h2>Chi tiết số tiền</h2><MoneyBreakdown value={order} /><OrderNote>Số tiền và sản phẩm được lưu theo đơn đã đặt.</OrderNote></section><section className="panel address-panel"><h2>Địa chỉ nhận hàng</h2><AddressSnapshot address={order.shippingAddress} /></section>{order.customerNote && <section className="panel address-panel"><h2>Ghi chú của bạn</h2><p className="customer-note">{order.customerNote}</p></section>}
         {order.cancelledAt && <section className="notice"><strong>Đã hủy lúc {formatDate(order.cancelledAt)}</strong>{order.cancelReason && <p>{order.cancelReason}</p>}</section>}
         {order.canCancel ? <section className="panel cancellation-panel"><h2>Cần thay đổi lựa chọn?</h2><p>Đơn còn đủ điều kiện hủy theo trạng thái hiện tại. Cửa hàng kiểm tra lại khi gửi yêu cầu.</p>{cancelOpen ? <form onSubmit={cancel}><div ref={cancelErrorRef} tabIndex="-1"><ErrorNotice error={cancelError} /></div><label htmlFor="cancel-reason">Lý do hủy đơn</label><textarea id="cancel-reason" autoFocus required maxLength={1000} rows={3} value={reason} disabled={cancelling} onChange={event => setReason(event.target.value)} aria-describedby={cancelError?.fieldErrors?.reason ? 'cancel-reason-error' : undefined} />{cancelError?.fieldErrors?.reason && <span className="field-error" id="cancel-reason-error">{cancelError.fieldErrors.reason}</span>}<p className="small muted">Nếu đã thu tiền, cửa hàng sẽ tạo yêu cầu hoàn tiền để xử lý riêng.</p><div className="cancel-actions"><button type="button" className="button secondary" disabled={cancelling} onClick={() => setCancelOpen(false)}>Giữ đơn</button><button className="button danger" disabled={cancelling || !reason.trim()}>{cancelling ? 'Đang hủy…' : 'Xác nhận hủy đơn'}</button></div></form> : <button className="text-button destructive" onClick={() => setCancelOpen(true)}>Hủy đơn hàng</button>}</section> : order.cancellationMessage && <div className="notice"><p>{order.cancellationMessage}</p></div>}
-      </aside></div><Link to="/orders" className="inline-link">← Tất cả đơn hàng</Link>
+      <AssemblySelection requested={order.assemblyRequested} /></aside></div><Link to="/orders" className="inline-link">← Tất cả đơn hàng</Link>
     </>}
   </>;
 }

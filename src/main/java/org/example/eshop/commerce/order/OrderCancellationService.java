@@ -2,6 +2,7 @@ package org.example.eshop.commerce.order;
 
 import org.example.eshop.commerce.common.CommerceException;
 import org.example.eshop.commerce.port.InventoryPort;
+import org.example.eshop.commerce.port.OrderAuditPort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
 import java.math.BigDecimal;
@@ -10,8 +11,8 @@ import java.util.*;
 
 @Service
 public class OrderCancellationService {
-    private final OrderStore store;private final CheckoutQuoteService quotes;private final OrderQueryService orders;private final InventoryPort inventory;private final Clock clock;
-    public OrderCancellationService(OrderStore store,CheckoutQuoteService quotes,OrderQueryService orders,InventoryPort inventory,Clock clock){this.store=store;this.quotes=quotes;this.orders=orders;this.inventory=inventory;this.clock=clock;}
+    private final OrderStore store;private final CheckoutQuoteService quotes;private final OrderQueryService orders;private final InventoryPort inventory;private final Clock clock;private final OrderAuditPort audit;
+    public OrderCancellationService(OrderStore store,CheckoutQuoteService quotes,OrderQueryService orders,InventoryPort inventory,Clock clock,OrderAuditPort audit){this.store=store;this.quotes=quotes;this.orders=orders;this.inventory=inventory;this.clock=clock;this.audit=audit;}
     @Transactional(isolation=Isolation.READ_COMMITTED)
     public Map<String,Object> cancel(long id,String reason){
         long user=quotes.actorId();
@@ -19,9 +20,16 @@ public class OrderCancellationService {
         // Match checkout's user -> order -> coupon order. The history actor FK
         // must not acquire a late user lock while another checkout holds it.
         store.jdbc().queryForObject("SELECT id FROM users WHERE id=? FOR UPDATE",Long.class,user);
-        var order=store.owned(id,user,true);String before=order.get("status").toString();
-        if("CANCELLED".equals(before))return orders.detailFor(id,user);
-        if(!Set.of("PENDING_CONFIRMATION","CONFIRMED").contains(before)||store.dispatched(id))throw CommerceException.conflict("ORDER_NOT_CANCELLABLE","Đơn đã xử lý hoặc xuất giao. Vui lòng liên hệ cửa hàng.");
+        store.owned(id,user,true);
+        cancelLocked(id,user,reason,false);
+        return orders.detailFor(id,user);
+    }
+    @Transactional(propagation=Propagation.MANDATORY)
+    public void cancelLocked(long id,long actor,String reason,boolean staff){
+        if(reason==null||reason.isBlank()||reason.length()>1000)throw CommerceException.invalid(Map.of("reason","Nhập lý do hủy từ1 đến1000 ký tự."));
+        var order=store.find(id,true);String before=order.get("status").toString();
+        if("CANCELLED".equals(before))return;
+        if(!(Set.of("PENDING_CONFIRMATION","CONFIRMED").contains(before)||(staff&&"PROCESSING".equals(before)))||store.dispatched(id))throw CommerceException.conflict("ORDER_NOT_CANCELLABLE","Đơn đã xử lý hoặc xuất giao. Vui lòng liên hệ cửa hàng.");
         // All lifecycle writers must lock the order first, then coupon, payment rows and inventory.
         var couponIds=store.jdbc().query("SELECT coupon_id FROM orders WHERE id=? AND coupon_id IS NOT NULL",(rs,n)->rs.getLong(1),id);
         if(!couponIds.isEmpty())store.jdbc().queryForObject("SELECT id FROM coupons WHERE id=? FOR UPDATE",Long.class,couponIds.get(0));
@@ -37,10 +45,10 @@ public class OrderCancellationService {
             }
         }
         store.jdbc().update("UPDATE payments SET status='CANCELLED',updated_at=? WHERE order_id=? AND status='PENDING'",now,id);
-        store.jdbc().update("UPDATE shipments SET status='CANCELLED' WHERE order_id=? AND status IN ('PENDING','READY')",id);
+        store.jdbc().update("UPDATE shipments SET status='CANCELLED',installation_status=CASE WHEN installation_required=1 AND installation_status IN ('PENDING','SCHEDULED') THEN 'CANCELLED' ELSE installation_status END WHERE order_id=? AND status IN ('PENDING','READY')",id);
         store.jdbc().update("UPDATE coupon_redemptions SET status='RELEASED',expires_at=NULL WHERE order_id=? AND status IN ('RESERVED','APPLIED')",id);
         store.jdbc().update("UPDATE orders SET status='CANCELLED',cancelled_at=?,cancel_reason=?,updated_at=? WHERE id=?",now,reason.trim(),now,id);
-        store.insert("INSERT INTO order_status_history(order_id,from_status,to_status,changed_by,note,changed_at) VALUES(?,?,'CANCELLED',?,?,?)",id,before,user,reason.trim(),now);
-        return orders.detailFor(id,user);
+        store.insert("INSERT INTO order_status_history(order_id,from_status,to_status,changed_by,note,changed_at) VALUES(?,?,'CANCELLED',?,?,?)",id,before,actor,reason.trim(),now);
+        audit.append(actor,id,"ORDER_STATUS_CHANGED",Map.of("status",before),Map.of("status","CANCELLED"));
     }
 }

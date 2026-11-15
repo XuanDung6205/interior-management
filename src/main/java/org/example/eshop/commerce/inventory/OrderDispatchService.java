@@ -2,6 +2,7 @@ package org.example.eshop.commerce.inventory;
 
 import org.example.eshop.commerce.common.CommerceException;
 import org.example.eshop.commerce.port.CurrentActorPort;
+import org.example.eshop.commerce.order.OrderLifecycleService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -24,11 +25,13 @@ public class OrderDispatchService {
     private final JdbcTemplate jdbc;
     private final CurrentActorPort actors;
     private final Clock clock;
+    private final OrderLifecycleService lifecycle;
 
-    public OrderDispatchService(JdbcTemplate jdbc, CurrentActorPort actors, Clock clock) {
+    public OrderDispatchService(JdbcTemplate jdbc, CurrentActorPort actors, Clock clock,OrderLifecycleService lifecycle) {
         this.jdbc = jdbc;
         this.actors = actors;
         this.clock = clock;
+        this.lifecycle=lifecycle;
     }
 
     public record HoldView(long reservationId, long orderItemId, long warehouseId, String warehouseCode,
@@ -39,8 +42,8 @@ public class OrderDispatchService {
     public record DispatchItem(long orderItemId, String sku, int quantity) {}
     public record DispatchResult(long shipmentId, long orderId, long warehouseId, String status,
                                  String carrier, String trackingNumber, List<DispatchItem> items, boolean replayed) {}
-    private record Order(long id, Long owner, String number, String status, Long couponId) {}
-    private record Hold(long id, long itemId, long warehouseId, long variantId, String sku, int remaining) {}
+    private record Order(long id, Long owner, String number, String status, Long couponId, boolean assemblyRequested) {}
+    private record Hold(long id, long itemId, long warehouseId, long variantId, String sku, int remaining, boolean assemblyRequired) {}
     private record Balance(long warehouseId, long variantId, int onHand, int reserved, long version) {}
     private record Prior(long id, long orderId, long warehouseId, String carrier, String tracking, String note) {}
 
@@ -117,11 +120,11 @@ public class OrderDispatchService {
         }
         // Reservation children are current-read after locking the order; cancellation uses the same order lock.
         var holds = jdbc.query("""
-                SELECT r.id,r.order_item_id,r.warehouse_id,r.variant_id,oi.sku,r.remaining_quantity
+                SELECT r.id,r.order_item_id,r.warehouse_id,r.variant_id,oi.sku,r.remaining_quantity,oi.assembly_required
                 FROM inventory_reservations r JOIN order_items oi ON oi.id=r.order_item_id
                 WHERE oi.order_id=? ORDER BY r.variant_id,r.warehouse_id,r.id FOR UPDATE
                 """, (rs, row) -> new Hold(rs.getLong(1), rs.getLong(2), rs.getLong(3),
-                rs.getLong(4), rs.getString(5), rs.getInt(6)), orderId).stream()
+                rs.getLong(4), rs.getString(5), rs.getInt(6), rs.getBoolean(7)), orderId).stream()
                 .filter(hold -> hold.warehouseId() == request.warehouseId() && hold.remaining() > 0).toList();
         if (holds.isEmpty()) throw CommerceException.conflict("NO_HELD_STOCK", "Kho này không còn hàng đã giữ cho đơn.");
         var balances = new LinkedHashMap<Long, Balance>();
@@ -142,8 +145,18 @@ public class OrderDispatchService {
             Balance balance = balances.get(entry.getKey());
             if (balance.onHand() < entry.getValue() || balance.reserved() < entry.getValue()) throw stockConflict();
         }
+        // Preserve dispatch from pending orders while recording the same valid,
+        // audited forward edges used by the order administration screen.
+        if ("PENDING_CONFIRMATION".equals(order.status())) {
+            lifecycle.transition(orderId,"PENDING_CONFIRMATION","CONFIRMED","Xác nhận đơn trước khi xuất kho");
+        }
+        if (!"PROCESSING".equals(order.status())) {
+            lifecycle.transition(orderId,"CONFIRMED","PROCESSING","Chuẩn bị xuất kho giao hàng");
+        }
         LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
-        long shipmentId = insertShipment(orderId, request, key, now);
+        // The selected service is persisted even when free; unrelated warehouse lines need no job.
+        boolean installationRequired = order.assemblyRequested() && holds.stream().anyMatch(Hold::assemblyRequired);
+        long shipmentId = insertShipment(orderId, request, key, now, installationRequired);
         for (var entry : quantities.entrySet()) {
             Balance balance = balances.get(entry.getKey());
             int quantity = entry.getValue().intValue();
@@ -172,17 +185,10 @@ public class OrderDispatchService {
                     "SHIP-" + shipmentId, "dispatch:" + shipmentId + ":" + hold.id(),
                     "Xuất kho đơn " + order.number(), actor, now);
         }
-        if (!"PROCESSING".equals(order.status())) {
-            jdbc.update("UPDATE orders SET status='PROCESSING',updated_at=? WHERE id=?", now, orderId);
-            jdbc.update("""
-                    INSERT INTO order_status_history(order_id,from_status,to_status,changed_by,note,changed_at)
-                    VALUES(?,?,'PROCESSING',?,?,?)
-                    """, orderId, order.status(), actor, "Xuất kho giao hàng", now);
-        }
         return result(shipmentId, false);
     }
 
-    private long insertShipment(long orderId, OrderDispatchRequest request, String key, LocalDateTime now) {
+    private long insertShipment(long orderId, OrderDispatchRequest request, String key, LocalDateTime now, boolean installationRequired) {
         if (!jdbc.queryForList("SELECT id FROM shipments WHERE carrier=? AND tracking_number=?",
                 Long.class, request.carrier().trim(), request.trackingNumber().trim()).isEmpty()) {
             throw CommerceException.conflict("TRACKING_IN_USE", "Mã vận đơn đã được sử dụng.");
@@ -192,8 +198,8 @@ public class OrderDispatchService {
             jdbc.update(connection -> {
                 var statement = connection.prepareStatement("""
                         INSERT INTO shipments(order_id,warehouse_id,carrier,tracking_number,status,
-                            shipped_at,note,idempotency_key,created_at,updated_at)
-                        VALUES(?,?,?,?,'IN_TRANSIT',?,?,?,?,?)
+                            shipped_at,note,idempotency_key,installation_required,installation_status,created_at,updated_at)
+                        VALUES(?,?,?,?,'IN_TRANSIT',?,?,?,?,?,?,?)
                         """, Statement.RETURN_GENERATED_KEYS);
                 statement.setLong(1, orderId);
                 statement.setLong(2, request.warehouseId());
@@ -202,8 +208,10 @@ public class OrderDispatchService {
                 statement.setObject(5, now);
                 statement.setString(6, cleanNote(request.note()));
                 statement.setString(7, key);
-                statement.setObject(8, now);
-                statement.setObject(9, now);
+                statement.setBoolean(8, installationRequired);
+                statement.setString(9, installationRequired ? "PENDING" : "NOT_REQUIRED");
+                statement.setObject(10, now);
+                statement.setObject(11, now);
                 return statement;
             }, holder);
         } catch (DataIntegrityViolationException duplicate) {
@@ -235,9 +243,9 @@ public class OrderDispatchService {
     }
 
     private Order findOrder(long id, boolean lock) {
-        return jdbc.query("SELECT id,user_id,order_number,status,coupon_id FROM orders WHERE id=?" + (lock ? " FOR UPDATE" : ""),
+        return jdbc.query("SELECT id,user_id,order_number,status,coupon_id,assembly_requested FROM orders WHERE id=?" + (lock ? " FOR UPDATE" : ""),
                 (rs, row) -> new Order(rs.getLong(1), (Long) rs.getObject(2), rs.getString(3),
-                        rs.getString(4), (Long) rs.getObject(5)), id)
+                        rs.getString(4), (Long) rs.getObject(5), rs.getBoolean(6)), id)
                 .stream().findFirst().orElseThrow(() -> CommerceException.notFound("Không tìm thấy đơn hàng."));
     }
 

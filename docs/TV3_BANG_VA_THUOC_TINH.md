@@ -1,8 +1,13 @@
 # TV3 — Các bảng và thuộc tính theo schema hiện tại
 
-Nguồn chuẩn: [V001__create_furniture_shop.sql](database/V001__create_furniture_shop.sql). Đây là bản giải thích schema đã có, không tạo thêm hoặc sửa cột.
+Nguồn bootstrap: [V001__create_furniture_shop.sql](database/V001__create_furniture_shop.sql). Runtime bổ sung hai cột orders qua [V002](database/V002__orders_request_fingerprint.sql) và [V005](database/V005__orders_assembly_requested.sql); các định nghĩa bootstrap bên dưới được giữ nguyên để đối chiếu.
 
-Bạn sở hữu 11 bảng: 2 giỏ hàng, 4 đơn hàng, 2 khuyến mãi và 3 thanh toán/hoàn tiền. Trách nhiệm gồm Entity/Repository/Service/REST Controller/DTO, React page/component và API integration liên quan, kiểm thử và tài liệu. Người dùng đã chọn React thay cho Thymeleaf; lựa chọn này không làm thay đổi 11 bảng/139 thuộc tính dưới đây.
+Bạn sở hữu 11 bảng: 2 giỏ hàng, 4 đơn hàng, 2 khuyến mãi và 3 thanh toán/hoàn tiền. Trách nhiệm gồm persistence/Service/REST Controller/DTO, React page/component và API integration liên quan, kiểm thử và tài liệu. Bootstrap có139 thuộc tính; hiện có141 sau hai migration. Frontend dùng React thay cho Thymeleaf.
+
+Các cột orders bổ sung sau bootstrap:
+
+- `request_fingerprint CHAR(64) ascii_bin NULL` (V002): hash nội dung đặt hàng để phát hiện dùng lại idempotency key với nội dung khác; đơn lịch sử có thể NULL.
+- `assembly_requested BOOLEAN NOT NULL DEFAULT FALSE` (V005): khách có chọn dịch vụ lắp đặt, độc lập với phí và `order_items.assembly_required` (yêu cầu kỹ thuật của sản phẩm). Đơn cũ có phí lắp>0 được backfill TRUE.
 
 ## Quy ước đọc
 
