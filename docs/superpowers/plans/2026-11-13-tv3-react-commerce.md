@@ -124,10 +124,10 @@
 
 **API đề xuất:** `GET /api/admin/orders`, `GET /api/admin/orders/{id}`, `POST /api/admin/orders/{id}/transitions`.
 
-- [ ] Test `OrderLifecycleTest`: trạng thái sai bị từ chối; người không có quyền không cập nhật được; mỗi chuyển trạng thái hợp lệ ghi lịch sử đúng một lần.
-- [ ] Viết ma trận chuyển trạng thái thay vì nhận tùy ý mọi enum. COMPLETED yêu cầu điều kiện giao/lắp/thu tiền phù hợp; sau khi xuất hàng, hoàn hàng đi qua hậu mãi thay vì hủy đơn như chưa giao.
-- [ ] Làm lọc/tìm kiếm/phân trang, ghi chú nội bộ, xác nhận/xử lý đơn; phối hợp audit TV1 và fulfillment TV4.
-- [ ] Nghiệm thu: admin quản lý được; không tái sử dụng delete() cũ vì đang hoàn kho/xóa lịch sử theo mô hình cũ.
+- [x] Test `OrderLifecycleTest`: trạng thái sai bị từ chối; người không có quyền không cập nhật được; mỗi chuyển trạng thái hợp lệ ghi lịch sử đúng một lần.
+- [x] Viết ma trận chuyển trạng thái thay vì nhận tùy ý mọi enum. COMPLETED yêu cầu điều kiện giao/lắp/thu tiền phù hợp; sau khi xuất hàng, hoàn hàng đi qua hậu mãi thay vì hủy đơn như chưa giao.
+- [x] Làm lọc/tìm kiếm/phân trang, ghi chú nội bộ, xác nhận/xử lý đơn; phối hợp audit TV1 và fulfillment TV4.
+- [x] Nghiệm thu: admin quản lý được; không tái sử dụng delete() cũ vì đang hoàn kho/xóa lịch sử theo mô hình cũ.
 
 ## TV3-08 — COD và chuyển khoản có xác minh
 
