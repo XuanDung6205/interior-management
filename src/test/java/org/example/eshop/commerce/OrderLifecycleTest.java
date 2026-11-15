@@ -121,6 +121,28 @@ class OrderLifecycleTest {
         long id=order(customer,false);transition(id,"PENDING_CONFIRMATION","CONFIRMED","",200);
         assertTrue(db.queryForObject("SELECT ABS(TIMESTAMPDIFF(SECOND,created_at,UTC_TIMESTAMP(6)))<5 FROM audit_logs WHERE entity_id=? ORDER BY id DESC LIMIT 1",Boolean.class,Long.toString(id)));
     }
+    long dispatchThroughApi(long id)throws Exception{
+        long warehouse=db.queryForObject("SELECT id FROM warehouses WHERE code='MAIN'",Long.class);
+        var body=Map.of("warehouseId",warehouse,"carrier","Integration delivery","trackingNumber",UUID.randomUUID().toString(),"note","Kiểm thử ghép TV3/TV4");
+        return json(mvc.perform(post("/api/admin/inventory/orders/"+id+"/dispatch").header("Idempotency-Key","dispatch-http-"+UUID.randomUUID()).with(user(admin)).with(csrf()).contentType("application/json").content(mapper.writeValueAsString(body))).andExpect(status().isOk()).andReturn()).get("shipmentId").asLong();
+    }
+    void deliverThroughApi(long shipment,String key)throws Exception{
+        mvc.perform(post("/api/admin/inventory/shipments/"+shipment+"/status").header("Idempotency-Key",key).with(user(admin)).with(csrf()).contentType("application/json").content("{\"targetStatus\":\"DELIVERED\",\"reason\":\"Khách đã nhận đủ hàng\"}")).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("DELIVERED"));
+    }
+    @Test void actualShippingApiCannotCompleteUncollectedCod()throws Exception{
+        long id=order(customer,false);transition(id,"PENDING_CONFIRMATION","CONFIRMED","",200);long shipment=dispatchThroughApi(id);deliverThroughApi(shipment,"unpaid-delivery-http");
+        assertEquals("PROCESSING",detail(id).get("status").asText());assertEquals("PENDING",db.queryForObject("SELECT status FROM payments WHERE order_id=?",String.class,id));transition(id,"PROCESSING","COMPLETED","",409);transition(id,"PROCESSING","CANCELLED","Đã giao không hủy",409);
+        var customerDetail=json(mvc.perform(get("/api/orders/"+id).with(user(customer))).andExpect(status().isOk()).andReturn());assertEquals(1,customerDetail.get("shipmentEvents").size());assertTrue(customerDetail.get("shipments").get(0).has("installationRequired"));
+    }
+    @Test void actualShippingApiUsesSharedCompletionAuditAndReplay()throws Exception{
+        long id=order(customer,false);transition(id,"PENDING_CONFIRMATION","CONFIRMED","",200);long shipment=dispatchThroughApi(id);db.update("UPDATE payments SET status='SUCCEEDED',paid_at=UTC_TIMESTAMP(6) WHERE order_id=?",id);
+        deliverThroughApi(shipment,"paid-delivery-http");deliverThroughApi(shipment,"paid-delivery-http");assertEquals("COMPLETED",detail(id).get("status").asText());
+        assertEquals(1,db.queryForObject("SELECT COUNT(*) FROM order_status_history WHERE order_id=? AND to_status='COMPLETED'",Integer.class,id));assertEquals(1,db.queryForObject("SELECT COUNT(*) FROM audit_logs WHERE entity_type='ORDER' AND entity_id=? AND JSON_UNQUOTE(JSON_EXTRACT(after_data,'$.status'))='COMPLETED'",Integer.class,Long.toString(id)));
+    }
+    @Test void actualShippingApiPreservesSelectedInstallationAndBlocksEarlyCompletion()throws Exception{
+        long id=order(customer,true);transition(id,"PENDING_CONFIRMATION","CONFIRMED","",200);long shipment=dispatchThroughApi(id);db.update("UPDATE payments SET status='SUCCEEDED',paid_at=UTC_TIMESTAMP(6) WHERE order_id=?",id);deliverThroughApi(shipment,"assembly-delivery-http");
+        assertTrue(db.queryForObject("SELECT installation_required FROM shipments WHERE id=?",Boolean.class,shipment));assertEquals("PENDING",db.queryForObject("SELECT installation_status FROM shipments WHERE id=?",String.class,shipment));assertEquals("PROCESSING",detail(id).get("status").asText());transition(id,"PROCESSING","COMPLETED","",409);
+    }
     @Test void concurrentNotesCannotOverwriteAnotherStaffEdit()throws Exception{
         long id=order(customer,false);var pool=Executors.newFixedThreadPool(2);var gate=new CountDownLatch(1);
         try{var a=pool.submit(()->noteAfter(gate,id,admin,"Ghi chú A"));var b=pool.submit(()->noteAfter(gate,id,staff,"Ghi chú B"));gate.countDown();var statuses=new ArrayList<>(List.of(a.get(20,TimeUnit.SECONDS),b.get(20,TimeUnit.SECONDS)));Collections.sort(statuses);assertEquals(List.of(200,409),statuses);assertEquals(1,count("audit_logs"));assertEquals(1,count("order_status_history"));}finally{pool.shutdownNow();}

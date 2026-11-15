@@ -12,7 +12,7 @@ npm ci
 npm run dev
 ```
 
-Mở `http://127.0.0.1:5173/cart`, `/login`, `/checkout`, `/orders`, `/orders/:id`, `/admin/orders`, `/admin/orders/:id` hoặc `/admin/coupons`. Vite chuyển tiếp `/api` đến backend; luôn gọi API với cookie phiên và CSRF. Không cấu hình token/password trong frontend. Dùng tài khoản thật hoặc dữ liệu test cô lập do backend cung cấp; frontend không tạo tài khoản, sản phẩm hay kho.
+Mở `http://127.0.0.1:5173/cart`, `/login`, `/checkout`, `/orders`, `/orders/:id`, `/admin/orders`, `/admin/orders/:id`, `/admin/coupons`, `/admin/inventory/receipts`, `/admin/inventory/operations`, `/admin/inventory/dispatch` hoặc `/admin/inventory/shipments`. Vite chuyển tiếp `/api` đến backend; luôn gọi API với cookie phiên và CSRF. Không cấu hình token/password trong frontend. Dùng tài khoản thật hoặc dữ liệu test cô lập do backend cung cấp; frontend không tạo tài khoản, sản phẩm hay kho. Các trang kho dành cho STAFF/ADMIN; hợp đồng API ở `docs/api/TV4_INVENTORY_RECEIPTS.md`, `docs/api/TV4_STOCK_OPERATIONS.md`, `docs/api/TV4_ORDER_DISPATCH.md` và `docs/api/TV4_SHIPMENT_LIFECYCLE.md`.
 
 Nếu npm báo lỗi chứng chỉ trên Windows có chứng chỉ doanh nghiệp, có thể dùng kho chứng chỉ hệ điều hành của Node:
 
@@ -47,12 +47,13 @@ Build nằm trong `dist/`. Khi triển khai cần cùng origin, reverse proxy `/
 ## Bằng chứng kiểm thử frontend
 
 - RED trước implementation: 13 test fail (thiếu màn hình, session/CSRF client, định dạng tiền và UTC).
-- GREEN: `npm test` chạy 55 test/5 file. Ngoài 37 test đã có, TV3-07 đã chạy RED 18 test trước implementation rồi GREEN: staff guard/login return, tìm/lọc/phân trang, khách lịch sử, snapshot/lắp đặt, allowed/blocked transitions, lý do/xác nhận hủy, stale status và ghi chú nội bộ xung đột/giữ bản nháp/đối chiếu rõ ràng. Các test TV3-01 đến TV3-06 vẫn pass.
+- GREEN sau khi ghép TV4: `npm test` chạy 67 test/10 file. Gồm 55 test TV3, 4 test kho/vận đơn được ghép và 8 test tích hợp staff guard/login return cho bốn trang kho. TV3-07 đã chạy RED 18 test trước implementation rồi GREEN; khi ghép, đã thấy RED cho bốn đường dẫn đăng nhập lại trước khi mở rộng whitelist. Các test giỏ/checkout/đơn/coupon và kho/vận đơn vẫn pass.
 - `npm run build`: pass. `npm audit`: 0 lỗ hổng sau khi ghim phiên bản đã vá.
 - Component test chỉ thay thế biên HTTP; không chứng minh transaction, quyền sở hữu hoặc MariaDB. Trên môi trường Windows Codex này Vitest cần chạy ngoài sandbox do sandbox chặn rename tệp tạm (`EPERM`).
 - Smoke qua proxy Vite thật tới Java/MariaDB cô lập `furniture_shop_tv3_dev`: `/api/session` trả guest, `/api/cart` trả giỏ rỗng/VND và catalog trả 3 SKU đã seed, giá có kiểu chuỗi. Chỉ kiểm tra đọc qua HTTP, không thay thế E2E browser.
 - E2E thực tế: `npm run test:e2e` qua Playwright dùng Chrome đã cài (`channel: chrome`), backend Java và MariaDB demo thật. Bốn test pass, gồm ba luồng giỏ/coupon/checkout đã có và TV3-07: khách tạo đơn → admin tìm/lọc/xem → sửa ghi chú riêng → xác nhận → xử lý → thấy lý do chưa thể hoàn thành → hủy có xác nhận. Kiểm tra thêm API/UI của khách không có ghi chú nội bộ. Đơn do test tạo được hủy để giải phóng giữ hàng; không hard-delete. Desktop 1440px và mobile 390px không tràn ngang, không có pageerror. Ảnh trong `test-results/` (Git bỏ qua) đã xem trực tiếp; quản trị dùng `tv3-admin-orders-{desktop,mobile}.png`, `tv3-admin-order-{desktop,mobile}.png`.
 - E2E chỉ chạy mutation sau khi `/api/commerce/runtime` xác nhận DB cô lập. Cần đặt `TV3_DEMO_PASSWORD` qua environment và khởi chạy backend/Vite trước; checkout mặc định `tv3.customer` (`TV3_CHECKOUT_USER`), admin mặc định `tv3.admin` (`TV3_ADMIN_USER`). Test không tự sinh người dùng, không dùng DB production. Retry mạng/đổi quote/xung đột note được kiểm ở component HTTP boundary; E2E không mô phỏng mất phản hồi hay hai nhân viên sửa đồng thời. Gateway, xác minh khoản thu và thực thi hoàn tiền thuộc task sau.
+- Sau khi ghép frontend TV4, kiểm tra bố cục Chrome riêng với HTTP read-only thay thế ở biên test: đủ tám link nhân viên tại 1440/1024/768/390/375px, không tràn ngang. Đã thấy lỗi tràn 1024px trước khi sửa grid. Ảnh header desktop/mobile `staff-navigation-1440.png`, `staff-navigation-390.png` trong `test-results/` đã xem trực tiếp. Đây là kiểm tra bố cục, chưa thay thế việc chạy lại E2E với backend đã ghép và migration mới.
 
 Tài liệu thư viện đã đối chiếu: [Vite](https://vite.dev/guide/), [React Router](https://reactrouter.com/start/declarative/installation), [Vitest](https://vitest.dev/guide/) và metadata/audit từ npm registry chính thức. Các phiên bản đã khóa trong `package-lock.json`.
 

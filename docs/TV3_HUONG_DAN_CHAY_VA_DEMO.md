@@ -35,7 +35,7 @@ python scripts/tv3_database.py seed --database furniture_shop_tv3_dev
 Remove-Item Env:TV3_DEMO_PASSWORD
 ```
 
-`create` cố ý thất bại nếu DB đã tồn tại; không xóa/ghi đè DB. DB mới gồm45 bảng V001 và V002/V003 thêm request fingerprint/lựa chọn lắp đặt. DB demo đã có cần chạy `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev` trước khi chạy bản mới. Seed tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU và tồn MAIN; mật khẩu lấy từ environment và hash bằng BCrypt, không in ra. Không dùng chung mật khẩu tài khoản thật. Script từ chối database `furniture_shop` chính.
+`create` cố ý thất bại nếu DB đã tồn tại; không xóa/ghi đè DB. DB mới gồm45 bảng V001 và V002–V005 thêm request fingerprint/lựa chọn lắp đặt. DB demo đã có cần chạy `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev` trước khi chạy bản mới. Seed tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU và tồn MAIN; mật khẩu lấy từ environment và hash bằng BCrypt, không in ra. Không dùng chung mật khẩu tài khoản thật. Script từ chối database `furniture_shop` chính.
 
 Khi DB demo trên máy đã được chuẩn bị, không cần tạo lại. Có thể đặt lại mật khẩu demo bằng cách chạy `seed` với environment do bạn chọn. Script chỉ chấp nhận `furniture_shop_tv3_dev` hoặc `furniture_shop_test_*`.
 
@@ -66,7 +66,7 @@ Phí mặc định là chính sách demo cấu hình ở server: giao50.000đ, m
 
 Giữ hàng/coupon chưa có tự động hết hạn (Task11): tồn giữ chỉ được trả qua hủy hoặc fulfillment TV4, không bỏ qua reservation khi chỉ hết timestamp. Khi mất kết nối lúc đặt, frontend lưu request/key theo user trong sessionStorage để gửi lại đúng nội dung, kể cả sau tải lại trang. Không sửa nội dung hoặc tạo key mới để retry một kết quả chưa rõ.
 
-Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy lần lượt `docs/database/V002__orders_request_fingerprint.sql` và `V003__orders_assembly_requested.sql`. V003 backfill đơn cũ đã thu phí lắp thành có chọn dịch vụ; đơn mới lưu lựa chọn kể cả phí0. Không xóa lịch sử và không chạy lại V001 trên database đã tồn tại.
+Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy lần lượt `docs/database/V002__orders_request_fingerprint.sql`, `V003__shipments_idempotency.sql`, `V004__shipment_audit_index.sql`, `V005__orders_assembly_requested.sql`. V003/V004 hỗ trợ xuất kho/vận đơn TV4; V005 backfill đơn cũ đã thu phí lắp thành có chọn dịch vụ và lưu lựa chọn mới kể cả phí0. Không xóa lịch sử và không chạy lại V001 trên database đã tồn tại.
 
 ## Quản trị đơn hàng TV3-07
 
@@ -77,6 +77,8 @@ Luồng trạng thái: Chờ xác nhận → Đã xác nhận → Đang xử lý
 Hoàn thành cần đủ khoản thu thực sau khi trừ khoản hoàn đang chờ/đã hoàn, giao đủ số lượng, reservation đã xuất hết, movement xuất kho đúng và hoàn tất lắp đặt đã chọn. Nếu thiếu, UI hiển thị lý do và server từ chối chuyển. Màn hình này không có nút giả lập đã thu tiền/đã giao hàng; TV3-08 và TV4 cung cấp bằng chứng đó sau.
 
 Ghi chú nội bộ chỉ nhân viên đọc được, không xuất hiện trong lịch sử khách. Thông báo chuyển trạng thái/lý do hủy là nội dung khách nhìn thấy. Khi ghi chú bị sửa đồng thời, bản nháp được giữ; đọc bản mới rồi quyết định lưu lại, không ghi đè im lặng.
+
+Phần kho/giao hàng TV4 đã được ghép cùng: `/admin/inventory/receipts` (nhập kho), `/admin/inventory/operations` (điều chỉnh/chuyển kho), `/admin/inventory/dispatch` (xuất hàng đã giữ), `/admin/inventory/shipments` (kết quả giao/hoàn về kho). Xem các contract TV4 trong `docs/api/`. Giao đủ hàng chỉ tự hoàn tất đơn khi cùng chính sách TV3-07 xác nhận đủ thu tiền, số lượng và lắp đặt; COD chưa thu vẫn ở Đang xử lý.
 
 Nếu máy Windows có CA doanh nghiệp và gặp lỗi chứng chỉ npm, có thể đặt `NODE_OPTIONS=--use-system-ca` tạm thời. Maven có thể dùng truststore Windows `-Djavax.net.ssl.trustStoreType=Windows-ROOT -Djavax.net.ssl.trustStore=NONE` trong MAVEN_OPTS. Không tắt xác minh TLS; không cần thay truststore máy lâu dài.
 

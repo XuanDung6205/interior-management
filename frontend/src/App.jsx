@@ -6,6 +6,10 @@ import { ErrorNotice, Icon, Loading } from './components/ui';
 import CartPage from './features/cart/CartPage';
 import LoginPage from './features/auth/LoginPage';
 import CouponAdminPage from './features/promotions/CouponAdminPage';
+import InventoryReceiptPage from './features/inventory/InventoryReceiptPage';
+import StockOperationsPage from './features/inventory/StockOperationsPage';
+import OrderDispatchPage from './features/inventory/OrderDispatchPage';
+import ShipmentLifecyclePage from './features/inventory/ShipmentLifecyclePage';
 import CheckoutPage from './features/checkout/CheckoutPage';
 import OrdersPage from './features/orders/OrdersPage';
 import OrderDetailPage from './features/orders/OrderDetailPage';
@@ -35,7 +39,7 @@ export default function App() {
     api.request('/session').then(value => { if (active) setSession(value); }).catch(value => { if (active) setError(value); });
     return () => { active = false; };
   }, [api, revision]);
-  useEffect(() => { document.title = `${location.pathname.startsWith('/admin/orders') ? 'Quản lý đơn hàng' : location.pathname.startsWith('/admin/coupons') ? 'Quản lý ưu đãi' : location.pathname === '/login' ? 'Đăng nhập' : location.pathname === '/checkout' ? 'Đặt hàng' : location.pathname.startsWith('/orders') ? 'Đơn hàng' : 'Giỏ hàng'} · Nếp Nhà`; }, [location.pathname]);
+  useEffect(() => { document.title = `${location.pathname.startsWith('/admin/orders') ? 'Quản lý đơn hàng' : location.pathname.startsWith('/admin/inventory/shipments') ? 'Theo dõi vận đơn' : location.pathname.startsWith('/admin/inventory/dispatch') ? 'Xuất kho giao hàng' : location.pathname.startsWith('/admin/inventory/operations') ? 'Điều chỉnh và chuyển kho' : location.pathname.startsWith('/admin/inventory/receipts') ? 'Nhập kho' : location.pathname.startsWith('/admin/coupons') ? 'Quản lý ưu đãi' : location.pathname === '/login' ? 'Đăng nhập' : location.pathname === '/checkout' ? 'Đặt hàng' : location.pathname.startsWith('/orders') ? 'Đơn hàng' : 'Giỏ hàng'} · Nếp Nhà`; }, [location.pathname]);
   const isStaff = session?.user?.roles?.some(role => role === 'STAFF' || role === 'ADMIN');
   async function logout() {
     setBusy(true); setError(null);
@@ -48,7 +52,7 @@ export default function App() {
     <div className="announcement">Một chút tinh tế. Một tổ ấm riêng bạn.</div>
     <header className="site-header"><div className="header-inner">
       <Link to="/cart" className="brand" aria-label="Nếp Nhà — Trang giỏ hàng"><span className="brand-mark"><Icon name="leaf" size={27} /></span><span>Nếp Nhà<small>NỘI THẤT & KHÔNG GIAN SỐNG</small></span></Link>
-      <nav className={isStaff ? 'main-nav staff-nav' : 'main-nav'} aria-label="Điều hướng chính"><NavLink to="/cart"><Icon name="bag" />Giỏ hàng</NavLink>{session?.authenticated && <NavLink to="/orders"><Icon name="orders" />Đơn hàng</NavLink>}{isStaff && <><NavLink to="/admin/orders"><Icon name="shield" />Quản lý đơn hàng</NavLink><NavLink to="/admin/coupons"><Icon name="ticket" />Quản lý ưu đãi</NavLink></>}</nav>
+      <nav className={isStaff ? 'main-nav staff-nav' : 'main-nav'} aria-label="Điều hướng chính"><NavLink to="/cart"><Icon name="bag" />Giỏ hàng</NavLink>{session?.authenticated && <NavLink to="/orders"><Icon name="orders" />Đơn hàng</NavLink>}{isStaff && <><NavLink to="/admin/orders"><Icon name="shield" />Quản lý đơn hàng</NavLink><NavLink to="/admin/coupons"><Icon name="ticket" />Quản lý ưu đãi</NavLink><NavLink to="/admin/inventory/receipts"><Icon name="box" />Nhập kho</NavLink><NavLink to="/admin/inventory/operations"><Icon name="box" />Điều chuyển</NavLink><NavLink to="/admin/inventory/dispatch"><Icon name="orders" />Xuất kho</NavLink><NavLink to="/admin/inventory/shipments"><Icon name="orders" />Vận đơn</NavLink></>}</nav>
       <div className="account-nav">{session?.authenticated ? <><span className="account-name"><Icon name="user" />{session.user.fullName || session.user.username}</span><button className="text-button" disabled={busy} onClick={logout}>{busy ? 'Đang thoát…' : 'Đăng xuất'}</button></> : <NavLink to="/login" className="login-link"><Icon name="user" />Đăng nhập</NavLink>}</div>
     </div></header>
     <main id="main" className="page-shell" tabIndex="-1">
@@ -62,6 +66,10 @@ export default function App() {
         <Route path="/admin/coupons" element={<StaffPage isStaff={isStaff}><CouponAdminPage key={session.user?.id ?? 'guest'} /></StaffPage>} />
         <Route path="/admin/orders" element={<StaffPage isStaff={isStaff}><OrderAdminPage key={session.user?.id ?? 'guest'} /></StaffPage>} />
         <Route path="/admin/orders/:id" element={<StaffPage isStaff={isStaff}><OrderAdminDetailPage key={`${session.user?.id ?? 'guest'}-${location.pathname}`} /></StaffPage>} />
+        <Route path="/admin/inventory/receipts" element={<StaffPage isStaff={isStaff}><InventoryReceiptPage key={session.user?.id ?? 'guest'} /></StaffPage>} />
+        <Route path="/admin/inventory/operations" element={<StaffPage isStaff={isStaff}><StockOperationsPage key={session.user?.id ?? 'guest'} /></StaffPage>} />
+        <Route path="/admin/inventory/dispatch" element={<StaffPage isStaff={isStaff}><OrderDispatchPage key={session.user?.id ?? 'guest'} /></StaffPage>} />
+        <Route path="/admin/inventory/shipments" element={<StaffPage isStaff={isStaff}><ShipmentLifecyclePage key={session.user?.id ?? 'guest'} /></StaffPage>} />
         <Route path="/" element={<Navigate to="/cart" replace />} />
         <Route path="*" element={<section className="access-state panel"><h1>Chưa tìm thấy trang này</h1><Link to="/cart" className="button">Về giỏ hàng</Link></section>} />
       </Routes>}

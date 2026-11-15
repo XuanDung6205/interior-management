@@ -24,4 +24,4 @@ Lock order: owner and actor users sorted by ID → order root → coupon → pay
 
 OrderAuditPort.append(long actorId,long orderId,String action,Map<String,Object> before,Map<String,Object> after) joins existing transaction (MANDATORY); local JDBC adapter appends audit_logs with actor name snapshot/server-generated request ID and explicit UTC created_at using the application's Clock (not the database's local-time default). Replace this adapter with TV1's service later; no duplicate audit table/module.
 
-V003 adds orders.assembly_requested, backfills charged historical assembly orders true and preserves other snapshots. Checkout writes the selected service even for free assembly. V001/V002 remain immutable; migrate script applies V002 then V003 for isolated schemas. Local main/demo migrations are additive only.
+V005 adds orders.assembly_requested, backfills charged historical assembly orders true and preserves other snapshots. Checkout writes the selected service even for free assembly. V001/V002 remain immutable; migrate script applies V002 then V005 for isolated schemas. Local main/demo migrations are additive only.
