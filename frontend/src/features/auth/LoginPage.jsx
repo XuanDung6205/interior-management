@@ -12,7 +12,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const requested = location.state?.returnTo;
-  const returnTo = typeof requested === 'string' && /^\/(?:checkout|orders(?:\/\d+)?|admin\/(?:orders(?:\/\d+)?|coupons|inventory\/(?:receipts|operations|dispatch|shipments)))(?:\?.*)?$/.test(requested) ? requested : '/cart';
+  const returnTo = typeof requested === 'string' && /^\/(?:checkout|orders(?:\/\d+(?:\/payments)?)?|admin\/(?:(?:orders|payments)(?:\/\d+)?|coupons|inventory\/(?:receipts|operations|dispatch|shipments)))(?:\?.*)?$/.test(requested) ? requested : '/cart';
   async function merge() {
     try { await api.mergeCart(); navigate(returnTo); }
     catch (value) { setMergeError(value); }

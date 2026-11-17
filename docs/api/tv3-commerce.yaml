@@ -1,10 +1,8 @@
 openapi: 3.0.3
 info:
   title: TV3 Furniture Commerce API
-  version: 1.2.0
-  description: 'TV3-01–07: session/CSRF, cart/coupons, checkout, customer orders and staff order administration with audited
-    forward lifecycle, private optimistic notes and persisted payment/fulfillment completion checks. Actual collection/gateway/refund
-    execution/expiry are subsequent tasks.'
+  version: 1.3.0
+  description: 'TV3-01–08: session/CSRF, cart/coupons, checkout, customer/staff orders and manually verified COD/bank collections. Gateway integration, refund execution and coordinated expiry remain subsequent tasks.'
 servers:
 - url: http://localhost:8080
   description: Local Spring Boot commerce runtime
@@ -16,6 +14,7 @@ tags:
 - name: Checkout
 - name: Orders
 - name: Order administration
+- name: Manual payments
 paths:
   /api/csrf:
     get:
@@ -1078,6 +1077,327 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/OrderInternalNoteRequest'
+  /api/orders/{id}/payments:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        format: int64
+    get:
+      operationId: getOwnedManualPayments
+      tags:
+      - Manual payments
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualPaymentSummary'
+        '400':
+          description: Invalid proof, attestation or filters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Resource missing or not owned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Payment state, proof allocation or idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      operationId: createManualPaymentAttempt
+      tags:
+      - Manual payments
+      security:
+      - cookieSession: []
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualPaymentSummary'
+        '400':
+          description: Invalid proof, attestation or filters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Resource missing or not owned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Payment state, proof allocation or idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      parameters:
+      - in: header
+        name: X-CSRF-TOKEN
+        required: true
+        schema:
+          type: string
+      - in: header
+        name: Idempotency-Key
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{8,64}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateManualPayment'
+      description: Checkout already creates PENDING. Retry only after terminal failure/expiry;
+        server amount and user-scoped persisted key. Exact order/method replay returns201
+        even after state changed. PAYMENT_PENDING_EXISTS, ORDER_NOT_PAYABLE, PAYMENT_NOT_REQUIRED,
+        ORDER_ALREADY_PAID, REFUND_RECONCILIATION_REQUIRED, PAYMENT_BANK_NOT_CONFIGURED,
+        IDEMPOTENCY_CONFLICT are definitive business conflicts; auth/network/429 are
+        not.
+  /api/admin/payments:
+    get:
+      operationId: listStaffManualPayments
+      tags:
+      - Manual payments
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualPaymentPage'
+        '400':
+          description: Invalid proof, attestation or filters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Resource missing or not owned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Payment state, proof allocation or idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      - in: query
+        name: size
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ''
+          - PENDING
+          - SUCCEEDED
+          - FAILED
+          - CANCELLED
+          - EXPIRED
+      - in: query
+        name: method
+        schema:
+          type: string
+          enum:
+          - ''
+          - COD
+          - BANK_TRANSFER
+          - GATEWAY
+      - in: query
+        name: query
+        schema:
+          type: string
+          maxLength: 150
+      description: STAFF/ADMIN only. Literal search, stable createdAt/id descending;
+        batched page reads.
+  /api/admin/payments/{id}:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        format: int64
+    get:
+      operationId: getStaffManualPayment
+      tags:
+      - Manual payments
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffManualPaymentSummary'
+        '400':
+          description: Invalid proof, attestation or filters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Resource missing or not owned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Payment state, proof allocation or idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/admin/payments/{id}/confirm:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        format: int64
+    post:
+      operationId: confirmManualPaymentReceipt
+      tags:
+      - Manual payments
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffManualPaymentSummary'
+        '400':
+          description: Invalid proof, attestation or filters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Resource missing or not owned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Payment state, proof allocation or idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      parameters:
+      - in: header
+        name: X-CSRF-TOKEN
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmManualPayment'
+      description: Only COD/MANUAL_BANK. PAYMENT_EXCEEDS_BALANCE and PAYMENT_REFERENCE_IN_USE
+        require manual reconciliation; PAYMENT_ALREADY_CONFIRMED rejects changed proof.
+        Existing expired active attempts cannot confirm. Update, coupon, late refund,
+        audit and optional shared order completion are atomic; no gateway calls.
 components:
   securitySchemes:
     cookieSession:
@@ -1855,3 +2175,246 @@ components:
       - expectedInternalNote
       description: Expected note is the exact prior value, including whitespace for imported notes. Stale edit409 INTERNAL_NOTE_CHANGED.
         Internal note never appears in public customer history.
+    ManualPayment:
+      type: object
+      required:
+      - id
+      - orderId
+      - method
+      - provider
+      - status
+      - amount
+      - currency
+      - isExpired
+      properties:
+        id:
+          type: integer
+          format: int64
+        orderId:
+          type: integer
+          format: int64
+        method:
+          type: string
+          enum:
+          - COD
+          - BANK_TRANSFER
+          - GATEWAY
+        provider:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - SUCCEEDED
+          - FAILED
+          - CANCELLED
+          - EXPIRED
+        amount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '2050000.00'
+        currency:
+          type: string
+        reference:
+          type: string
+          nullable: true
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        isExpired:
+          type: boolean
+    StaffManualPayment:
+      allOf:
+      - $ref: '#/components/schemas/ManualPayment'
+      - type: object
+        properties:
+          confirmationNote:
+            type: string
+            nullable: true
+          verifiedBy:
+            type: object
+            nullable: true
+            properties:
+              id:
+                type: integer
+                format: int64
+              fullName:
+                type: string
+                nullable: true
+          canConfirm:
+            type: boolean
+          confirmationMessage:
+            type: string
+            nullable: true
+          isLateCollection:
+            type: boolean
+    ManualBankInstructions:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum:
+          - UNCONFIGURED
+          - DEMO
+          - MANUAL
+        configured:
+          type: boolean
+        isDemo:
+          type: boolean
+        notice:
+          type: string
+        bankName:
+          type: string
+          nullable: true
+        accountNumber:
+          type: string
+          nullable: true
+        accountHolder:
+          type: string
+          nullable: true
+        transferContent:
+          type: string
+      description: DEMO is clearly fictitious and limited to isolated TV3 schemas; no
+        real funds or bank sandbox. MANUAL validates formatting only. No bank API or external
+        QR.
+    ManualPaymentSummary:
+      type: object
+      properties:
+        orderId:
+          type: integer
+          format: int64
+        orderNumber:
+          type: string
+        orderStatus:
+          type: string
+        currency:
+          type: string
+        totalAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '2050000.00'
+        collectedAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '2050000.00'
+        pendingRefundAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '2050000.00'
+        refundedAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '2050000.00'
+        netCollectedAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '2050000.00'
+        remainingAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '2050000.00'
+        canCreate:
+          type: boolean
+        createBlockReason:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ManualPayment'
+        bankTransfer:
+          $ref: '#/components/schemas/ManualBankInstructions'
+      description: Gross SUCCEEDED collections cap the original receivable. Refunds never
+        reopen it; pending refund is not completed repayment. Customer items never contain
+        private verification fields.
+    StaffManualPaymentSummary:
+      allOf:
+      - $ref: '#/components/schemas/ManualPaymentSummary'
+      - type: object
+        properties:
+          selectedPaymentId:
+            type: integer
+            format: int64
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/StaffManualPayment'
+    ManualPaymentPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/StaffManualPayment'
+            - type: object
+              properties:
+                orderNumber:
+                  type: string
+                orderStatus:
+                  type: string
+                customer:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: int64
+                      nullable: true
+                    username:
+                      type: string
+                      nullable: true
+                    fullName:
+                      type: string
+                      nullable: true
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 0
+        totalElements:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+    CreateManualPayment:
+      type: object
+      required:
+      - method
+      properties:
+        method:
+          type: string
+          enum:
+          - COD
+          - BANK_TRANSFER
+    ConfirmManualPayment:
+      type: object
+      required:
+      - reference
+      - acknowledged
+      properties:
+        reference:
+          type: string
+          pattern: ^[A-Za-z0-9._:/-]{6,150}$
+        note:
+          type: string
+          nullable: true
+          maxLength: 1000
+        acknowledged:
+          type: boolean
+          enum:
+          - true
+      description: Staff attests actual receipt reconciliation. Amount, verifier and UTC
+        verification time are server-owned. Exact normalized reference/note replays without
+        new audit; changed proof conflicts. Cancelled-order late collection queues a durable
+        pending refund without resurrecting fulfillment.

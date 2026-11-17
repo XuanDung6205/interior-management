@@ -25,7 +25,16 @@ export function createApiClient(fetcher = (...args) => fetch(...args)) {
       if (error.name === 'AbortError') throw error;
       throw new ApiError(0, { code: 'NETWORK_ERROR', message: 'Chưa kết nối được máy chủ. Kiểm tra kết nối và thử lại.' });
     }
-    const data = response.status === 204 ? null : await response.json().catch(() => null);
+    let data = null;
+    if (response.status !== 204) {
+      try { data = await response.json(); }
+      catch (error) {
+        if (error.name === 'AbortError') throw error;
+        // Headers can arrive after a mutation commits, while its body is lost.
+        // Keep this outcome uncertain so callers retain the original key/proof.
+        if (response.ok) throw new ApiError(response.status, { code: 'INVALID_RESPONSE', message: 'Chưa đọc được phản hồi từ máy chủ. Giữ nguyên yêu cầu đã gửi và thử lại để kiểm tra kết quả.' });
+      }
+    }
     if (!response.ok) {
       if (response.status === 403) csrf = undefined;
       throw new ApiError(response.status, data);

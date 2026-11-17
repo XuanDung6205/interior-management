@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Statement;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -108,9 +109,13 @@ public class OrderDispatchService {
             throw CommerceException.conflict("ORDER_NOT_DISPATCHABLE", "Đơn không ở trạng thái có thể xuất kho.");
         }
         if (order.couponId() != null) jdbc.queryForList("SELECT id FROM coupons WHERE id=? FOR UPDATE", Long.class, order.couponId());
-        var payments = jdbc.query("SELECT method,status FROM payments WHERE order_id=? ORDER BY id FOR UPDATE",
-                (rs, row) -> Map.entry(rs.getString(1), rs.getString(2)), orderId);
-        if (payments.stream().anyMatch(payment -> !"COD".equals(payment.getKey()) && !"SUCCEEDED".equals(payment.getValue()))) {
+        jdbc.queryForList("SELECT id FROM payments WHERE order_id=? ORDER BY id FOR UPDATE",Long.class,orderId);
+        // Historical failures remain evidence, not unpaid obligations. Dispatch needs
+        // collected money or a live COD receivable covering the remaining original total.
+        var paymentCheckedAt=LocalDateTime.ofInstant(clock.instant(),ZoneOffset.UTC);
+        BigDecimal covered=jdbc.queryForObject("SELECT COALESCE(SUM(CASE WHEN status='SUCCEEDED' OR (method='COD' AND provider='COD' AND status='PENDING' AND (expires_at IS NULL OR expires_at>?)) THEN amount ELSE 0 END),0) FROM payments WHERE order_id=?",BigDecimal.class,paymentCheckedAt,orderId);
+        BigDecimal total=jdbc.queryForObject("SELECT grand_total FROM orders WHERE id=?",BigDecimal.class,orderId);
+        if (covered.compareTo(total)<0) {
             throw CommerceException.conflict("PAYMENT_UNVERIFIED", "Chưa xác minh thanh toán để xuất kho.");
         }
         var warehouses = jdbc.query("SELECT id,is_active FROM warehouses ORDER BY id LOCK IN SHARE MODE",
