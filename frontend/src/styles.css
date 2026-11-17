@@ -874,3 +874,17 @@ input[type='radio'] { accent-color: var(--teal); width: 18px; height: 18px; min-
   *, *:before, *:after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
   html { scroll-behavior: auto; }
 }
+.refund-create .form-field { margin-bottom: 22px; }
+.refund-create input, .refund-create select, .refund-create textarea { width: 100%; min-width: 0; }
+.refund-create label, .refund-cancel-form label { display: block; margin-bottom: 8px; }
+.refund-cancel-form { margin-top: 32px; padding-top: 28px; border-top: 1px solid var(--line); }
+.refund-cancel-form .checkbox-label { display: flex; }
+.refund-text, .refund-budget, .refund-create .notice { overflow-wrap: anywhere; }
+.refund-budget + .refund-budget { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 20px; }
+.refund-budget h3 { font-size: 14px; }
+.refund-create .small { line-height: 1.6; }
+@media (max-width: 560px) {
+  .refund-create input, .refund-create select, .refund-create textarea { font-size: 16px; }
+  .refund-create .actions { flex-wrap: wrap; }
+  .refund-create .actions .button { width: 100%; }
+}

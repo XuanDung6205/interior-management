@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "startedAtUtc": "2026-11-17T16:21:29.693137+00:00",
+  "endedAtUtc": "2026-11-17T16:21:33.461915+00:00",
+  "runtime": {
+    "application": "tv3-commerce",
+    "isolatedData": true,
+    "baseUrl": "http://127.0.0.1:8080"
+  },
+  "configuration": {
+    "workers": 2,
+    "sessionsPerWorker": 2,
+    "roundsPerWorker": 20,
+    "page": 0,
+    "pageSize": 10,
+    "thinkTimePerRequestMs": 25.0,
+    "timeoutSeconds": 10,
+    "scheduler": "Commerce scheduling not enabled; no expiry/reconciliation jobs running.",
+    "databasePool": "Hikari datasource present; pool utilization and connection timings are not instrumented or measured.",
+    "schedule": "closed loop; four fixed GETs in order per worker; no retry",
+    "warmup": {
+      "roundsPerWorker": 2,
+      "excludedRequests": 16,
+      "cacheState": "uncontrolled; no flush or cold-cache claim"
+    },
+    "measurementWindow": "After refund integration suite finished; root paused Maven and requested frontend author hold E2E/unit/build. Frontend author subsequently reported a focused Vitest run had already started before the hold notice, so overlap during these 160 requests is possible. Spring devtools, Vite and IDE remained running on the same laptop. This was not a confirmed quiet window; contention was uncontrolled."
+  },
+  "machine": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.14.3",
+    "logicalCpus": 16,
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel"
+  },
+  "dataset": {
+    "before": {
+      "cart": {
+        "itemCount": 0,
+        "lines": 0
+      },
+      "customerOrders": {
+        "totalElements": 23,
+        "page": 0,
+        "size": 10
+      },
+      "adminOrders": {
+        "totalElements": 23,
+        "page": 0,
+        "size": 10
+      },
+      "adminPayments": {
+        "totalElements": 23,
+        "page": 0,
+        "size": 10
+      }
+    },
+    "after": {
+      "cart": {
+        "itemCount": 0,
+        "lines": 0
+      },
+      "customerOrders": {
+        "totalElements": 23,
+        "page": 0,
+        "size": 10
+      },
+      "adminOrders": {
+        "totalElements": 23,
+        "page": 0,
+        "size": 10
+      },
+      "adminPayments": {
+        "totalElements": 23,
+        "page": 0,
+        "size": 10
+      }
+    },
+    "unchangedSummary": true,
+    "note": "Persistent isolated TV3 demo database: three furniture SKUs and retained cancelled E2E orders; no production data.",
+    "createdByHarness": false
+  },
+  "statistics": {
+    "percentileMethod": "nearest rank; all attempted requests including failures",
+    "latencyScope": "client wall time including HTTP connection/read/JSON; excludes think time",
+    "throughputScope": "count / shared measured wall seconds; includes think/scheduling",
+    "setupExcluded": "runtime checks, logins, dataset snapshots and warmup",
+    "measuredSeconds": 3.726794
+  },
+  "endpoints": {
+    "cart": {
+      "method": "GET",
+      "path": "/api/cart",
+      "count": 40,
+      "successes": 40,
+      "errors": 0,
+      "errorKinds": {},
+      "p50Ms": 14.203,
+      "p95Ms": 39.092,
+      "maxMs": 49.447,
+      "requestsPerSecond": 10.733
+    },
+    "customerOrders": {
+      "method": "GET",
+      "path": "/api/orders?page=0&size=10",
+      "count": 40,
+      "successes": 40,
+      "errors": 0,
+      "errorKinds": {},
+      "p50Ms": 14.812,
+      "p95Ms": 39.069,
+      "maxMs": 41.761,
+      "requestsPerSecond": 10.733
+    },
+    "adminOrders": {
+      "method": "GET",
+      "path": "/api/admin/orders?page=0&size=10",
+      "count": 40,
+      "successes": 40,
+      "errors": 0,
+      "errorKinds": {},
+      "p50Ms": 15.031,
+      "p95Ms": 37.497,
+      "maxMs": 90.437,
+      "requestsPerSecond": 10.733
+    },
+    "adminPayments": {
+      "method": "GET",
+      "path": "/api/admin/payments?page=0&size=10",
+      "count": 40,
+      "successes": 40,
+      "errors": 0,
+      "errorKinds": {},
+      "p50Ms": 19.0,
+      "p95Ms": 45.743,
+      "maxMs": 48.139,
+      "requestsPerSecond": 10.733
+    }
+  },
+  "overall": {
+    "count": 160,
+    "successes": 160,
+    "errors": 0,
+    "errorKinds": {},
+    "p50Ms": 16.345,
+    "p95Ms": 39.521,
+    "maxMs": 90.437,
+    "requestsPerSecond": 42.932
+  },
+  "limitations": [
+    "Small existing isolated dataset; not production capacity evidence.",
+    "No business writes, provider calls, Redis test, SQL timing or pool telemetry.",
+    "Session login is the only POST; separate cookie jars per worker and role."
+  ]
+}

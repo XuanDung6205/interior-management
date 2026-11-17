@@ -170,6 +170,8 @@
 - [ ] React quản trị: số đã thu/đã hoàn/đang chờ/còn được hoàn, chọn số tiền và lý do, lịch sử trạng thái. Có đường MANUAL được ghi nhận/xác minh đúng; không ghi SUCCEEDED chỉ vì nhân viên bấm gửi yêu cầu online.
 - [ ] Nghiệm thu: cả hoàn toàn phần/một phần có đối soát; payment gốc giữ lịch sử thu thành công; không tự cập nhật kho khi hoàn tiền.
 
+Phần độc lập sandbox đã triển khai TV3-10 MANUAL (2026-11-17): API/React tạo yêu cầu từng phần/toàn phần, giữ ngân sách PENDING, xác minh chứng từ đã hoàn, hủy yêu cầu chưa gửi và lập thay thế; replay key/proof, chống tranh chấp/vượt hạn mức, audit riêng, không lộ ghi chú. Đọc phiếu TV4 đã duyệt/thực nhận bằng fixture integration. Phần online/refund gateway và đối soát provider vẫn chưa hoàn thành; không tick toàn bộ Task10 như đã xong.
+
 ## TV3-11 — Job hết hạn, thông báo và hiệu năng
 
 **Files:** `commerce/order/OrderExpiryJob.java`, `commerce/payment/PaymentReconciliationJob.java`, handler thông báo; cấu hình/scheduler/outbox nền phối hợp TV1. Kịch bản tải đặt dưới `tests/performance/tv3/` theo công cụ nhóm thống nhất.
@@ -179,6 +181,8 @@
 - [ ] Phân trang/projection/fetch có chủ đích cho đơn/admin; kiểm tra EXPLAIN theo truy vấn đo được. Không cache quyết định tiền, tồn, coupon hoặc quyền; cache frontend không phải nguồn dữ liệu để đặt đơn.
 - [ ] Nghiệm thu: có số đo p95, lỗi, truy vấn và DB pool với cấu hình tải/máy/dataset ghi rõ; test Redis/provider lỗi. Không bịa số đo hoặc ghi tối ưu thành công chỉ vì thêm annotation/index.
 
+Đã có phần độc lập sandbox: harness GET có guard cô lập và EXPLAIN chỉ đọc tại tests/performance/tv3; báo cáo thực tế docs/performance/TV3_READ_PERFORMANCE_2026-11-17.md (160request/0lỗi/p95~39.5ms,8plan). Chưa có expiry/notification/reconciliation jobs, pool telemetry, Redis/provider-failure checks; baseline nhỏ không thay thế nghiệm thu toàn bộ Task11.
+
 ## TV3-12 — Kiểm thử xuyên suốt và bàn giao
 
 **Files:** test Java dưới `src/test/java/org/example/eshop/commerce/`, test React theo bộ công cụ TV1; E2E `frontend/e2e/tv3-commerce.spec.js`; hướng dẫn `docs/TV3_HUONG_DAN_CHAY_VA_DEMO.md`; contract/collection local không chứa secret.
@@ -187,6 +191,8 @@
 - [ ] Luồng lỗi: hết hàng, giá đổi, coupon hết lượt, gửi lại, truy cập đơn người khác, thu/hoàn thất bại hoặc timeout, callback lặp/trái thứ tự, hủy khi đã xuất giao.
 - [ ] Chạy backend/component/E2E/schema integration phù hợp; ghi chính xác test thực tế, test mock, test sandbox và phần chưa xác minh. Smoke test phải dùng schema mới với các module thực đã tích hợp, không chỉ legacy DB.
 - [ ] Bàn giao biến môi trường mẫu, dữ liệu demo, API contract/collection, ảnh/kịch bản demo và danh sách dependency còn cần nhóm xử lý. Không commit password, JWT secret hoặc khóa provider.
+
+Đã mở rộng phần manual Task12: Chrome thật chạy đủ6kịch bản qua API/MariaDB demo, thêm thu→hủy→hoàn thủ công, mất phản hồi/tải lại/replay và lịch sử khách không lộ ghi chú. OpenAPI1.4 gồm39operations, runbook/migrationV007/dictionary cập nhật. E2E online VNPAY, hoàn online và đổi trả TV4 thực tế vẫn chờ ghép; chưa coi toàn bộ Task12 hoàn tất.
 
 ## Điểm bắt đầu
 

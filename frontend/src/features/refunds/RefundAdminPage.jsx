@@ -1,0 +1,22 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ErrorNotice, Loading, Pager } from '../../components/ui';
+import { useCommerce } from '../../lib/session';
+import { formatDate, formatMoney } from '../../lib/format';
+import { refundApi, friendlyRefundError } from './refundApi';
+import { RefundNotice, RefundStatus, refundStatuses } from './RefundParts';
+
+export default function RefundAdminPage() {
+  const { api } = useCommerce(); const client = useMemo(() => refundApi(api), [api]); const [params, setParams] = useSearchParams();
+  const page = /^\d{1,9}$/.test(params.get('page') || '0') ? Number(params.get('page') || 0) : 0;
+  const status = Object.hasOwn(refundStatuses, params.get('status')) ? params.get('status') : ''; const query = (params.get('query') || '').slice(0, 150);
+  const [search, setSearch] = useState(query); const [data, setData] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(null); const [revision, setRevision] = useState(0);
+  useEffect(() => setSearch(query), [query]);
+  useEffect(() => {
+    const controller = new AbortController(); setLoading(true); setError(null);
+    client.list(page, status, query, controller.signal).then(value => { if (!controller.signal.aborted) setData(value); }).catch(failure => { if (!controller.signal.aborted && failure.name !== 'AbortError') setError(friendlyRefundError(failure)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [client, page, status, query, revision]);
+  const filter = changes => setParams({ page: '0', status, query, ...changes });
+  return <><div className="breadcrumb"><span>Quản trị</span><span>/</span><span>Hoàn tiền</span></div><div className="page-heading"><div><span className="eyebrow">ĐỐI SOÁT & CHỨNG TỪ</span><h1>Quản lý hoàn tiền<span className="heading-dot">.</span></h1><p>Đối chiếu riêng yêu cầu chờ, khoản đã hoàn và yêu cầu đã hủy.</p></div></div><RefundNotice /><section className="panel admin-payments-list"><div className="panel-heading payment-list-toolbar"><h2>Yêu cầu hoàn <span className="count-badge">{data?.totalElements ?? '—'}</span></h2><form className="search-form" onSubmit={event => { event.preventDefault(); filter({ query: search.trim() }); }}><label className="sr-only" htmlFor="refund-search">Tìm yêu cầu hoàn</label><input id="refund-search" type="search" maxLength={150} value={search} onChange={event => setSearch(event.target.value)} placeholder="Mã đơn, khách hoặc tham chiếu" /><button className="button secondary" disabled={loading}>Tìm kiếm</button></form><div className="payment-list-filter"><label htmlFor="refund-filter">Trạng thái hoàn tiền</label><select id="refund-filter" value={status} onChange={event => filter({ status: event.target.value })}><option value="">Tất cả trạng thái</option>{Object.entries(refundStatuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div></div><ErrorNotice error={error} onRetry={() => setRevision(value => value + 1)} />{error?.status === 401 && <Link className="inline-link" to="/login" state={{ returnTo: `/admin/refunds?${params}` }}>Đăng nhập lại để đối chiếu hoàn</Link>}{loading ? <Loading text="Đang tải yêu cầu hoàn…" /> : !error && data && (data.items.length ? data.items.map(item => <article className="payment-list-record" key={item.id}><div><span className="eyebrow">HOÀN #{item.id} · {formatDate(item.createdAt)}</span><h2>{item.orderNumber}</h2><p>{item.customer?.fullName || item.customer?.username || 'Khách không có tài khoản'}</p><Link className="inline-link" to={`/admin/orders/${item.orderId}/refunds`}>Ngân sách hoàn của đơn</Link></div><div><RefundStatus value={item.status} /><p className="refund-text">{item.reason}</p>{item.reference && <p className="receipt-reference">{item.reference}</p>}</div><div className="payment-list-amount"><strong>{formatMoney(item.amount)}</strong><Link className="button secondary" to={`/admin/refunds/${item.id}`} aria-label={`Đối chiếu hoàn ${item.id}`}>Xem & đối chiếu</Link></div></article>) : <div className="empty-state"><h2>Chưa có yêu cầu hoàn phù hợp</h2><p>Thử bộ lọc khác hoặc tìm theo mã đơn, khách và tham chiếu.</p></div>)}<Pager page={data} busy={loading} onChange={value => setParams({ page: String(value), status, query })} /></section></>;
+}

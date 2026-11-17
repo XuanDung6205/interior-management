@@ -66,7 +66,7 @@ Phí mặc định là chính sách demo cấu hình ở server: giao50.000đ, m
 
 Giữ hàng/coupon chưa có tự động hết hạn (Task11): tồn giữ chỉ được trả qua hủy hoặc fulfillment TV4, không bỏ qua reservation khi chỉ hết timestamp. Khi mất kết nối lúc đặt, frontend lưu request/key theo user trong sessionStorage để gửi lại đúng nội dung, kể cả sau tải lại trang. Không sửa nội dung hoặc tạo key mới để retry một kết quả chưa rõ.
 
-Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy lần lượt `docs/database/V002__orders_request_fingerprint.sql`, `V003__shipments_idempotency.sql`, `V004__shipment_audit_index.sql`, `V005__orders_assembly_requested.sql`, `V006__payments_confirmation_note.sql`. V003/V004 hỗ trợ xuất kho/vận đơn TV4; V005 backfill đơn cũ đã thu phí lắp thành có chọn dịch vụ và lưu lựa chọn mới kể cả phí0; V006 bổ sung ghi chú đối soát riêng cho nhân viên. Không xóa lịch sử và không chạy lại V001 trên database đã tồn tại.
+Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy lần lượt `docs/database/V002__orders_request_fingerprint.sql`, `V003__shipments_idempotency.sql`, `V004__shipment_audit_index.sql`, `V005__orders_assembly_requested.sql`, `V006__payments_confirmation_note.sql`, `V007__refunds_verification_notes.sql`. V003/V004 hỗ trợ xuất kho/vận đơn TV4; V005 backfill đơn cũ đã thu phí lắp thành có chọn dịch vụ và lưu lựa chọn mới kể cả phí0; V006/V007 bổ sung ghi chú đối soát riêng cho nhân viên. Không xóa lịch sử và không chạy lại V001 trên database đã tồn tại.
 
 ## Quản trị đơn hàng TV3-07
 
@@ -98,7 +98,7 @@ Integration API/MariaDB thật (database riêng, test sẽ xóa fixture bên tro
 ```powershell
 python scripts/tv3_database.py create --database furniture_shop_test_tv3_policy_local
 $env:TV3_TEST_DB_URL = 'jdbc:mariadb://localhost:3306/furniture_shop_test_tv3_policy_local'
-.\mvnw.cmd '-Dtest=CommerceDatabaseTest,CheckoutTransactionTest,CheckoutAdaptersTest,InventoryReservationTest,OrderLifecycleTest,OrderCompletionPolicyTest,PaymentConfirmationTest,OrderDispatchTest' test
+.\mvnw.cmd '-Dtest=CommerceDatabaseTest,CheckoutTransactionTest,CheckoutAdaptersTest,InventoryReservationTest,OrderLifecycleTest,OrderCompletionPolicyTest,PaymentConfirmationTest,ManualRefundTest,OrderDispatchTest' test
 Remove-Item Env:TV3_TEST_DB_URL
 ```
 
@@ -139,3 +139,23 @@ Mặc định `PAYMENT_BANK_MODE=UNCONFIGURED`, không công khai số tài kho�
 Đặt hàng đã tạo sẵn một khoản PENDING; khách không cần tạo lần thứ hai. Chỉ tạo lại khi lần trước đã FAILED/EXPIRED; PENDING quá timestamp vẫn chờ job phối hợp TV3-11 chuyển trạng thái. Tạo lại dùng số tiền server tính từ tổng đơn trừ khoản SUCCEEDED. Hoàn tiền không mở lại công nợ đơn cũ. Không có nút khách tự đánh dấu đã trả tiền.
 
 Nhân viên chỉ xác minh COD/MANUAL_BANK sau khi đối chiếu biên nhận/sao kê (trong demo dùng chứng từ minh họa). Số tiền, tài khoản nhân viên và thời gian UTC do server quyết định. Ghi chú đối soát không xuất hiện trong API khách. Nếu mất phản hồi, React giữ nguyên nội dung và gửi lại cùng bằng chứng; không đổi mã để thử thu lại. Mã biên nhận đã gắn khoản khác bị từ chối, khoản vượt công nợ cần đối soát thủ công. Cổng thanh toán/webhook là TV3-09, thực hiện hoàn tiền là TV3-10; TV3-08 không giả lập các giao dịch đó thành đã hoàn tất.
+
+## Hoàn tiền thủ công TV3-10 — không cần sandbox
+
+STAFF/ADMIN mở `/admin/refunds` để tìm/lọc yêu cầu. Có liên kết từ chi tiết đơn và khoản thu tới `/admin/orders/{id}/refunds`; chọn một yêu cầu để đối chiếu tại `/admin/refunds/{id}`. Nhân viên xem riêng số đã thu, đang giữ chờ hoàn, đã hoàn và ngân sách có thể đề nghị thêm. Khách chỉ xem lịch sử công khai, không được gọi API ghi hoàn tiền.
+
+Hủy đơn đã thu tạo sẵn PENDING, giữ ngân sách bằng số cần hoàn. Ứng dụng không chuyển tiền. Chỉ bấm xác nhận sau khi đã hoàn thực tế và đối chiếu mã chứng từ; trong demo dùng chứng từ giả trên DB cô lập, không chuyển tiền thật. Xác nhận hai bước giữ nguyên toàn bộ số tiền yêu cầu; tài khoản nhân viên và thời gian UTC do server ghi. Cùng chứng từ gửi lại giữ nguyên kết quả/người/thời điểm, không thêm audit. Thanh toán gốc vẫn SUCCEEDED và đơn đã hủy vẫn CANCELLED.
+
+Nếu chưa chuyển tiền và yêu cầu cũ cần thay bằng các khoản từng phần, dùng **hủy yêu cầu chưa gửi tiền** với lý do/xác nhận rõ ràng, rồi lập yêu cầu thay thế theo ngân sách server trả. Đây không phải xóa nghĩa vụ hoàn; khoản chưa được trả lại vẫn cần xử lý. Không hủy yêu cầu có tiền đã gửi hoặc trạng thái chưa rõ. Số PENDING và SUCCEEDED đều trừ vào hạn mức; hai yêu cầu đồng thời không thể giữ vượt khoản đã thu.
+
+Đơn chưa hủy chỉ được đề nghị theo phiếu TV4 cùng đơn có resolution REFUND, đã duyệt và thực nhận hàng (RECEIVED/COMPLETED). Giới hạn tính theo số lượng đã nhận và giá snapshot sau giảm giá; không tự cộng phí giao/lắp. TV3 chỉ đọc bằng chứng TV4, không tạo phiếu trả giả, duyệt thay hay cập nhật kho. Kiểm thử return dùng fixture DB; luồng trả hàng TV4 thực tế chưa được chứng minh bằng E2E ở phần này.
+
+Khi mất mạng, lỗi đọc JSON,401/403/429 hoặc lỗi chưa rõ, React giữ nguyên key/body/chứng từ theo nhân viên và tài nguyên, kể cả tải lại trang. Đăng nhập lại bằng đúng tài khoản rồi thử lại yêu cầu đã gửi. Lỗi nghiệp vụ chắc chắn giữ nội dung thành bản nháp để đối chiếu và sửa; không tự tạo lệnh hoàn mới khi chưa biết kết quả cũ.
+
+V007 thêm hai cột ghi chú riêng; đã áp dụng cộng thêm trên DB chính và demo trong phiên này. Hoàn tự động qua VNPAY, xử lý timeout/đối soát của provider và callback hoàn tiền vẫn chờ TV3-09/cấu hình sandbox, chưa được đánh dấu hoàn tất.
+
+## Hiệu năng đọc độc lập TV3-11
+
+Xem `tests/performance/tv3/README.md` và `docs/performance/TV3_READ_PERFORMANCE_2026-11-17.md` để chạy lại tải GET/EXPLAIN có guard DB cô lập. Lần đo demo160request có0lỗi, p95~39.5ms; dataset nhỏ, thời gian ngắn và có thể trùng Vitest nên không suy ra năng lực production. Chưa đo DB pool/Redis/provider failure; chưa có job hết hạn, thông báo bền hay job đối soát. Không cache quyết định tiền, tồn, coupon hoặc quyền.
+
+Kịch bản Chrome mới: thu DEMO→khách hủy→xem PENDING refund→nhân viên hủy yêu cầu chưa gửi→tạo thay thế→cố ý mất phản hồi/tải lại/gửi cùng key→xác minh hoàn với chứng từ giả→mất phản hồi/tải lại/gửi cùng chứng từ→khách xem lịch sử đã hoàn, không thấy ghi chú riêng. Đây là transaction/API/MariaDB thật trên dữ liệu demo; không phải giao dịch ngân hàng hay sandbox provider.

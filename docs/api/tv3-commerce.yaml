@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: TV3 Furniture Commerce API
-  version: 1.3.0
-  description: 'TV3-01–08: session/CSRF, cart/coupons, checkout, customer/staff orders and manually verified COD/bank collections. Gateway integration, refund execution and coordinated expiry remain subsequent tasks.'
+  version: 1.4.0
+  description: 'TV3-01–08: session/CSRF, cart/coupons, checkout, customer/staff orders and manually verified COD/bank collections and manual refunds. Online gateway/refund integration and coordinated expiry remain subsequent work.'
 servers:
 - url: http://localhost:8080
   description: Local Spring Boot commerce runtime
@@ -15,6 +15,7 @@ tags:
 - name: Orders
 - name: Order administration
 - name: Manual payments
+- name: Manual refunds
 paths:
   /api/csrf:
     get:
@@ -1398,6 +1399,372 @@ paths:
         require manual reconciliation; PAYMENT_ALREADY_CONFIRMED rejects changed proof.
         Existing expired active attempts cannot confirm. Update, coupon, late refund,
         audit and optional shared order completion are atomic; no gateway calls.
+  /api/admin/refunds:
+    get:
+      operationId: listManualRefunds
+      tags:
+      - Manual refunds
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRefundPage'
+        '400':
+          description: Invalid money/proof/attestation/filter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Order/refund missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Budget, return, proof or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      - in: query
+        name: size
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - ''
+          - PENDING
+          - SUCCEEDED
+          - FAILED
+          - CANCELLED
+      - in: query
+        name: query
+        schema:
+          type: string
+          maxLength: 150
+  /api/admin/orders/{id}/refunds:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        format: int64
+    get:
+      operationId: getOrderRefundBudget
+      tags:
+      - Manual refunds
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRefundSummary'
+        '400':
+          description: Invalid money/proof/attestation/filter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Order/refund missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Budget, return, proof or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      operationId: requestManualRefund
+      tags:
+      - Manual refunds
+      security:
+      - cookieSession: []
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRefundSummary'
+        '400':
+          description: Invalid money/proof/attestation/filter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Order/refund missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Budget, return, proof or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      parameters:
+      - in: header
+        name: X-CSRF-TOKEN
+        required: true
+        schema:
+          type: string
+      - in: header
+        name: Idempotency-Key
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{8,64}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateManualRefund'
+      description: Only successful COD/MANUAL_BANK collections, cancelled order or eligible
+        received return. Exact persisted order/payment/amount/reason/return intent replays
+        before current-state checks. Unknown network/auth/429/5xx/JSON outcomes must
+        retain original request/key. No gateway execution.
+  /api/admin/refunds/{id}:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        format: int64
+    get:
+      operationId: getManualRefund
+      tags:
+      - Manual refunds
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRefundSummary'
+        '400':
+          description: Invalid money/proof/attestation/filter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Order/refund missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Budget, return, proof or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/admin/refunds/{id}/confirm:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        format: int64
+    post:
+      operationId: confirmManualRefund
+      tags:
+      - Manual refunds
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRefundSummary'
+        '400':
+          description: Invalid money/proof/attestation/filter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Order/refund missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Budget, return, proof or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      parameters:
+      - in: header
+        name: X-CSRF-TOKEN
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmManualRefund'
+  /api/admin/refunds/{id}/cancel:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        format: int64
+    post:
+      operationId: cancelUnsentManualRefund
+      tags:
+      - Manual refunds
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRefundSummary'
+        '400':
+          description: Invalid money/proof/attestation/filter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Order/refund missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Budget, return, proof or state conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+      parameters:
+      - in: header
+        name: X-CSRF-TOKEN
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelManualRefund'
 components:
   securitySchemes:
     cookieSession:
@@ -2418,3 +2785,275 @@ components:
         verification time are server-owned. Exact normalized reference/note replays without
         new audit; changed proof conflicts. Cancelled-order late collection queues a durable
         pending refund without resurrecting fulfillment.
+    StaffRefund:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        orderId:
+          type: integer
+          format: int64
+        paymentId:
+          type: integer
+          format: int64
+        returnRequestId:
+          type: integer
+          format: int64
+          nullable: true
+        provider:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - SUCCEEDED
+          - FAILED
+          - CANCELLED
+        amount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '1000000.00'
+        currency:
+          type: string
+        reason:
+          type: string
+        reference:
+          type: string
+          nullable: true
+        confirmationNote:
+          type: string
+          nullable: true
+        resolutionNote:
+          type: string
+          nullable: true
+        processedBy:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+              format: int64
+            fullName:
+              type: string
+              nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        canConfirm:
+          type: boolean
+        canCancel:
+          type: boolean
+        actionBlockReason:
+          type: string
+          nullable: true
+      description: Staff-only view. Private verification/resolution notes and processor
+        identity never enter customer snapshots. PENDING reserves budget; only reconciled
+        manual receipt confirmation marks SUCCEEDED.
+    RefundPaymentBudget:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        method:
+          type: string
+        provider:
+          type: string
+        status:
+          type: string
+        amount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '1000000.00'
+        currency:
+          type: string
+        pendingRefundAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '1000000.00'
+        refundedAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '1000000.00'
+        availableRefundAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '1000000.00'
+        canRefund:
+          type: boolean
+    RefundReturnBudget:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        returnNumber:
+          type: string
+        refundableAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '1000000.00'
+        availableRefundAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '1000000.00'
+      description: Only same-order approved, physically received REFUND returns. Discounted
+        received-goods cap excludes shipping/assembly. Actual payout also bounded by collection
+        budgets.
+    ManualRefundSummary:
+      type: object
+      properties:
+        orderId:
+          type: integer
+          format: int64
+        orderNumber:
+          type: string
+        orderStatus:
+          type: string
+        currency:
+          type: string
+        collectedAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '1000000.00'
+        pendingRefundAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '1000000.00'
+        refundedAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '1000000.00'
+        availableRefundAmount:
+          type: string
+          pattern: ^\d+\.\d{2}$
+          example: '1000000.00'
+        canCreate:
+          type: boolean
+        createBlockReason:
+          type: string
+          nullable: true
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/RefundPaymentBudget'
+        returns:
+          type: array
+          items:
+            $ref: '#/components/schemas/RefundReturnBudget'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffRefund'
+        selectedRefundId:
+          type: integer
+          format: int64
+    ManualRefundPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/StaffRefund'
+            - type: object
+              properties:
+                orderNumber:
+                  type: string
+                orderStatus:
+                  type: string
+                customer:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: int64
+                      nullable: true
+                    username:
+                      type: string
+                      nullable: true
+                    fullName:
+                      type: string
+                      nullable: true
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 0
+        totalElements:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+    CreateManualRefund:
+      type: object
+      required:
+      - paymentId
+      - amount
+      - reason
+      properties:
+        paymentId:
+          type: integer
+          format: int64
+        amount:
+          type: string
+          pattern: ^[0-9]{1,13}(?:\.[0-9]{1,2})?$
+          description: Strict positive decimal; server checks remaining gross collection
+            less pending/successful holds per payment/order/return.
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        returnRequestId:
+          type: integer
+          format: int64
+          nullable: true
+    ConfirmManualRefund:
+      type: object
+      required:
+      - reference
+      - acknowledged
+      properties:
+        reference:
+          type: string
+          pattern: ^[A-Za-z0-9._:/-]{6,150}$
+        note:
+          type: string
+          nullable: true
+          maxLength: 1000
+        acknowledged:
+          type: boolean
+          enum:
+          - true
+      description: Staff attests already completed manual refund. No bank transfer is
+        initiated. Exact normalized reference/note replay preserves first verifier/time/audit.
+        Original collection remains SUCCEEDED.
+    CancelManualRefund:
+      type: object
+      required:
+      - reason
+      - acknowledged
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        acknowledged:
+          type: boolean
+          enum:
+          - true
+      description: Explicitly attest no money was sent. Only unsent manual PENDING requests
+        may cancel/release their held budget. Debt is not erased; replacement may be requested.
+        Exact normalized reason replays.

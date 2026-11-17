@@ -14,7 +14,8 @@ Mật khẩu không được ghi trong repository, SQL hay tài liệu này. Kh�
 
 - `V001__create_furniture_shop.sql`: bootstrap một lần, tạo database và 45 bảng, seed 3 quyền và 1 kho chính.
 - `V002__orders_request_fingerprint.sql`, `V003__shipments_idempotency.sql`, `V004__shipment_audit_index.sql`, `V005__orders_assembly_requested.sql`: migration cộng thêm theo thứ tự sau V001; dùng các bảng đã có nên tổng số bảng vẫn là45. V005 lưu lựa chọn lắp đặt độc lập với phí.
-- `V006__payments_confirmation_note.sql`: bổ sung ghi chú đối soát nội bộ cho khoản thu thủ công; không thay đổi dữ liệu tài chính cũ. Sau V001 cần áp dụng đủ V002–V006 khi khởi tạo runtime hiện tại.
+- `V006__payments_confirmation_note.sql`: bổ sung ghi chú đối soát nội bộ cho khoản thu thủ công; không thay đổi dữ liệu tài chính cũ. Áp dụng sau V002–V005.
+- `V007__refunds_verification_notes.sql`: hai cột ghi chú đối soát/hủy yêu cầu hoàn thủ công, chỉ nhân viên đọc. Runtime mới cần áp dụng đủ V002–V007; vẫn45bảng, không ghi đè lịch sử khoản thu/hoàn.
 - `verify_schema.py`: kiểm tra tích hợp bằng MariaDB CLI, chỉ chấp nhận tên `furniture_shop` hoặc `furniture_shop_test_*`.
 - `verification-fixture.sql`: dữ liệu kiểm thử bên trong transaction; script kiểm tra sẽ rollback, không phải dữ liệu mẫu để import.
 
