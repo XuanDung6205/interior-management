@@ -298,6 +298,7 @@ class OrderDispatchTest {
     }
     @Test void installationRequirementUsesOnlyLinesDispatchedFromThisWarehouse() {
         jdbc.update("UPDATE orders SET assembly_requested=1,subtotal=600,grand_total=600 WHERE id=?",ORDER);
+        jdbc.update("UPDATE payments SET amount=600 WHERE order_id=? AND status='PENDING'",ORDER);
         jdbc.update("UPDATE order_items SET assembly_required=1 WHERE id=?",ITEM);
         jdbc.update("INSERT INTO order_items(id,order_id,product_id,variant_id,product_name,variant_name,sku,quantity,unit_price,assembly_required) VALUES(931002,931001,931001,931001,'TV4 Chair','Default','TV4-CHAIR-TEST',2,100,0)");
         jdbc.update("INSERT INTO warehouses(id,code,name,is_active) VALUES(931002,'TV4-DISPATCH-2','Second',1)");

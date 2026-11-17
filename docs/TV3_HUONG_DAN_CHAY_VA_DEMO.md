@@ -66,7 +66,7 @@ Phí mặc định là chính sách demo cấu hình ở server: giao50.000đ, m
 
 Giữ hàng/coupon chưa có tự động hết hạn (Task11): tồn giữ chỉ được trả qua hủy hoặc fulfillment TV4, không bỏ qua reservation khi chỉ hết timestamp. Khi mất kết nối lúc đặt, frontend lưu request/key theo user trong sessionStorage để gửi lại đúng nội dung, kể cả sau tải lại trang. Không sửa nội dung hoặc tạo key mới để retry một kết quả chưa rõ.
 
-Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy lần lượt `docs/database/V002__orders_request_fingerprint.sql`, `V003__shipments_idempotency.sql`, `V004__shipment_audit_index.sql`, `V005__orders_assembly_requested.sql`. V003/V004 hỗ trợ xuất kho/vận đơn TV4; V005 backfill đơn cũ đã thu phí lắp thành có chọn dịch vụ và lưu lựa chọn mới kể cả phí0. Không xóa lịch sử và không chạy lại V001 trên database đã tồn tại.
+Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy lần lượt `docs/database/V002__orders_request_fingerprint.sql`, `V003__shipments_idempotency.sql`, `V004__shipment_audit_index.sql`, `V005__orders_assembly_requested.sql`, `V006__payments_confirmation_note.sql`. V003/V004 hỗ trợ xuất kho/vận đơn TV4; V005 backfill đơn cũ đã thu phí lắp thành có chọn dịch vụ và lưu lựa chọn mới kể cả phí0; V006 bổ sung ghi chú đối soát riêng cho nhân viên. Không xóa lịch sử và không chạy lại V001 trên database đã tồn tại.
 
 ## Quản trị đơn hàng TV3-07
 
@@ -74,7 +74,7 @@ Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy
 
 Luồng trạng thái: Chờ xác nhận → Đã xác nhận → Đang xử lý → Hoàn thành. Có thể hủy ở ba trạng thái đầu nếu chưa xuất giao; hủy khi Đang xử lý chỉ dành cho nhân viên. Bấm lặp một chuyển trạng thái đã áp dụng không ghi lịch sử/audit thêm. Nếu người khác đổi trạng thái, tải lại trước khi thao tác tiếp.
 
-Hoàn thành cần đủ khoản thu thực sau khi trừ khoản hoàn đang chờ/đã hoàn, giao đủ số lượng, reservation đã xuất hết, movement xuất kho đúng và hoàn tất lắp đặt đã chọn. Nếu thiếu, UI hiển thị lý do và server từ chối chuyển. Màn hình này không có nút giả lập đã thu tiền/đã giao hàng; TV3-08 và TV4 cung cấp bằng chứng đó sau.
+Hoàn thành cần đủ khoản thu thực sau khi trừ khoản hoàn đang chờ/đã hoàn, giao đủ số lượng, reservation đã xuất hết, movement xuất kho đúng và hoàn tất lắp đặt đã chọn. Nếu thiếu, UI hiển thị lý do và server từ chối chuyển. TV3-08 xác minh khoản thu; TV4 ghi nhận giao hàng. Lần chuyển khoản thất bại cũ không chặn xuất kho sau khi lần mới đã thu đủ hoặc có khoản COD đang chờ hợp lệ phủ đủ công nợ.
 
 Ghi chú nội bộ chỉ nhân viên đọc được, không xuất hiện trong lịch sử khách. Thông báo chuyển trạng thái/lý do hủy là nội dung khách nhìn thấy. Khi ghi chú bị sửa đồng thời, bản nháp được giữ; đọc bản mới rồi quyết định lưu lại, không ghi đè im lặng.
 
@@ -87,7 +87,7 @@ Nếu máy Windows có CA doanh nghiệp và gặp lỗi chứng chỉ npm, có 
 Unit/security không cần MariaDB:
 
 ```powershell
-.\mvnw.cmd '-Dtest=CurrentActorTest,CommerceSecurityTest,CatalogBridgeTest,CommerceRuntimeTest,CouponCalculatorTest' test
+.\mvnw.cmd '-Dtest=CurrentActorTest,CommerceSecurityTest,CatalogBridgeTest,CommerceRuntimeTest,CouponCalculatorTest,BankTransferSettingsTest' test
 cd frontend
 npm test
 npm run build
@@ -98,7 +98,7 @@ Integration API/MariaDB thật (database riêng, test sẽ xóa fixture bên tro
 ```powershell
 python scripts/tv3_database.py create --database furniture_shop_test_tv3_policy_local
 $env:TV3_TEST_DB_URL = 'jdbc:mariadb://localhost:3306/furniture_shop_test_tv3_policy_local'
-.\mvnw.cmd '-Dtest=CommerceDatabaseTest,CheckoutTransactionTest,CheckoutAdaptersTest,InventoryReservationTest,OrderLifecycleTest,OrderCompletionPolicyTest' test
+.\mvnw.cmd '-Dtest=CommerceDatabaseTest,CheckoutTransactionTest,CheckoutAdaptersTest,InventoryReservationTest,OrderLifecycleTest,OrderCompletionPolicyTest,PaymentConfirmationTest,OrderDispatchTest' test
 Remove-Item Env:TV3_TEST_DB_URL
 ```
 
@@ -126,4 +126,16 @@ Full regression suite còn chứa legacy SpringBoot smoke test, cần schema leg
 4. Với khách, vào checkout, nhập/chọn địa chỉ, thêm mã giảm, chọn dịch vụ/phương thức rồi xem trước. Kiểm tra từng khoản tiền và xác nhận đặt. Xem sản phẩm/địa chỉ snapshot tại `/orders/{id}` và lọc lịch sử tại `/orders`.
 5. Hủy đơn còn chờ xác nhận, xem payment chuyển CANCELLED và tồn/lượt mã được trả. Gửi hủy lần nữa không có hiệu ứng thứ hai. Không thể xem/hủy đơn của tài khoản khác. Đơn đã xuất giao cần hỗ trợ từ cửa hàng.
 6. Quay lại admin: xóa coupon chưa dùng; coupon đã được đơn tham chiếu trả COUPON_IN_USE, có thể tắt mã. Tổng/snapshot của đơn cũ vẫn giữ nguyên.
-7. Với admin, tìm đơn mới, thêm ghi chú nội bộ, xác nhận/đưa vào xử lý; xem lý do chưa thể hoàn thành rồi hủy trước xuất giao. Đăng nhập khách kiểm tra không thấy ghi chú nội bộ. Bước tiếp theo là TV3-08 xác minh thu tiền.
+7. Với admin, tìm đơn mới, thêm ghi chú nội bộ, xác nhận/đưa vào xử lý; xem lý do chưa thể hoàn thành rồi hủy trước xuất giao. Đăng nhập khách kiểm tra không thấy ghi chú nội bộ.
+8. Khách bấm **Thanh toán** từ đơn để xem khoản thu và hướng dẫn. Nhân viên mở `/admin/payments`, lọc/tìm đơn, đối chiếu khoản thu, nhập mã biên nhận và xác nhận hai bước. Khách tải lại thấy đã thu; xác nhận lại cùng bằng chứng giữ nguyên người/thời điểm ghi nhận.
+9. Trên đơn đã thu còn được phép hủy, khách hủy và kiểm tra **Hoàn tiền chờ xử lý**. Đây là yêu cầu hoàn, chưa chuyển trả tiền. Nếu thực tế khoản thu đến sau khi hủy, nhân viên xác minh với cảnh báo khoản đến muộn; đơn giữ CANCELLED và tạo đúng một yêu cầu hoàn.
+
+## Thanh toán thủ công TV3-08
+
+Để demo trên `furniture_shop_tv3_dev`, đặt `$env:PAYMENT_BANK_MODE='DEMO'` trong terminal khởi động Spring Boot. Hướng dẫn dùng số tài khoản cố ý không hợp lệ `DEMO-KHONG-CHUYEN-TIEN` và hiển thị cảnh báo. Đây là mô phỏng cục bộ, không phải sandbox ngân hàng; không chuyển tiền thật. Cấu hình DEMO bị từ chối trên database chính.
+
+Mặc định `PAYMENT_BANK_MODE=UNCONFIGURED`, không công khai số tài khoản và không cho tạo lần BANK_TRANSFER mới. COD vẫn dùng được. Đơn đã tạo bằng BANK_TRANSFER vẫn xem được lịch sử và thông báo chưa cấu hình. Khi cửa hàng có nhu cầu nhận chuyển khoản thủ công thật, dùng MANUAL và đặt đủ PAYMENT_BANK_NAME, PAYMENT_BANK_ACCOUNT_NUMBER, PAYMENT_BANK_ACCOUNT_HOLDER trong environment riêng; ứng dụng chỉ kiểm tra định dạng, không xác minh tài khoản và không gọi ngân hàng. Không ghi thông tin nhạy cảm vào Git.
+
+Đặt hàng đã tạo sẵn một khoản PENDING; khách không cần tạo lần thứ hai. Chỉ tạo lại khi lần trước đã FAILED/EXPIRED; PENDING quá timestamp vẫn chờ job phối hợp TV3-11 chuyển trạng thái. Tạo lại dùng số tiền server tính từ tổng đơn trừ khoản SUCCEEDED. Hoàn tiền không mở lại công nợ đơn cũ. Không có nút khách tự đánh dấu đã trả tiền.
+
+Nhân viên chỉ xác minh COD/MANUAL_BANK sau khi đối chiếu biên nhận/sao kê (trong demo dùng chứng từ minh họa). Số tiền, tài khoản nhân viên và thời gian UTC do server quyết định. Ghi chú đối soát không xuất hiện trong API khách. Nếu mất phản hồi, React giữ nguyên nội dung và gửi lại cùng bằng chứng; không đổi mã để thử thu lại. Mã biên nhận đã gắn khoản khác bị từ chối, khoản vượt công nợ cần đối soát thủ công. Cổng thanh toán/webhook là TV3-09, thực hiện hoàn tiền là TV3-10; TV3-08 không giả lập các giao dịch đó thành đã hoàn tất.

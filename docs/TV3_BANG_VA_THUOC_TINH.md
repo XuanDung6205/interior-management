@@ -2,12 +2,14 @@
 
 Nguồn bootstrap: [V001__create_furniture_shop.sql](database/V001__create_furniture_shop.sql). Runtime bổ sung hai cột orders qua [V002](database/V002__orders_request_fingerprint.sql) và [V005](database/V005__orders_assembly_requested.sql); các định nghĩa bootstrap bên dưới được giữ nguyên để đối chiếu.
 
-Bạn sở hữu 11 bảng: 2 giỏ hàng, 4 đơn hàng, 2 khuyến mãi và 3 thanh toán/hoàn tiền. Trách nhiệm gồm persistence/Service/REST Controller/DTO, React page/component và API integration liên quan, kiểm thử và tài liệu. Bootstrap có139 thuộc tính; hiện có141 sau hai migration. Frontend dùng React thay cho Thymeleaf.
+Bạn sở hữu 11 bảng: 2 giỏ hàng, 4 đơn hàng, 2 khuyến mãi và 3 thanh toán/hoàn tiền. Trách nhiệm gồm persistence/Service/REST Controller/DTO, React page/component và API integration liên quan, kiểm thử và tài liệu. Bootstrap có139 thuộc tính; hiện có142 sau V002, V005 và V006. Frontend dùng React thay cho Thymeleaf.
 
 Các cột orders bổ sung sau bootstrap:
 
 - `request_fingerprint CHAR(64) ascii_bin NULL` (V002): hash nội dung đặt hàng để phát hiện dùng lại idempotency key với nội dung khác; đơn lịch sử có thể NULL.
 - `assembly_requested BOOLEAN NOT NULL DEFAULT FALSE` (V005): khách có chọn dịch vụ lắp đặt, độc lập với phí và `order_items.assembly_required` (yêu cầu kỹ thuật của sản phẩm). Đơn cũ có phí lắp>0 được backfill TRUE.
+
+Cột payments bổ sung: `confirmation_note VARCHAR(1000) NULL` ([V006](database/V006__payments_confirmation_note.sql)): ghi chú đối soát chỉ STAFF/ADMIN đọc được; không trả trong API khách hàng. Mã biên nhận nằm ở `provider_transaction_id`, người xác minh ở `verified_by`, thời điểm server xác minh ở `paid_at`; xác nhận lại cùng bằng chứng không ghi đè các trường này.
 
 ## Quy ước đọc
 

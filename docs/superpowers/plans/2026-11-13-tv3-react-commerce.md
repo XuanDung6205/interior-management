@@ -137,10 +137,10 @@
 
 **API đề xuất:** `POST /api/orders/{id}/payments`, `GET /api/orders/{id}/payments`, `POST /api/admin/payments/{id}/confirm`.
 
-- [ ] Test `PaymentConfirmationIT`: customer không tự xác nhận; admin xác nhận lặp không thu hai lần; không vượt số còn phải trả; BANK_TRANSFER thay enum BANKING cũ.
-- [ ] Ghi phương thức/provider/số tiền/tiền tệ/trạng thái; xác minh chuyển khoản bằng người có quyền và thông tin đối soát. COD chỉ SUCCEEDED khi có xác nhận đã thu từ người/hệ thống được phép.
-- [ ] React hiển thị hướng dẫn chuyển khoản/trạng thái chờ/thất bại/hết hạn; màn hình nhân viên xác minh. Không dùng endpoint /pay giả lập cũ.
-- [ ] Nghiệm thu: khoản thu thật được ghi đúng một lần; số tiền/verified_by không do client tùy chọn; đơn 0 đồng không tạo payment amount=0.
+- [x] Test `PaymentConfirmationTest`: customer không tự xác nhận; admin xác nhận lặp không thu hai lần; không vượt số còn phải trả; BANK_TRANSFER thay enum BANKING cũ. Có thêm tranh chấp hai nhân viên, hủy/xác nhận đồng thời và retry qua xuất kho thật.
+- [x] Ghi phương thức/provider/số tiền/tiền tệ/trạng thái; xác minh chuyển khoản bằng người có quyền và thông tin đối soát. COD chỉ SUCCEEDED khi có xác nhận đã thu từ người/hệ thống được phép. DEMO giới hạn trong DB cô lập; không giả lập giao dịch ngân hàng thành công.
+- [x] React hiển thị hướng dẫn chuyển khoản/trạng thái chờ/thất bại/hết hạn; màn hình nhân viên xác minh hai bước và lọc/tìm/phân trang. Không dùng endpoint /pay giả lập cũ. Giữ đúng request/proof qua mất phản hồi, lỗi JSON, đăng nhập lại và tải trang.
+- [x] Nghiệm thu: chứng từ được ghi đúng một lần; số tiền/verified_by không do client tùy chọn; đơn 0 đồng không tạo payment amount=0. Chrome chạy xác nhận DEMO thật qua API/MariaDB cô lập, mất phản hồi rồi replay cùng bằng chứng, khách xem khoản thu và hủy tạo yêu cầu hoàn PENDING. Đây chưa phải kết nối ngân hàng hoặc thực hiện hoàn tiền.
 
 ## TV3-09 — Cổng thanh toán sandbox và webhook
 

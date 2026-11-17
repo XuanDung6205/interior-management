@@ -4,6 +4,20 @@ import { createApiClient } from './apiClient';
 const response = (body, status = 200) => new Response(body == null ? null : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 describe('session and CSRF boundary', () => {
+  it('preserves an intentional abort while reading a response body', async () => {
+    const aborted = new DOMException('The operation was aborted.', 'AbortError');
+    const api = createApiClient(async () => ({ status: 200, ok: true, json: async () => { throw aborted; } }));
+    await expect(api.request('/admin/payments')).rejects.toBe(aborted);
+  });
+  it.each([200, 201])('rejects unreadable successful HTTP%s without claiming a mutation succeeded', async status => {
+    const api = createApiClient(async () => new Response('{"orderId":', { status, headers: { 'Content-Type': 'application/json' } }));
+    await expect(api.request('/orders/101/payments')).rejects.toMatchObject({ status, code: 'INVALID_RESPONSE' });
+  });
+  it('keeps non-JSON HTTP error status and accepts a legitimate 204 without a body', async () => {
+    const api = createApiClient(async url => url.endsWith('/empty') ? new Response(null, { status: 204 }) : new Response('upstream unavailable', { status: 503 }));
+    await expect(api.request('/broken')).rejects.toMatchObject({ status: 503 });
+    await expect(api.request('/empty')).resolves.toBeNull();
+  });
   it('sends order idempotency headers and exposes the new quote from a conflict response', async () => {
     const calls = [];
     const api = createApiClient(async (url, options) => { calls.push({ url, ...options }); return url === '/api/csrf' ? response({ token: 't', headerName: 'X-CSRF-TOKEN' }) : response({ code: 'QUOTE_CHANGED', message: 'Giá đổi', fieldErrors: {}, quote: { quoteFingerprint: 'v2', grandTotal: '100.00' } }, 409); });
