@@ -18,6 +18,8 @@ import OrderAdminDetailPage from './features/orders/OrderAdminDetailPage';
 import PaymentPage from './features/payments/PaymentPage';
 import PaymentAdminPage from './features/payments/PaymentAdminPage';
 import PaymentAdminDetailPage from './features/payments/PaymentAdminDetailPage';
+import RefundAdminPage from './features/refunds/RefundAdminPage';
+import RefundOrderPage from './features/refunds/RefundOrderPage';
 
 function PrivatePage({ session, children }) {
   const location = useLocation();
@@ -42,7 +44,7 @@ export default function App() {
     api.request('/session').then(value => { if (active) setSession(value); }).catch(value => { if (active) setError(value); });
     return () => { active = false; };
   }, [api, revision]);
-  useEffect(() => { document.title = `${location.pathname.startsWith('/admin/payments') ? 'Quản lý thanh toán' : location.pathname.startsWith('/admin/orders') ? 'Quản lý đơn hàng' : location.pathname.startsWith('/admin/inventory/shipments') ? 'Theo dõi vận đơn' : location.pathname.startsWith('/admin/inventory/dispatch') ? 'Xuất kho giao hàng' : location.pathname.startsWith('/admin/inventory/operations') ? 'Điều chỉnh và chuyển kho' : location.pathname.startsWith('/admin/inventory/receipts') ? 'Nhập kho' : location.pathname.startsWith('/admin/coupons') ? 'Quản lý ưu đãi' : location.pathname === '/login' ? 'Đăng nhập' : location.pathname === '/checkout' ? 'Đặt hàng' : /^\/orders\/\d+\/payments$/.test(location.pathname) ? 'Thanh toán đơn' : location.pathname.startsWith('/orders') ? 'Đơn hàng' : 'Giỏ hàng'} · Nếp Nhà`; }, [location.pathname]);
+  useEffect(() => { document.title = `${(location.pathname.startsWith('/admin/refunds') || /^\/admin\/orders\/\d+\/refunds$/.test(location.pathname)) ? 'Quản lý hoàn tiền' : location.pathname.startsWith('/admin/payments') ? 'Quản lý thanh toán' : location.pathname.startsWith('/admin/orders') ? 'Quản lý đơn hàng' : location.pathname.startsWith('/admin/inventory/shipments') ? 'Theo dõi vận đơn' : location.pathname.startsWith('/admin/inventory/dispatch') ? 'Xuất kho giao hàng' : location.pathname.startsWith('/admin/inventory/operations') ? 'Điều chỉnh và chuyển kho' : location.pathname.startsWith('/admin/inventory/receipts') ? 'Nhập kho' : location.pathname.startsWith('/admin/coupons') ? 'Quản lý ưu đãi' : location.pathname === '/login' ? 'Đăng nhập' : location.pathname === '/checkout' ? 'Đặt hàng' : /^\/orders\/\d+\/payments$/.test(location.pathname) ? 'Thanh toán đơn' : location.pathname.startsWith('/orders') ? 'Đơn hàng' : 'Giỏ hàng'} · Nếp Nhà`; }, [location.pathname]);
   const isStaff = session?.user?.roles?.some(role => role === 'STAFF' || role === 'ADMIN');
   async function logout() {
     setBusy(true); setError(null);
@@ -55,7 +57,7 @@ export default function App() {
     <div className="announcement">Một chút tinh tế. Một tổ ấm riêng bạn.</div>
     <header className="site-header"><div className="header-inner">
       <Link to="/cart" className="brand" aria-label="Nếp Nhà — Trang giỏ hàng"><span className="brand-mark"><Icon name="leaf" size={27} /></span><span>Nếp Nhà<small>NỘI THẤT & KHÔNG GIAN SỐNG</small></span></Link>
-      <nav className={isStaff ? 'main-nav staff-nav' : 'main-nav'} aria-label="Điều hướng chính"><NavLink to="/cart"><Icon name="bag" />Giỏ hàng</NavLink>{session?.authenticated && <NavLink to="/orders"><Icon name="orders" />Đơn hàng</NavLink>}{isStaff && <><NavLink to="/admin/orders"><Icon name="shield" />Quản lý đơn hàng</NavLink><NavLink to="/admin/payments"><Icon name="ticket" />Khoản thu</NavLink><NavLink to="/admin/coupons"><Icon name="ticket" />Quản lý ưu đãi</NavLink><NavLink to="/admin/inventory/receipts"><Icon name="box" />Nhập kho</NavLink><NavLink to="/admin/inventory/operations"><Icon name="box" />Điều chuyển</NavLink><NavLink to="/admin/inventory/dispatch"><Icon name="orders" />Xuất kho</NavLink><NavLink to="/admin/inventory/shipments"><Icon name="orders" />Vận đơn</NavLink></>}</nav>
+      <nav className={isStaff ? 'main-nav staff-nav' : 'main-nav'} aria-label="Điều hướng chính"><NavLink to="/cart"><Icon name="bag" />Giỏ hàng</NavLink>{session?.authenticated && <NavLink to="/orders"><Icon name="orders" />Đơn hàng</NavLink>}{isStaff && <><NavLink to="/admin/orders"><Icon name="shield" />Quản lý đơn hàng</NavLink><NavLink to="/admin/payments"><Icon name="ticket" />Khoản thu</NavLink><NavLink to="/admin/refunds"><Icon name="ticket" />Hoàn tiền</NavLink><NavLink to="/admin/coupons"><Icon name="ticket" />Quản lý ưu đãi</NavLink><NavLink to="/admin/inventory/receipts"><Icon name="box" />Nhập kho</NavLink><NavLink to="/admin/inventory/operations"><Icon name="box" />Điều chuyển</NavLink><NavLink to="/admin/inventory/dispatch"><Icon name="orders" />Xuất kho</NavLink><NavLink to="/admin/inventory/shipments"><Icon name="orders" />Vận đơn</NavLink></>}</nav>
       <div className="account-nav">{session?.authenticated ? <><span className="account-name"><Icon name="user" />{session.user.fullName || session.user.username}</span><button className="text-button" disabled={busy} onClick={logout}>{busy ? 'Đang thoát…' : 'Đăng xuất'}</button></> : <NavLink to="/login" className="login-link"><Icon name="user" />Đăng nhập</NavLink>}</div>
     </div></header>
     <main id="main" className="page-shell" tabIndex="-1">
@@ -70,6 +72,9 @@ export default function App() {
         <Route path="/admin/coupons" element={<StaffPage isStaff={isStaff}><CouponAdminPage key={session.user?.id ?? 'guest'} /></StaffPage>} />
         <Route path="/admin/orders" element={<StaffPage isStaff={isStaff}><OrderAdminPage key={session.user?.id ?? 'guest'} /></StaffPage>} />
         <Route path="/admin/orders/:id" element={<StaffPage isStaff={isStaff}><OrderAdminDetailPage key={`${session.user?.id ?? 'guest'}-${location.pathname}`} /></StaffPage>} />
+        <Route path="/admin/refunds" element={<StaffPage isStaff={isStaff}><RefundAdminPage key={session.user?.id ?? 'guest'} /></StaffPage>} />
+        <Route path="/admin/refunds/:id" element={<StaffPage isStaff={isStaff}><RefundOrderPage selected key={`${session.user?.id ?? 'guest'}-${location.pathname}`} /></StaffPage>} />
+        <Route path="/admin/orders/:id/refunds" element={<StaffPage isStaff={isStaff}><RefundOrderPage key={`${session.user?.id ?? 'guest'}-${location.pathname}`} /></StaffPage>} />
         <Route path="/admin/payments" element={<StaffPage isStaff={isStaff}><PaymentAdminPage key={session.user?.id ?? 'guest'} /></StaffPage>} />
         <Route path="/admin/payments/:id" element={<StaffPage isStaff={isStaff}><PaymentAdminDetailPage key={`${session.user?.id ?? 'guest'}-${location.pathname}`} /></StaffPage>} />
         <Route path="/admin/inventory/receipts" element={<StaffPage isStaff={isStaff}><InventoryReceiptPage key={session.user?.id ?? 'guest'} /></StaffPage>} />

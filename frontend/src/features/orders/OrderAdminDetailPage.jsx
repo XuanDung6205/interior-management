@@ -48,7 +48,7 @@ export default function OrderAdminDetailPage() {
         <PublicOrderHistory history={order.history} />
         <InternalNoteEditor key={order.id} order={order} client={client} busy={busy} perform={perform} onUpdated={setOrder} />
       </div><aside className="order-detail-aside admin-order-aside">
-        <OrderLifecycleActions key={order.id} order={order} client={client} busy={busy} perform={perform} onUpdated={setOrder} onRefresh={refresh} />
+        <Link className="button secondary full" to={`/admin/orders/${order.id}/refunds`}>Đối chiếu hoàn tiền của đơn</Link><OrderLifecycleActions key={order.id} order={order} client={client} busy={busy} perform={perform} onUpdated={setOrder} onRefresh={refresh} />
         <section className="panel order-summary"><h2>Chi tiết số tiền</h2><MoneyBreakdown value={order} /></section>
         <AssemblySelection requested={order.assemblyRequested} />
         {order.customerNote && <section className="panel address-panel"><h2>Ghi chú của khách</h2><p className="customer-note">{order.customerNote}</p></section>}
