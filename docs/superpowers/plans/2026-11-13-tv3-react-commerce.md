@@ -194,6 +194,15 @@ Phần độc lập sandbox đã triển khai TV3-10 MANUAL (2026-11-17): API/Re
 
 Đã mở rộng phần manual Task12: Chrome thật chạy đủ6kịch bản qua API/MariaDB demo, thêm thu→hủy→hoàn thủ công, mất phản hồi/tải lại/replay và lịch sử khách không lộ ghi chú. OpenAPI1.4 gồm39operations, runbook/migrationV007/dictionary cập nhật. E2E online VNPAY, hoàn online và đổi trả TV4 thực tế vẫn chờ ghép; chưa coi toàn bộ Task12 hoàn tất.
 
+### Cập nhật nghiệm thu19/11/2026 — phần không cần sandbox
+
+- TV3-11: đã có hạn COD24giờ theo lựa chọn người dùng, job bounded/idempotent/retry bền, audit hệ thống; không backfill đơn cũ hoặc tự hủy BANK_TRANSFER/đơn đã thu/xuất. Đã kiểm thử cạnh tranh tiền/hủy/job, rollback và worker đồng thời. Chưa có webhook race của VNPAY.
+- Outbox/inbox MariaDB ghi cùng transaction, hộp thư web theo chủ sở hữu, unread/mark-read, retry/DEAD và trang staff operations có Hikari thực. Không tuyên bố SMTP/email; không có dependency Redis để kiểm thử lỗi Redis.
+- V009 thêm3index theo EXPLAIN trên1000đơn/3000dòng/1003SKU. Tổng3200GET/0lỗi; p95 trước40.150ms, sau43.508ms nên không đạt bằng chứng tăng tốc HTTP. Deep offset còn scan. Xem báo cáo `docs/performance/TV3_READ_PERFORMANCE_2026-11-19.md`.
+- TV3-12: đã ghép luồng TV4 thật chọn hàng→COD→xuất/giao→thu→lắp→trả một phần→duyệt/nhận/nhập lại kho→hoàn thủ công→thông báo khách. API/MariaDB/Chrome thực có mất phản hồi/tải lại/replay; không dùng fixture SQL để thay giao/nhận trong E2E này.
+- Kết quả cuối: Java180ca/179pass/1liveGemini skip, React142pass/13file, build63module, Chrome7/7pass, schema47bảng/22behaviorcheck rollback, harness15pass. Review độc lập đã sửa việc scheduler có thể chạm fixture; Surefire và commerce test tắt lịch mặc định, regression RED→GREEN.
+- Contract OpenAPI1.5.0/52operation, V001–V009, dictionary/runbook và `docs/TV3_BAN_GIAO_VA_DEMO.md` đã cập nhật. Task09, hoàn online/đối soát provider trong Task10/11 và E2E VNPAY trong Task12 vẫn chờ credential; không tick hoàn tất toàn bộ các task này.
+
 ## Điểm bắt đầu
 
 Làm **TV3-01**, sau đó **TV3-02**. Thành quả đầu tiên là giỏ theo SKU lưu DB, React thêm/sửa/xóa được và test quyền sở hữu đạt. Tiếp theo là coupon → quote → đặt đơn; thanh toán và hoàn tiền được xây trên nền đó. Đây là thứ tự phụ thuộc, không phải lịch theo ngày.

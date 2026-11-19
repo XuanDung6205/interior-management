@@ -2,6 +2,8 @@ package org.example.eshop.commerce.order;
 
 import org.example.eshop.commerce.common.CommerceException;
 import org.example.eshop.commerce.port.InventoryPort;
+import org.example.eshop.commerce.notification.OrderNotifications;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
 import java.math.BigDecimal;
@@ -15,7 +17,8 @@ public class CheckoutService {
     private final OrderQueryService orders;
     private final InventoryPort inventory;
     private final Clock clock;
-    public CheckoutService(OrderStore store,CheckoutQuoteService quotes,OrderQueryService orders,InventoryPort inventory,Clock clock){this.store=store;this.quotes=quotes;this.orders=orders;this.inventory=inventory;this.clock=clock;}
+    private final long confirmationTtl;
+    public CheckoutService(OrderStore store,CheckoutQuoteService quotes,OrderQueryService orders,InventoryPort inventory,Clock clock,@Value("${commerce.order.confirmation-ttl-seconds:86400}")long confirmationTtl){this.store=store;this.quotes=quotes;this.orders=orders;this.inventory=inventory;this.clock=clock;if(confirmationTtl<60||confirmationTtl>604800)throw new IllegalArgumentException("COD confirmation TTL must be60..604800seconds");this.confirmationTtl=confirmationTtl;}
     @Transactional(isolation=Isolation.READ_COMMITTED)
     public Map<String,Object> place(CheckoutRequest request,String key){
         long user=quotes.actorId();quotes.validate(request);
@@ -56,6 +59,8 @@ public class CheckoutService {
         store.insert("INSERT INTO order_status_history(order_id,from_status,to_status,changed_by,note,changed_at) VALUES(?,NULL,'PENDING_CONFIRMATION',?,'Khách hàng đặt đơn',?)",id,user,now);
         if(calculation.couponId()!=null)store.insert("INSERT INTO coupon_redemptions(coupon_id,order_id,user_id,discount_amount,status,expires_at,created_at) VALUES(?,?,?,?,'RESERVED',NULL,?)",calculation.couponId(),id,user,q.discountAmount(),now);
         if(new BigDecimal(q.grandTotal()).signum()>0)store.insert("INSERT INTO payments(order_id,method,provider,idempotency_key,amount,currency,status,created_at,updated_at) VALUES(?,?,?, ?,?,'VND','PENDING',?,?)",id,q.paymentMethod(),"COD".equals(q.paymentMethod())?"COD":"MANUAL_BANK","checkout:"+id,q.grandTotal(),now,now);
+        if("COD".equals(q.paymentMethod())&&new BigDecimal(q.grandTotal()).signum()>0)store.jdbc().update("UPDATE orders SET confirmation_expires_at=? WHERE id=?",now.plusSeconds(confirmationTtl),id);
+        OrderNotifications.placed(store.jdbc(),clock,id);
         int converted=store.jdbc().update("UPDATE carts SET status='CONVERTED',updated_at=? WHERE id=? AND user_id=? AND status='ACTIVE'",now,request.cartId(),user);
         if(converted!=1)throw CommerceException.conflict("CART_UNAVAILABLE","Giỏ hàng đã thay đổi.");
         return orders.detailFor(id,user);

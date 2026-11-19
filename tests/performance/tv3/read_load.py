@@ -1,7 +1,7 @@
 """Guarded local TV3 read benchmark. Python standard library only.
 
 Only /api/session/login may POST (real session + CSRF); measured requests are
-four fixed GET routes. Credentials, cookies and response bodies are not saved.
+fixed GET routes. Credentials, cookies and response bodies are not saved.
 """
 import argparse
 from collections import Counter
@@ -26,6 +26,10 @@ ENDPOINTS = {
     'customerOrders': ('customer', '/api/orders?page=0&size=10'),
     'adminOrders': ('staff', '/api/admin/orders?page=0&size=10'),
     'adminPayments': ('staff', '/api/admin/payments?page=0&size=10'),
+    'adminOrdersDeep': ('staff', '/api/admin/orders?page=9&size=100'),
+    'adminPaymentsPending': ('staff', '/api/admin/payments?page=0&size=100&status=PENDING'),
+    'adminOrdersCancelled': ('staff', '/api/admin/orders?page=0&size=100&status=CANCELLED'),
+    'operations': ('staff', '/api/admin/operations'),
 }
 READ_PATHS = frozenset(path for _, path in ENDPOINTS.values()) | {
     '/api/commerce/runtime', '/api/csrf', '/api/session',
@@ -131,15 +135,29 @@ def summarize(samples, seconds):
         return round(values[max(0, math.ceil(percentile * len(values)) - 1)], 3) if values else None
     return {'count': len(values), 'successes': len(values) - sum(errors.values()),
             'errors': sum(errors.values()), 'errorKinds': dict(sorted(errors.items())),
+            'errorRatePercent': round(100 * sum(errors.values()) / len(values), 3) if values else None,
             'p50Ms': rank(.50), 'p95Ms': rank(.95),
             'maxMs': round(max(values), 3) if values else None,
             'requestsPerSecond': round(len(values) / seconds, 3) if seconds > 0 else None}
+
+
+def operations_snapshot(value):
+    # Explicit safe fields only: never retain expiry order identifiers, customer
+    # text, datasource URLs, credentials or future endpoint additions.
+    fields = {'pool': ('active', 'idle', 'total', 'awaiting', 'max', 'minIdle', 'available'),
+              'jobs': ('enabled', 'expiryEnabled', 'notificationEnabled', 'confirmationTtlSeconds'),
+              'outbox': ('pending', 'retry', 'dead', 'sent')}
+    return {group: {key: value.get(group, {}).get(key) for key in keys
+                    if isinstance(value.get(group, {}).get(key), (int, bool))}
+            for group, keys in fields.items()}
 
 
 def dataset_snapshot(sessions):
     snapshot = {}
     for name, (role, path) in ENDPOINTS.items():
         value = sessions[role].call(path)
+        if name == 'operations':
+            continue
         if name == 'cart':
             snapshot[name] = {'itemCount': value.get('itemCount'), 'lines': len(value.get('items', []))}
         else:
@@ -168,6 +186,9 @@ def run(args):
             sessions[role].login(username, password, role)
         workers.append(sessions)
     before = dataset_snapshot(workers[0])
+    snapshots = [{'phase': 'before', 'sampledAtUtc': datetime.now(timezone.utc).isoformat(),
+                  **operations_snapshot(workers[0]['staff'].call('/api/admin/operations'))}]
+    snapshot_lock = threading.Lock()
     for sessions in workers:
         for _ in range(args.warmup_rounds):
             for role, path in ENDPOINTS.values():
@@ -181,7 +202,11 @@ def run(args):
                 start = time.perf_counter()
                 kind = None
                 try:
-                    sessions[role].call(path)
+                    value = sessions[role].call(path)
+                    if name == 'operations':
+                        with snapshot_lock:
+                            snapshots.append({'phase': 'measured', 'sampledAtUtc': datetime.now(timezone.utc).isoformat(),
+                                              **operations_snapshot(value)})
                 except RequestFailure as failure:
                     kind = failure.kind
                 result[name].append(((time.perf_counter() - start) * 1000, kind))
@@ -196,22 +221,25 @@ def run(args):
         measurements = [future.result() for future in futures]
         seconds = time.perf_counter() - started
     after = dataset_snapshot(workers[0])
+    snapshots.append({'phase': 'after', 'sampledAtUtc': datetime.now(timezone.utc).isoformat(),
+                      **operations_snapshot(workers[0]['staff'].call('/api/admin/operations'))})
     per_endpoint = {}
     all_samples = []
     for name in ENDPOINTS:
         samples = [sample for measured in measurements for sample in measured[name]]
         all_samples.extend(samples)
         per_endpoint[name] = {'method': 'GET', 'path': ENDPOINTS[name][1], **summarize(samples, seconds)}
-    return {'schemaVersion': 1, 'startedAtUtc': started_at,
+    return {'schemaVersion': 2, 'startedAtUtc': started_at,
             'endedAtUtc': datetime.now(timezone.utc).isoformat(),
             'runtime': {'application': 'tv3-commerce', 'isolatedData': True, 'baseUrl': base},
             'configuration': {'workers': args.workers, 'sessionsPerWorker': 2,
-                              'roundsPerWorker': args.rounds, 'page': 0, 'pageSize': 10,
+                              'roundsPerWorker': args.rounds,
+                              'pagination': 'Fixed per endpoint; page0/size10, page0/size100 filtered, page9/size100 deep',
                               'thinkTimePerRequestMs': args.think_ms, 'timeoutSeconds': args.timeout,
                               'scheduler': args.scheduler_note, 'databasePool': args.db_pool_note,
-                              'schedule': 'closed loop; four fixed GETs in order per worker; no retry',
+                              'schedule': 'closed loop; eight fixed GETs in order per worker; no retry',
                               'warmup': {'roundsPerWorker': args.warmup_rounds,
-                                         'excludedRequests': args.workers * args.warmup_rounds * 4,
+                                         'excludedRequests': args.workers * args.warmup_rounds * len(ENDPOINTS),
                                          'cacheState': 'uncontrolled; no flush or cold-cache claim'},
                               'measurementWindow': args.window_note},
             'machine': {'os': platform.platform(), 'python': platform.python_version(),
@@ -224,8 +252,12 @@ def run(args):
                            'setupExcluded': 'runtime checks, logins, dataset snapshots and warmup',
                            'measuredSeconds': round(seconds, 6)},
             'endpoints': per_endpoint, 'overall': summarize(all_samples, seconds),
-            'limitations': ['Small existing isolated dataset; not production capacity evidence.',
-                            'No business writes, provider calls, Redis test, SQL timing or pool telemetry.',
+            'operations': {'source': 'real staff-protected GET /api/admin/operations; sampled by workload, not continuous maxima',
+                           'snapshots': snapshots,
+                           'peakObserved': {key: max((s['pool'].get(key, 0) for s in snapshots), default=0)
+                                            for key in ('active', 'total', 'awaiting')}},
+            'limitations': ['Bounded local dataset/workload; not production capacity evidence.',
+                            'No business writes, provider calls, Redis test or SQL execution timing.',
                             'Session login is the only POST; separate cookie jars per worker and role.']}
 
 

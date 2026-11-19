@@ -22,7 +22,9 @@ public class PaymentService {
         var totals=queries.totals(id);String block=queries.createBlock(order,totals,queries.payments(id,true));if(block!=null)throw CommerceException.conflict(block,PaymentQueryService.message(block));
         if("BANK_TRANSFER".equals(method)&&!Boolean.TRUE.equals(bank.forOrder(order.get("orderNumber").toString()).get("configured")))throw CommerceException.conflict("PAYMENT_BANK_NOT_CONFIGURED",PaymentQueryService.message("PAYMENT_BANK_NOT_CONFIGURED"));
         var now=LocalDateTime.ofInstant(clock.instant(),ZoneOffset.UTC);BigDecimal amount=PaymentQueryService.decimal(order.get("grandTotal")).subtract(totals.collected());
-        store.insert("INSERT INTO payments(order_id,method,provider,idempotency_key,amount,currency,status,created_at,updated_at) VALUES(?,?,?,?,?,?,'PENDING',?,?)",id,method,"COD".equals(method)?"COD":"MANUAL_BANK",scoped,amount,order.get("currency"),now,now);return queries.customer(id);
+        store.insert("INSERT INTO payments(order_id,method,provider,idempotency_key,amount,currency,status,created_at,updated_at) VALUES(?,?,?,?,?,?,'PENDING',?,?)",id,method,"COD".equals(method)?"COD":"MANUAL_BANK",scoped,amount,order.get("currency"),now,now);
+        if("BANK_TRANSFER".equals(method))store.jdbc().update("UPDATE orders SET confirmation_expires_at=NULL,expiry_retry_after=NULL WHERE id=?",id);
+        return queries.customer(id);
     }
     @Transactional(isolation=Isolation.READ_COMMITTED)
     public Map<String,Object> confirm(long payment,String reference,String note,Boolean acknowledged){

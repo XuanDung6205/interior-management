@@ -1,0 +1,89 @@
+{
+  "database": "furniture_shop_test_perf_ops_20261119",
+  "capturedAtUtc": "2026-11-19T03:32:59.318905+00:00",
+  "dataset": [
+    {
+      "tableName": "orders",
+      "rowCount": "1000"
+    },
+    {
+      "tableName": "order_items",
+      "rowCount": "3000"
+    },
+    {
+      "tableName": "product_variants",
+      "rowCount": "1003"
+    },
+    {
+      "tableName": "payments",
+      "rowCount": "1000"
+    },
+    {
+      "tableName": "coupon_redemptions",
+      "rowCount": "333"
+    },
+    {
+      "tableName": "cart_items",
+      "rowCount": "3"
+    }
+  ],
+  "mix": [
+    {
+      "status": "CANCELLED",
+      "method": "BANK_TRANSFER",
+      "paymentStatus": "CANCELLED",
+      "rowCount": "50"
+    },
+    {
+      "status": "CANCELLED",
+      "method": "COD",
+      "paymentStatus": "CANCELLED",
+      "rowCount": "200"
+    },
+    {
+      "status": "CONFIRMED",
+      "method": "BANK_TRANSFER",
+      "paymentStatus": "PENDING",
+      "rowCount": "50"
+    },
+    {
+      "status": "CONFIRMED",
+      "method": "COD",
+      "paymentStatus": "PENDING",
+      "rowCount": "200"
+    },
+    {
+      "status": "PENDING_CONFIRMATION",
+      "method": "BANK_TRANSFER",
+      "paymentStatus": "PENDING",
+      "rowCount": "50"
+    },
+    {
+      "status": "PENDING_CONFIRMATION",
+      "method": "COD",
+      "paymentStatus": "PENDING",
+      "rowCount": "200"
+    },
+    {
+      "status": "PROCESSING",
+      "method": "BANK_TRANSFER",
+      "paymentStatus": "SUCCEEDED",
+      "rowCount": "50"
+    },
+    {
+      "status": "PROCESSING",
+      "method": "COD",
+      "paymentStatus": "SUCCEEDED",
+      "rowCount": "200"
+    }
+  ],
+  "source": "Explicit bounded SQL test data, not real checkout/fulfillment E2E.",
+  "size": {
+    "addedSkus": 1000,
+    "orders": 1000,
+    "orderItems": 3000
+  },
+  "guard": "Exact database identity, empty order history, no perf prefix and 47 base tables required.",
+  "expiry": "No deadlines backdated/created; no scheduler/provider/network calls.",
+  "cleanup": "No destructive teardown implemented; entire explicitly disposable DB may be removed by its owner."
+}

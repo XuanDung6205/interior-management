@@ -33,6 +33,7 @@ public class OrderLifecycleService {
             if(redeemed!=1)throw CommerceException.conflict("COUPON_RESERVATION_CHANGED","Lượt ưu đãi của đơn không còn hợp lệ. Vui lòng kiểm tra lại.");
         }
         store.jdbc().update("UPDATE orders SET status=?,confirmed_at=CASE WHEN ?='CONFIRMED' THEN COALESCE(confirmed_at,?) ELSE confirmed_at END,completed_at=CASE WHEN ?='COMPLETED' THEN COALESCE(completed_at,?) ELSE completed_at END,updated_at=? WHERE id=?",to,to,now,to,now,now,id);
+        if("CONFIRMED".equals(to))store.jdbc().update("UPDATE orders SET confirmation_expires_at=NULL,expiry_retry_after=NULL WHERE id=?",id);
         store.insert("INSERT INTO order_status_history(order_id,from_status,to_status,changed_by,note,changed_at) VALUES(?,?,?,?,?,?)",id,from,to,actor,note,now);
         audit.append(actor,id,"ORDER_STATUS_CHANGED",Map.of("status",from),Map.of("status",to));
         return queries.detail(id);

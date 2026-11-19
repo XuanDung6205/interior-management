@@ -1,0 +1,5299 @@
+{
+  "schemaVersion": 2,
+  "startedAtUtc": "2026-11-19T03:38:32.761738+00:00",
+  "endedAtUtc": "2026-11-19T03:38:52.058800+00:00",
+  "runtime": {
+    "application": "tv3-commerce",
+    "isolatedData": true,
+    "baseUrl": "http://127.0.0.1:8081"
+  },
+  "configuration": {
+    "workers": 4,
+    "sessionsPerWorker": 2,
+    "roundsPerWorker": 50,
+    "pagination": "Fixed per endpoint; page0/size10, page0/size100 filtered, page9/size100 deep",
+    "thinkTimePerRequestMs": 25.0,
+    "timeoutSeconds": 10.0,
+    "scheduler": "Dedicated benchmark runtime COMMERCE_JOBS_ENABLED=false; isolated demo runtime on8080 has scheduled checks but no browser writes during measurement.",
+    "databasePool": "Actual protected Hikari snapshots before/during/after in operations endpoint.",
+    "schedule": "closed loop; eight fixed GETs in order per worker; no retry",
+    "warmup": {
+      "roundsPerWorker": 2,
+      "excludedRequests": 64,
+      "cacheState": "uncontrolled; no flush or cold-cache claim"
+    },
+    "measurementWindow": "Maven and frontend test/build completed; agents read-only; no Playwright running. Two Spring runtimes,Vite andIDE on same16logicalCPUlaptop."
+  },
+  "machine": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.14.3",
+    "logicalCpus": 16,
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel"
+  },
+  "dataset": {
+    "before": {
+      "cart": {
+        "itemCount": 6,
+        "lines": 3
+      },
+      "customerOrders": {
+        "totalElements": 1000,
+        "page": 0,
+        "size": 10
+      },
+      "adminOrders": {
+        "totalElements": 1000,
+        "page": 0,
+        "size": 10
+      },
+      "adminPayments": {
+        "totalElements": 1000,
+        "page": 0,
+        "size": 10
+      },
+      "adminOrdersDeep": {
+        "totalElements": 1000,
+        "page": 9,
+        "size": 100
+      },
+      "adminPaymentsPending": {
+        "totalElements": 500,
+        "page": 0,
+        "size": 100
+      },
+      "adminOrdersCancelled": {
+        "totalElements": 250,
+        "page": 0,
+        "size": 100
+      }
+    },
+    "after": {
+      "cart": {
+        "itemCount": 6,
+        "lines": 3
+      },
+      "customerOrders": {
+        "totalElements": 1000,
+        "page": 0,
+        "size": 10
+      },
+      "adminOrders": {
+        "totalElements": 1000,
+        "page": 0,
+        "size": 10
+      },
+      "adminPayments": {
+        "totalElements": 1000,
+        "page": 0,
+        "size": 10
+      },
+      "adminOrdersDeep": {
+        "totalElements": 1000,
+        "page": 9,
+        "size": 100
+      },
+      "adminPaymentsPending": {
+        "totalElements": 500,
+        "page": 0,
+        "size": 100
+      },
+      "adminOrdersCancelled": {
+        "totalElements": 250,
+        "page": 0,
+        "size": 100
+      }
+    },
+    "unchangedSummary": true,
+    "note": "Disposable SQL load fixture:1000orders3000lines1003variants333discountedorders3cartlines; not fulfillment E2E evidence.",
+    "createdByHarness": false
+  },
+  "statistics": {
+    "percentileMethod": "nearest rank; all attempted requests including failures",
+    "latencyScope": "client wall time including HTTP connection/read/JSON; excludes think time",
+    "throughputScope": "count / shared measured wall seconds; includes think/scheduling",
+    "setupExcluded": "runtime checks, logins, dataset snapshots and warmup",
+    "measuredSeconds": 19.066871
+  },
+  "endpoints": {
+    "cart": {
+      "method": "GET",
+      "path": "/api/cart",
+      "count": 200,
+      "successes": 200,
+      "errors": 0,
+      "errorKinds": {},
+      "errorRatePercent": 0.0,
+      "p50Ms": 15.992,
+      "p95Ms": 37.426,
+      "maxMs": 54.938,
+      "requestsPerSecond": 10.489
+    },
+    "customerOrders": {
+      "method": "GET",
+      "path": "/api/orders?page=0&size=10",
+      "count": 200,
+      "successes": 200,
+      "errors": 0,
+      "errorKinds": {},
+      "errorRatePercent": 0.0,
+      "p50Ms": 13.891,
+      "p95Ms": 33.998,
+      "maxMs": 59.224,
+      "requestsPerSecond": 10.489
+    },
+    "adminOrders": {
+      "method": "GET",
+      "path": "/api/admin/orders?page=0&size=10",
+      "count": 200,
+      "successes": 200,
+      "errors": 0,
+      "errorKinds": {},
+      "errorRatePercent": 0.0,
+      "p50Ms": 18.153,
+      "p95Ms": 39.832,
+      "maxMs": 63.944,
+      "requestsPerSecond": 10.489
+    },
+    "adminPayments": {
+      "method": "GET",
+      "path": "/api/admin/payments?page=0&size=10",
+      "count": 200,
+      "successes": 200,
+      "errors": 0,
+      "errorKinds": {},
+      "errorRatePercent": 0.0,
+      "p50Ms": 18.15,
+      "p95Ms": 39.696,
+      "maxMs": 44.689,
+      "requestsPerSecond": 10.489
+    },
+    "adminOrdersDeep": {
+      "method": "GET",
+      "path": "/api/admin/orders?page=9&size=100",
+      "count": 200,
+      "successes": 200,
+      "errors": 0,
+      "errorKinds": {},
+      "errorRatePercent": 0.0,
+      "p50Ms": 23.633,
+      "p95Ms": 45.208,
+      "maxMs": 63.303,
+      "requestsPerSecond": 10.489
+    },
+    "adminPaymentsPending": {
+      "method": "GET",
+      "path": "/api/admin/payments?page=0&size=100&status=PENDING",
+      "count": 200,
+      "successes": 200,
+      "errors": 0,
+      "errorKinds": {},
+      "errorRatePercent": 0.0,
+      "p50Ms": 22.154,
+      "p95Ms": 43.05,
+      "maxMs": 55.421,
+      "requestsPerSecond": 10.489
+    },
+    "adminOrdersCancelled": {
+      "method": "GET",
+      "path": "/api/admin/orders?page=0&size=100&status=CANCELLED",
+      "count": 200,
+      "successes": 200,
+      "errors": 0,
+      "errorKinds": {},
+      "errorRatePercent": 0.0,
+      "p50Ms": 18.828,
+      "p95Ms": 38.502,
+      "maxMs": 53.224,
+      "requestsPerSecond": 10.489
+    },
+    "operations": {
+      "method": "GET",
+      "path": "/api/admin/operations",
+      "count": 200,
+      "successes": 200,
+      "errors": 0,
+      "errorKinds": {},
+      "errorRatePercent": 0.0,
+      "p50Ms": 12.928,
+      "p95Ms": 33.943,
+      "maxMs": 45.999,
+      "requestsPerSecond": 10.489
+    }
+  },
+  "overall": {
+    "count": 1600,
+    "successes": 1600,
+    "errors": 0,
+    "errorKinds": {},
+    "errorRatePercent": 0.0,
+    "p50Ms": 18.699,
+    "p95Ms": 40.15,
+    "maxMs": 63.944,
+    "requestsPerSecond": 83.915
+  },
+  "operations": {
+    "source": "real staff-protected GET /api/admin/operations; sampled by workload, not continuous maxima",
+    "snapshots": [
+      {
+        "phase": "before",
+        "sampledAtUtc": "2026-11-19T03:38:31.387330+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:33.108623+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:33.135385+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:33.136258+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:33.146353+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:33.473674+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:33.499843+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:33.503918+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:33.514277+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:33.853646+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:33.875382+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:33.878920+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:33.919106+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:34.184295+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:34.218230+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:34.241576+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:34.256591+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:34.546997+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:34.581817+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:34.604683+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:34.632091+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:34.938796+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:34.962718+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:34.983921+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:35.022208+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:35.303768+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:35.334279+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:35.362654+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:35.411558+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:35.699336+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:35.721443+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:35.732475+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:35.789984+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:36.068039+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:36.079531+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:36.120377+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:36.180652+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:36.412527+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:36.448282+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:36.527079+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:36.529616+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:36.794345+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:36.820262+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:36.895946+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:36.896324+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:37.127062+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:37.187713+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:37.279020+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:37.325920+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:37.504229+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:37.526005+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:37.605881+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:37.682983+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:37.874907+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:37.886431+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:38.024465+00:00",
+        "pool": {
+          "active": 3,
+          "idle": 7,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:38.066847+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:38.238927+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:38.260200+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:38.366526+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:38.389982+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:38.569513+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:38.593401+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:38.703691+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:38.711693+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:38.958849+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:38.969638+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:39.100850+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:39.122443+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:39.334942+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:39.362738+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:39.486189+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:39.550952+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:39.704219+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:39.735513+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:39.849748+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:39.982913+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:40.062351+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:40.106566+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:40.204021+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:40.343777+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:40.379411+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:40.470255+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:40.573122+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:40.693810+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:40.753153+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:40.848534+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:40.924392+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:41.055483+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:41.160191+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:41.224321+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:41.262562+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:41.414353+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:41.541195+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:41.568507+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:41.653564+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:41.813783+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:41.901963+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:41.960962+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:42.032132+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:42.171270+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:42.248871+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:42.322593+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:42.388544+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:42.520262+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:42.592837+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:42.649690+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:42.762827+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:42.920828+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:42.935561+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:43.020854+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:43.109773+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:43.290295+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:43.301656+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:43.365032+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:43.466415+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:43.687026+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:43.705638+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:43.749546+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:43.879926+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:44.088280+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:44.155322+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:44.202606+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:44.294714+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:44.445271+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:44.559977+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:44.568883+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:44.708334+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:44.823852+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:44.921629+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:44.944613+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:45.061279+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:45.207102+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:45.291409+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:45.293354+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:45.470278+00:00",
+        "pool": {
+          "active": 3,
+          "idle": 7,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:45.573912+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:45.661015+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:45.661167+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:45.859786+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:45.955525+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:46.012369+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:46.059127+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:46.281620+00:00",
+        "pool": {
+          "active": 3,
+          "idle": 7,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:46.345361+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:46.366010+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:46.460962+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:46.663728+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:46.715079+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:46.812223+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:46.858443+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:47.052666+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:47.089122+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:47.179945+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:47.220109+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:47.454046+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:47.467029+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:47.581005+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:47.659220+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:47.860599+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:47.900474+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:47.952440+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:48.063901+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:48.195740+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:48.285466+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:48.321105+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:48.423197+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:48.559704+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:48.679077+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:48.700648+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:48.755862+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:48.891815+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:49.020143+00:00",
+        "pool": {
+          "active": 3,
+          "idle": 7,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:49.062678+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:49.104837+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:49.226298+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:49.361095+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:49.405477+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:49.432375+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:49.597369+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:49.760973+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:49.807701+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:49.816812+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:50.091258+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:50.255209+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:50.255633+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:50.276438+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:50.442979+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:50.626662+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:50.627138+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:50.671875+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:50.811993+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:50.987197+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:50.992809+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:51.062597+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:51.161110+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:51.348309+00:00",
+        "pool": {
+          "active": 2,
+          "idle": 8,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:51.348705+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:51.502568+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:51.548344+00:00",
+        "pool": {
+          "active": 1,
+          "idle": 9,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "measured",
+        "sampledAtUtc": "2026-11-19T03:38:51.804785+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      },
+      {
+        "phase": "after",
+        "sampledAtUtc": "2026-11-19T03:38:52.039379+00:00",
+        "pool": {
+          "active": 0,
+          "idle": 10,
+          "total": 10,
+          "awaiting": 0,
+          "max": 10,
+          "minIdle": 10,
+          "available": true
+        },
+        "jobs": {
+          "enabled": false,
+          "expiryEnabled": true,
+          "notificationEnabled": true,
+          "confirmationTtlSeconds": 86400
+        },
+        "outbox": {
+          "pending": 0,
+          "retry": 0,
+          "dead": 0,
+          "sent": 0
+        }
+      }
+    ],
+    "peakObserved": {
+      "active": 3,
+      "total": 10,
+      "awaiting": 0
+    }
+  },
+  "limitations": [
+    "Bounded local dataset/workload; not production capacity evidence.",
+    "No business writes, provider calls, Redis test or SQL execution timing.",
+    "Session login is the only POST; separate cookie jars per worker and role."
+  ]
+}
