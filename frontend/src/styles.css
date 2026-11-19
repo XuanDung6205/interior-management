@@ -888,3 +888,11 @@ input[type='radio'] { accent-color: var(--teal); width: 18px; height: 18px; min-
   .refund-create .actions { flex-wrap: wrap; }
   .refund-create .actions .button { width: 100%; }
 }
+.aftercare-stack { display: grid; gap: 1.25rem; margin: 1.25rem 0; }
+.aftercare-form { margin: 1rem 0; }
+.aftercare-form fieldset { padding: 0; border: 0; min-width: 0; }
+.aftercare-form input[type="number"] { max-width: 12rem; }
+.aftercare-proof { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .875rem; }
+.operations-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 1rem; }
+.operations-metrics dd { margin: .5rem 0; font-size: 1.5rem; }
+.notification-count { border-radius: 1rem; background: var(--ink, #243d33); color: white; padding: .15rem .45rem; font-size: .75rem; }

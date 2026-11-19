@@ -82,6 +82,15 @@ class SafetyTests(unittest.TestCase):
 
 
 class StatisticsTests(unittest.TestCase):
+    def test_operations_snapshot_keeps_actual_metrics_without_customer_data(self):
+        value = load.operations_snapshot({'pool': {'active': 3, 'idle': 7, 'total': 10,
+            'awaiting': 1, 'max': 10, 'minIdle': 2, 'available': True, 'password': 'secret'},
+            'jobs': {'enabled': False, 'confirmationTtlSeconds': 86400},
+            'outbox': {'pending': 5}, 'expiryAttention': [{'orderNumber': 'private'}]})
+        self.assertEqual(value['pool']['active'], 3)
+        self.assertNotIn('secret', json.dumps(value))
+        self.assertNotIn('private', json.dumps(value))
+
     def test_nearest_rank_and_errors_have_distinct_counts(self):
         report = load.summarize([(10.0, None), (20.0, None), (30.0, 'HTTP_503'),
                                  (40.0, None), (50.0, None)], 2.0)
@@ -133,6 +142,10 @@ class LocalProtocolTests(unittest.TestCase):
                     self.reply({'authenticated': True, 'user': {'roles': [role], 'username': 'private-user'}})
                 elif self.path == '/api/cart':
                     self.reply({'itemCount': 2, 'items': [{'private': 'secret-customer-data'}]})
+                elif self.path == '/api/admin/operations':
+                    self.reply({'pool': {'active': 1, 'idle': 9, 'total': 10, 'awaiting': 0,
+                                         'max': 10, 'minIdle': 10, 'available': True},
+                                'jobs': {'enabled': False}, 'outbox': {'pending': 0}})
                 elif self.path in load.READ_PATHS:
                     self.reply({'totalElements': 13, 'page': 0, 'size': 10,
                                 'items': [{'private': 'secret-customer-data'}]})
@@ -165,10 +178,11 @@ class LocalProtocolTests(unittest.TestCase):
             self.assertEqual(calls[0], ('GET', '/api/commerce/runtime'))
             self.assertEqual(len(logged_in), 4)
             self.assertEqual([path for method, path in calls if method == 'POST'], ['/api/session/login'] * 4)
-            self.assertEqual(report['overall']['count'], 24)
+            self.assertEqual(report['overall']['count'], 2 * 3 * len(load.ENDPOINTS))
             self.assertEqual(report['overall']['errors'], 0)
             self.assertEqual(report['endpoints']['adminPayments']['count'], 6)
-            self.assertEqual(report['configuration']['warmup']['excludedRequests'], 8)
+            self.assertEqual(report['configuration']['warmup']['excludedRequests'], 2 * len(load.ENDPOINTS))
+            self.assertGreaterEqual(len(report['operations']['snapshots']), 2)
             self.assertEqual(report['dataset']['before']['customerOrders']['totalElements'], 13)
             for secret in ('credential-secret', 'secret-customer-data', 'private-user', 'csrf-sensitive-token', 'JSESSIONID'):
                 self.assertNotIn(secret, json.dumps(report))

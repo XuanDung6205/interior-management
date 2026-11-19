@@ -40,7 +40,9 @@ def main():
         sql((ROOT/"docs/database/V005__orders_assembly_requested.sql").read_text(encoding="utf-8"),args.database)
         sql((ROOT/"docs/database/V006__payments_confirmation_note.sql").read_text(encoding="utf-8"),args.database)
         sql((ROOT/"docs/database/V007__refunds_verification_notes.sql").read_text(encoding="utf-8"),args.database)
-        print("Applied additive V002-V007 migrations to isolated DB "+args.database+".")
+        sql((ROOT/"docs/database/V008__commerce_operations.sql").read_text(encoding="utf-8"),args.database)
+        sql((ROOT/"docs/database/V009__commerce_read_indexes.sql").read_text(encoding="utf-8"),args.database)
+        print("Applied additive V002-V009 migrations to isolated DB "+args.database+".")
         return
     if args.action=="create":
         bootstrap=(ROOT/"docs/database/V001__create_furniture_shop.sql").read_text(encoding="utf-8")
@@ -53,7 +55,9 @@ def main():
         sql((ROOT/"docs/database/V005__orders_assembly_requested.sql").read_text(encoding="utf-8"),args.database)
         sql((ROOT/"docs/database/V006__payments_confirmation_note.sql").read_text(encoding="utf-8"),args.database)
         sql((ROOT/"docs/database/V007__refunds_verification_notes.sql").read_text(encoding="utf-8"),args.database)
-        print("Created "+args.database+" with approved 45-table schema and V002-V007 migrations. Existing DBs were not overwritten.")
+        sql((ROOT/"docs/database/V008__commerce_operations.sql").read_text(encoding="utf-8"),args.database)
+        sql((ROOT/"docs/database/V009__commerce_read_indexes.sql").read_text(encoding="utf-8"),args.database)
+        print("Created "+args.database+" with 45 core tables plus 2 notification tables and V002-V009 migrations. Existing DBs were not overwritten.")
         return
     if len(os.environ.get("TV3_DEMO_PASSWORD",""))<10:
         parser.error("Supply TV3_DEMO_PASSWORD with at least 10 characters; it is not printed.")
@@ -78,9 +82,9 @@ def main():
     seed+="INSERT INTO categories(name,slug) VALUES('Nội thất phòng khách','tv3-phong-khach') ON DUPLICATE KEY UPDATE name=VALUES(name);\n"
     fixtures=[("Sofa Modena","tv3-modena","TV3-MODENA-KEM","Kem / 2 mét","12900000.00","photo-1555041469-a586c61ea9bc"),("Bàn trà Oslo","tv3-oslo","TV3-OSLO-SOI","Gỗ sồi tự nhiên","2490000.00","photo-1533090161767-e6ffed986c88"),("Ghế thư giãn Aalto","tv3-aalto","TV3-AALTO-BE","Vải beige","3890000.00","photo-1567538096630-e0c55bd6374c")]
     for name,slug,sku,variant,price,photo in fixtures:
-        seed+=f"INSERT INTO products(category_id,name,slug,short_description,status,warranty_months) SELECT id,'{name}','{slug}','Dữ liệu nội thất demo riêng cho TV3','ACTIVE',24 FROM categories WHERE slug='tv3-phong-khach' ON DUPLICATE KEY UPDATE name=VALUES(name);\n"
+        seed+=f"INSERT INTO products(category_id,name,slug,short_description,status,warranty_months,assembly_required) SELECT id,'{name}','{slug}','Dữ liệu nội thất demo riêng cho TV3','ACTIVE',24,{1 if slug=='tv3-modena' else 0} FROM categories WHERE slug='tv3-phong-khach' ON DUPLICATE KEY UPDATE name=VALUES(name),assembly_required=VALUES(assembly_required);\n"
         seed+=f"INSERT INTO product_variants(product_id,sku,variant_key,name,price,color_name) SELECT id,'{sku}','default','{variant}',{price},'Tự nhiên' FROM products WHERE slug='{slug}' ON DUPLICATE KEY UPDATE price=VALUES(price);\n"
-        seed+=f"INSERT INTO inventory_balances(warehouse_id,variant_id,on_hand_quantity) SELECT w.id,v.id,50 FROM warehouses w CROSS JOIN product_variants v WHERE w.code='MAIN' AND v.sku='{sku}' ON DUPLICATE KEY UPDATE on_hand_quantity=GREATEST(on_hand_quantity,reserved_quantity,50);\n"
+        seed+=f"INSERT IGNORE INTO inventory_balances(warehouse_id,variant_id,on_hand_quantity) SELECT w.id,v.id,50 FROM warehouses w CROSS JOIN product_variants v WHERE w.code='MAIN' AND v.sku='{sku}';\n"
         seed+=f"INSERT INTO product_images(product_id,url,alt_text) SELECT p.id,'https://images.unsplash.com/{photo}?auto=format&fit=crop&w=640&q=80','{name}' FROM products p WHERE p.slug='{slug}' AND NOT EXISTS(SELECT 1 FROM product_images i WHERE i.product_id=p.id);\n"
     seed+="COMMIT;"
     sql(seed,args.database)

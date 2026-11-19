@@ -1,0 +1,1514 @@
+{
+  "schemaVersion": 1,
+  "capturedAtUtc": "2026-11-19T03:38:52.598337+00:00",
+  "database": "furniture_shop_test_perf_ops_20261119",
+  "server": "12.2.2-MariaDB",
+  "dataset": [
+    {
+      "tableName": "users",
+      "rowCount": "2"
+    },
+    {
+      "tableName": "orders",
+      "rowCount": "1000"
+    },
+    {
+      "tableName": "order_items",
+      "rowCount": "3000"
+    },
+    {
+      "tableName": "payments",
+      "rowCount": "1000"
+    },
+    {
+      "tableName": "refunds",
+      "rowCount": "0"
+    },
+    {
+      "tableName": "carts",
+      "rowCount": "1"
+    },
+    {
+      "tableName": "cart_items",
+      "rowCount": "3"
+    },
+    {
+      "tableName": "product_variants",
+      "rowCount": "1003"
+    },
+    {
+      "tableName": "inventory_reservations",
+      "rowCount": "3000"
+    },
+    {
+      "tableName": "coupon_redemptions",
+      "rowCount": "333"
+    },
+    {
+      "tableName": "commerce_notification_outbox",
+      "rowCount": "0"
+    },
+    {
+      "tableName": "commerce_notifications",
+      "rowCount": "0"
+    }
+  ],
+  "existingIndexes": [
+    {
+      "TABLE_NAME": "carts",
+      "INDEX_NAME": "fk_carts_user",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "user_id",
+      "CARDINALITY": "1"
+    },
+    {
+      "TABLE_NAME": "carts",
+      "INDEX_NAME": "idx_carts_expiry",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "status",
+      "CARDINALITY": "1"
+    },
+    {
+      "TABLE_NAME": "carts",
+      "INDEX_NAME": "idx_carts_expiry",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "expires_at",
+      "CARDINALITY": "1"
+    },
+    {
+      "TABLE_NAME": "carts",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "1"
+    },
+    {
+      "TABLE_NAME": "carts",
+      "INDEX_NAME": "uq_carts_active_guest",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "active_guest_hash",
+      "CARDINALITY": "1"
+    },
+    {
+      "TABLE_NAME": "carts",
+      "INDEX_NAME": "uq_carts_active_user",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "active_user_id",
+      "CARDINALITY": "1"
+    },
+    {
+      "TABLE_NAME": "cart_items",
+      "INDEX_NAME": "fk_cart_items_variant",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "variant_id",
+      "CARDINALITY": "3"
+    },
+    {
+      "TABLE_NAME": "cart_items",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "3"
+    },
+    {
+      "TABLE_NAME": "cart_items",
+      "INDEX_NAME": "uq_cart_items",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "cart_id",
+      "CARDINALITY": "1"
+    },
+    {
+      "TABLE_NAME": "cart_items",
+      "INDEX_NAME": "uq_cart_items",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "variant_id",
+      "CARDINALITY": "3"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "fk_orders_coupon",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "coupon_id",
+      "CARDINALITY": "2"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "idx_orders_confirmation_expiry",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "status",
+      "CARDINALITY": "4"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "idx_orders_confirmation_expiry",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "confirmation_expires_at",
+      "CARDINALITY": "4"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "idx_orders_confirmation_expiry",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "idx_orders_status_time",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "status",
+      "CARDINALITY": "4"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "idx_orders_status_time",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "placed_at",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "idx_orders_user_time",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "user_id",
+      "CARDINALITY": "1"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "idx_orders_user_time",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "placed_at",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "uq_orders_idempotency",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "idempotency_key",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "uq_orders_id_coupon",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "uq_orders_id_coupon",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "coupon_id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "uq_orders_id_currency",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "uq_orders_id_currency",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "currency",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "uq_orders_id_user",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "uq_orders_id_user",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "user_id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "orders",
+      "INDEX_NAME": "uq_orders_number",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "order_number",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "order_addresses",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "order_addresses",
+      "INDEX_NAME": "uq_order_addresses_type",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "order_id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "order_addresses",
+      "INDEX_NAME": "uq_order_addresses_type",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "address_type",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "order_items",
+      "INDEX_NAME": "fk_order_items_order",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "order_id",
+      "CARDINALITY": "1006"
+    },
+    {
+      "TABLE_NAME": "order_items",
+      "INDEX_NAME": "fk_order_items_variant",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "variant_id",
+      "CARDINALITY": "1006"
+    },
+    {
+      "TABLE_NAME": "order_items",
+      "INDEX_NAME": "fk_order_items_variant",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "product_id",
+      "CARDINALITY": "1006"
+    },
+    {
+      "TABLE_NAME": "order_items",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "3018"
+    },
+    {
+      "TABLE_NAME": "order_items",
+      "INDEX_NAME": "uq_order_items_id_order",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "3018"
+    },
+    {
+      "TABLE_NAME": "order_items",
+      "INDEX_NAME": "uq_order_items_id_order",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "order_id",
+      "CARDINALITY": "3018"
+    },
+    {
+      "TABLE_NAME": "order_items",
+      "INDEX_NAME": "uq_order_items_id_order_product",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "3018"
+    },
+    {
+      "TABLE_NAME": "order_items",
+      "INDEX_NAME": "uq_order_items_id_order_product",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "order_id",
+      "CARDINALITY": "3018"
+    },
+    {
+      "TABLE_NAME": "order_items",
+      "INDEX_NAME": "uq_order_items_id_order_product",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "product_id",
+      "CARDINALITY": "3018"
+    },
+    {
+      "TABLE_NAME": "order_items",
+      "INDEX_NAME": "uq_order_items_id_variant",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "3018"
+    },
+    {
+      "TABLE_NAME": "order_items",
+      "INDEX_NAME": "uq_order_items_id_variant",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "variant_id",
+      "CARDINALITY": "3018"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "fk_payments_order",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "order_id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "fk_payments_order",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "currency",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "fk_payments_verifier",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "verified_by",
+      "CARDINALITY": "2"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "idx_payments_expiry",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "status",
+      "CARDINALITY": "3"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "idx_payments_expiry",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "expires_at",
+      "CARDINALITY": "3"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "idx_payments_order_status",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "order_id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "idx_payments_order_status",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "status",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "uq_payments_id_order_currency",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "uq_payments_id_order_currency",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "order_id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "uq_payments_id_order_currency",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "currency",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "uq_payments_id_provider",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "uq_payments_id_provider",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "provider",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "uq_payments_key",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "idempotency_key",
+      "CARDINALITY": "1000"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "uq_payments_provider_tx",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "provider",
+      "CARDINALITY": "2"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "INDEX_NAME": "uq_payments_provider_tx",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "provider_transaction_id",
+      "CARDINALITY": "2"
+    },
+    {
+      "TABLE_NAME": "refunds",
+      "INDEX_NAME": "fk_refunds_actor",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "processed_by",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "refunds",
+      "INDEX_NAME": "fk_refunds_payment",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "payment_id",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "refunds",
+      "INDEX_NAME": "fk_refunds_payment",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "order_id",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "refunds",
+      "INDEX_NAME": "fk_refunds_payment",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "3",
+      "COLUMN_NAME": "currency",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "refunds",
+      "INDEX_NAME": "fk_refunds_return",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "return_request_id",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "refunds",
+      "INDEX_NAME": "fk_refunds_return",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "order_id",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "refunds",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "refunds",
+      "INDEX_NAME": "uq_refunds_key",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "idempotency_key",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "refunds",
+      "INDEX_NAME": "uq_refunds_provider_tx",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "provider",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "refunds",
+      "INDEX_NAME": "uq_refunds_provider_tx",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "provider_refund_id",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "shipments",
+      "INDEX_NAME": "fk_shipments_installer",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "installation_staff_id",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "shipments",
+      "INDEX_NAME": "fk_shipments_warehouse",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "warehouse_id",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "shipments",
+      "INDEX_NAME": "idx_shipments_order_status",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "order_id",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "shipments",
+      "INDEX_NAME": "idx_shipments_order_status",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "status",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "shipments",
+      "INDEX_NAME": "idx_shipments_schedule",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "status",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "shipments",
+      "INDEX_NAME": "idx_shipments_schedule",
+      "NON_UNIQUE": "1",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "scheduled_from",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "shipments",
+      "INDEX_NAME": "PRIMARY",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "shipments",
+      "INDEX_NAME": "uq_shipments_carrier_tracking",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "carrier",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "shipments",
+      "INDEX_NAME": "uq_shipments_carrier_tracking",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "tracking_number",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "shipments",
+      "INDEX_NAME": "uq_shipments_idempotency",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "idempotency_key",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "shipments",
+      "INDEX_NAME": "uq_shipments_id_order",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "1",
+      "COLUMN_NAME": "id",
+      "CARDINALITY": "0"
+    },
+    {
+      "TABLE_NAME": "shipments",
+      "INDEX_NAME": "uq_shipments_id_order",
+      "NON_UNIQUE": "0",
+      "SEQ_IN_INDEX": "2",
+      "COLUMN_NAME": "order_id",
+      "CARDINALITY": "0"
+    }
+  ],
+  "plans": {
+    "customerOrdersPage0": {
+      "sql": "SELECT o.id,o.order_number,o.status,o.currency,o.grand_total,o.placed_at,\n       (SELECT CAST(COALESCE(SUM(i.quantity),0) AS SIGNED) FROM order_items i WHERE i.order_id=o.id) AS itemCount,\n       CASE WHEN o.grand_total=0 THEN 'NOT_REQUIRED'\n            WHEN (SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.order_id=o.id AND p.status='SUCCEEDED')>=o.grand_total THEN 'SUCCEEDED'\n            WHEN EXISTS(SELECT 1 FROM payments p WHERE p.order_id=o.id AND p.status='SUCCEEDED') THEN 'PARTIALLY_PAID'\n            WHEN o.status='CANCELLED' THEN 'CANCELLED' ELSE 'PENDING' END AS paymentStatus,\n       CASE WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status='IN_TRANSIT') THEN 'IN_TRANSIT'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status='DELIVERED') THEN 'DELIVERED'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status IN ('FAILED','RETURNED')) THEN 'EXCEPTION'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status<>'CANCELLED') THEN 'PENDING'\n            ELSE 'NOT_CREATED' END AS shipmentStatus FROM orders o WHERE o.user_id=2 ORDER BY o.placed_at DESC,o.id DESC LIMIT 10 OFFSET 0",
+      "explain": [
+        {
+          "id": "1",
+          "select_type": "PRIMARY",
+          "table": "o",
+          "type": "range",
+          "possible_keys": "idx_orders_user_time",
+          "key": "idx_orders_user_time",
+          "key_len": "9",
+          "ref": "NULL",
+          "rows": "1000",
+          "Extra": "Using index condition"
+        },
+        {
+          "id": "8",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "7",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "6",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "5",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "4",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "p",
+          "type": "ref",
+          "possible_keys": "fk_payments_order,idx_payments_order_status,idx_payments_expiry",
+          "key": "idx_payments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "3",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "p",
+          "type": "ref",
+          "possible_keys": "fk_payments_order,idx_payments_order_status,idx_payments_expiry",
+          "key": "fk_payments_order",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "2",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "i",
+          "type": "ref",
+          "possible_keys": "fk_order_items_order",
+          "key": "fk_order_items_order",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "3"
+        }
+      ]
+    },
+    "customerOrdersCount": {
+      "sql": "SELECT COUNT(*) FROM orders o WHERE o.user_id=2",
+      "explain": [
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "o",
+          "type": "ref",
+          "possible_keys": "idx_orders_user_time",
+          "key": "idx_orders_user_time",
+          "key_len": "9",
+          "ref": "const",
+          "rows": "1000",
+          "Extra": "Using index"
+        }
+      ]
+    },
+    "adminOrdersPage0": {
+      "sql": "SELECT o.id,o.order_number,o.status,o.currency,o.grand_total,o.placed_at,\n       (SELECT CAST(COALESCE(SUM(i.quantity),0) AS SIGNED) FROM order_items i WHERE i.order_id=o.id) AS itemCount,\n       CASE WHEN o.grand_total=0 THEN 'NOT_REQUIRED'\n            WHEN (SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.order_id=o.id AND p.status='SUCCEEDED')>=o.grand_total THEN 'SUCCEEDED'\n            WHEN EXISTS(SELECT 1 FROM payments p WHERE p.order_id=o.id AND p.status='SUCCEEDED') THEN 'PARTIALLY_PAID'\n            WHEN o.status='CANCELLED' THEN 'CANCELLED' ELSE 'PENDING' END AS paymentStatus,\n       CASE WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status='IN_TRANSIT') THEN 'IN_TRANSIT'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status='DELIVERED') THEN 'DELIVERED'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status IN ('FAILED','RETURNED')) THEN 'EXCEPTION'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status<>'CANCELLED') THEN 'PENDING'\n            ELSE 'NOT_CREATED' END AS shipmentStatus,u.id,u.username,u.full_name,u.email,a.recipient_name,a.phone FROM orders o LEFT JOIN users u ON u.id=o.user_id LEFT JOIN order_addresses a ON a.order_id=o.id AND a.address_type='SHIPPING' WHERE 1=1 ORDER BY o.placed_at DESC,o.id DESC LIMIT 10 OFFSET 0",
+      "explain": [
+        {
+          "id": "1",
+          "select_type": "PRIMARY",
+          "table": "o",
+          "type": "ALL",
+          "possible_keys": "NULL",
+          "key": "NULL",
+          "key_len": "NULL",
+          "ref": "NULL",
+          "rows": "1000",
+          "Extra": "Using filesort"
+        },
+        {
+          "id": "1",
+          "select_type": "PRIMARY",
+          "table": "u",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.user_id",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "1",
+          "select_type": "PRIMARY",
+          "table": "a",
+          "type": "eq_ref",
+          "possible_keys": "uq_order_addresses_type",
+          "key": "uq_order_addresses_type",
+          "key_len": "90",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "8",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "7",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "6",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "5",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "4",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "p",
+          "type": "ref",
+          "possible_keys": "fk_payments_order,idx_payments_order_status,idx_payments_expiry",
+          "key": "idx_payments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "3",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "p",
+          "type": "ref",
+          "possible_keys": "fk_payments_order,idx_payments_order_status,idx_payments_expiry",
+          "key": "fk_payments_order",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "2",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "i",
+          "type": "ref",
+          "possible_keys": "fk_order_items_order",
+          "key": "fk_order_items_order",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "3"
+        }
+      ]
+    },
+    "adminOrdersDeepPage9Size100": {
+      "sql": "SELECT o.id,o.order_number,o.status,o.currency,o.grand_total,o.placed_at,\n       (SELECT CAST(COALESCE(SUM(i.quantity),0) AS SIGNED) FROM order_items i WHERE i.order_id=o.id) AS itemCount,\n       CASE WHEN o.grand_total=0 THEN 'NOT_REQUIRED'\n            WHEN (SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.order_id=o.id AND p.status='SUCCEEDED')>=o.grand_total THEN 'SUCCEEDED'\n            WHEN EXISTS(SELECT 1 FROM payments p WHERE p.order_id=o.id AND p.status='SUCCEEDED') THEN 'PARTIALLY_PAID'\n            WHEN o.status='CANCELLED' THEN 'CANCELLED' ELSE 'PENDING' END AS paymentStatus,\n       CASE WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status='IN_TRANSIT') THEN 'IN_TRANSIT'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status='DELIVERED') THEN 'DELIVERED'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status IN ('FAILED','RETURNED')) THEN 'EXCEPTION'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status<>'CANCELLED') THEN 'PENDING'\n            ELSE 'NOT_CREATED' END AS shipmentStatus,u.id,u.username,u.full_name,u.email,a.recipient_name,a.phone FROM orders o LEFT JOIN users u ON u.id=o.user_id LEFT JOIN order_addresses a ON a.order_id=o.id AND a.address_type='SHIPPING' WHERE 1=1 ORDER BY o.placed_at DESC,o.id DESC LIMIT 100 OFFSET 900",
+      "explain": [
+        {
+          "id": "1",
+          "select_type": "PRIMARY",
+          "table": "o",
+          "type": "ALL",
+          "possible_keys": "NULL",
+          "key": "NULL",
+          "key_len": "NULL",
+          "ref": "NULL",
+          "rows": "1000",
+          "Extra": "Using filesort"
+        },
+        {
+          "id": "1",
+          "select_type": "PRIMARY",
+          "table": "u",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.user_id",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "1",
+          "select_type": "PRIMARY",
+          "table": "a",
+          "type": "eq_ref",
+          "possible_keys": "uq_order_addresses_type",
+          "key": "uq_order_addresses_type",
+          "key_len": "90",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "8",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "7",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "6",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "5",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "4",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "p",
+          "type": "ref",
+          "possible_keys": "fk_payments_order,idx_payments_order_status,idx_payments_expiry",
+          "key": "idx_payments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "3",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "p",
+          "type": "ref",
+          "possible_keys": "fk_payments_order,idx_payments_order_status,idx_payments_expiry",
+          "key": "fk_payments_order",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "2",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "i",
+          "type": "ref",
+          "possible_keys": "fk_order_items_order",
+          "key": "fk_order_items_order",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "3"
+        }
+      ]
+    },
+    "adminOrdersCount": {
+      "sql": "SELECT COUNT(*) FROM orders o LEFT JOIN users u ON u.id=o.user_id LEFT JOIN order_addresses a ON a.order_id=o.id AND a.address_type='SHIPPING' WHERE 1=1",
+      "explain": [
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "o",
+          "type": "index",
+          "possible_keys": "NULL",
+          "key": "uq_orders_id_user",
+          "key_len": "17",
+          "ref": "NULL",
+          "rows": "1000",
+          "Extra": "Using index"
+        }
+      ]
+    },
+    "adminOrdersCancelledPage0": {
+      "sql": "SELECT o.id,o.order_number,o.status,o.currency,o.grand_total,o.placed_at,\n       (SELECT CAST(COALESCE(SUM(i.quantity),0) AS SIGNED) FROM order_items i WHERE i.order_id=o.id) AS itemCount,\n       CASE WHEN o.grand_total=0 THEN 'NOT_REQUIRED'\n            WHEN (SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.order_id=o.id AND p.status='SUCCEEDED')>=o.grand_total THEN 'SUCCEEDED'\n            WHEN EXISTS(SELECT 1 FROM payments p WHERE p.order_id=o.id AND p.status='SUCCEEDED') THEN 'PARTIALLY_PAID'\n            WHEN o.status='CANCELLED' THEN 'CANCELLED' ELSE 'PENDING' END AS paymentStatus,\n       CASE WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status='IN_TRANSIT') THEN 'IN_TRANSIT'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status='DELIVERED') THEN 'DELIVERED'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status IN ('FAILED','RETURNED')) THEN 'EXCEPTION'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status<>'CANCELLED') THEN 'PENDING'\n            ELSE 'NOT_CREATED' END AS shipmentStatus,u.id,u.username,u.full_name,u.email,a.recipient_name,a.phone FROM orders o LEFT JOIN users u ON u.id=o.user_id LEFT JOIN order_addresses a ON a.order_id=o.id AND a.address_type='SHIPPING' WHERE 1=1 AND o.status='CANCELLED' ORDER BY o.placed_at DESC,o.id DESC LIMIT 10 OFFSET 0",
+      "explain": [
+        {
+          "id": "1",
+          "select_type": "PRIMARY",
+          "table": "o",
+          "type": "range",
+          "possible_keys": "idx_orders_status_time,idx_orders_confirmation_expiry",
+          "key": "idx_orders_status_time",
+          "key_len": "122",
+          "ref": "NULL",
+          "rows": "250",
+          "Extra": "Using index condition"
+        },
+        {
+          "id": "1",
+          "select_type": "PRIMARY",
+          "table": "u",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.user_id",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "1",
+          "select_type": "PRIMARY",
+          "table": "a",
+          "type": "eq_ref",
+          "possible_keys": "uq_order_addresses_type",
+          "key": "uq_order_addresses_type",
+          "key_len": "90",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "8",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "7",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "6",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "5",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "4",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "p",
+          "type": "ref",
+          "possible_keys": "fk_payments_order,idx_payments_order_status,idx_payments_expiry",
+          "key": "idx_payments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "3",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "p",
+          "type": "ref",
+          "possible_keys": "fk_payments_order,idx_payments_order_status,idx_payments_expiry",
+          "key": "fk_payments_order",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "2",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "i",
+          "type": "ref",
+          "possible_keys": "fk_order_items_order",
+          "key": "fk_order_items_order",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "3"
+        }
+      ]
+    },
+    "adminOrdersCancelledPage0Size100": {
+      "sql": "SELECT o.id,o.order_number,o.status,o.currency,o.grand_total,o.placed_at,\n       (SELECT CAST(COALESCE(SUM(i.quantity),0) AS SIGNED) FROM order_items i WHERE i.order_id=o.id) AS itemCount,\n       CASE WHEN o.grand_total=0 THEN 'NOT_REQUIRED'\n            WHEN (SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.order_id=o.id AND p.status='SUCCEEDED')>=o.grand_total THEN 'SUCCEEDED'\n            WHEN EXISTS(SELECT 1 FROM payments p WHERE p.order_id=o.id AND p.status='SUCCEEDED') THEN 'PARTIALLY_PAID'\n            WHEN o.status='CANCELLED' THEN 'CANCELLED' ELSE 'PENDING' END AS paymentStatus,\n       CASE WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status='IN_TRANSIT') THEN 'IN_TRANSIT'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status='DELIVERED') THEN 'DELIVERED'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status IN ('FAILED','RETURNED')) THEN 'EXCEPTION'\n            WHEN EXISTS(SELECT 1 FROM shipments s WHERE s.order_id=o.id AND s.status<>'CANCELLED') THEN 'PENDING'\n            ELSE 'NOT_CREATED' END AS shipmentStatus,u.id,u.username,u.full_name,u.email,a.recipient_name,a.phone FROM orders o LEFT JOIN users u ON u.id=o.user_id LEFT JOIN order_addresses a ON a.order_id=o.id AND a.address_type='SHIPPING' WHERE 1=1 AND o.status='CANCELLED' ORDER BY o.placed_at DESC,o.id DESC LIMIT 100 OFFSET 0",
+      "explain": [
+        {
+          "id": "1",
+          "select_type": "PRIMARY",
+          "table": "o",
+          "type": "range",
+          "possible_keys": "idx_orders_status_time,idx_orders_confirmation_expiry",
+          "key": "idx_orders_status_time",
+          "key_len": "122",
+          "ref": "NULL",
+          "rows": "250",
+          "Extra": "Using index condition"
+        },
+        {
+          "id": "1",
+          "select_type": "PRIMARY",
+          "table": "u",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.user_id",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "1",
+          "select_type": "PRIMARY",
+          "table": "a",
+          "type": "eq_ref",
+          "possible_keys": "uq_order_addresses_type",
+          "key": "uq_order_addresses_type",
+          "key_len": "90",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "8",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "7",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "6",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "5",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "s",
+          "type": "ref",
+          "possible_keys": "idx_shipments_order_status,idx_shipments_schedule",
+          "key": "idx_shipments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "4",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "p",
+          "type": "ref",
+          "possible_keys": "fk_payments_order,idx_payments_order_status,idx_payments_expiry",
+          "key": "idx_payments_order_status",
+          "key_len": "130",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id,const",
+          "rows": "1",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": "3",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "p",
+          "type": "ref",
+          "possible_keys": "fk_payments_order,idx_payments_order_status,idx_payments_expiry",
+          "key": "fk_payments_order",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "2",
+          "select_type": "DEPENDENT SUBQUERY",
+          "table": "i",
+          "type": "ref",
+          "possible_keys": "fk_order_items_order",
+          "key": "fk_order_items_order",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.id",
+          "rows": "3"
+        }
+      ]
+    },
+    "adminPaymentsPage0": {
+      "sql": "SELECT p.id,p.order_id,p.method,p.provider,p.status,p.amount,p.currency,\n       p.provider_transaction_id,p.confirmation_note,p.verified_by,p.paid_at,p.expires_at,p.created_at,\n       v.full_name,o.grand_total,o.order_number,o.status,u.id,u.username,u.full_name\n       FROM payments p JOIN orders o ON o.id=p.order_id LEFT JOIN users u ON u.id=o.user_id\n       LEFT JOIN users v ON v.id=p.verified_by WHERE 1=1 ORDER BY p.created_at DESC,p.id DESC LIMIT 10 OFFSET 0",
+      "explain": [
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "p",
+          "type": "ALL",
+          "possible_keys": "fk_payments_order,idx_payments_order_status",
+          "key": "NULL",
+          "key_len": "NULL",
+          "ref": "NULL",
+          "rows": "1000",
+          "Extra": "Using filesort"
+        },
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "o",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY,uq_orders_id_currency,uq_orders_id_user,uq_orders_id_coupon",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.p.order_id",
+          "rows": "1",
+          "Extra": ""
+        },
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "u",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.user_id",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "v",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.p.verified_by",
+          "rows": "1",
+          "Extra": "Using where"
+        }
+      ]
+    },
+    "adminPaymentsCount": {
+      "sql": "SELECT COUNT(*) FROM payments p JOIN orders o ON o.id=p.order_id LEFT JOIN users u ON u.id=o.user_id WHERE 1=1",
+      "explain": [
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "p",
+          "type": "index",
+          "possible_keys": "fk_payments_order,idx_payments_order_status",
+          "key": "fk_payments_order",
+          "key_len": "20",
+          "ref": "NULL",
+          "rows": "1000",
+          "Extra": "Using index"
+        },
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "o",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY,uq_orders_id_currency,uq_orders_id_user,uq_orders_id_coupon",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.p.order_id",
+          "rows": "1"
+        }
+      ]
+    },
+    "adminPaymentsPendingPage0": {
+      "sql": "SELECT p.id,p.order_id,p.method,p.provider,p.status,p.amount,p.currency,\n       p.provider_transaction_id,p.confirmation_note,p.verified_by,p.paid_at,p.expires_at,p.created_at,\n       v.full_name,o.grand_total,o.order_number,o.status,u.id,u.username,u.full_name\n       FROM payments p JOIN orders o ON o.id=p.order_id LEFT JOIN users u ON u.id=o.user_id\n       LEFT JOIN users v ON v.id=p.verified_by WHERE 1=1 AND p.status='PENDING' ORDER BY p.created_at DESC,p.id DESC LIMIT 10 OFFSET 0",
+      "explain": [
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "p",
+          "type": "range",
+          "possible_keys": "fk_payments_order,idx_payments_order_status,idx_payments_expiry",
+          "key": "idx_payments_expiry",
+          "key_len": "122",
+          "ref": "NULL",
+          "rows": "500",
+          "Extra": "Using index condition; Using filesort"
+        },
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "o",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY,uq_orders_id_currency,uq_orders_id_user,uq_orders_id_coupon",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.p.order_id",
+          "rows": "1",
+          "Extra": ""
+        },
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "u",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.user_id",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "v",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.p.verified_by",
+          "rows": "1",
+          "Extra": "Using where"
+        }
+      ]
+    },
+    "adminPaymentsPendingPage0Size100": {
+      "sql": "SELECT p.id,p.order_id,p.method,p.provider,p.status,p.amount,p.currency,\n       p.provider_transaction_id,p.confirmation_note,p.verified_by,p.paid_at,p.expires_at,p.created_at,\n       v.full_name,o.grand_total,o.order_number,o.status,u.id,u.username,u.full_name\n       FROM payments p JOIN orders o ON o.id=p.order_id LEFT JOIN users u ON u.id=o.user_id\n       LEFT JOIN users v ON v.id=p.verified_by WHERE 1=1 AND p.status='PENDING' ORDER BY p.created_at DESC,p.id DESC LIMIT 100 OFFSET 0",
+      "explain": [
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "p",
+          "type": "range",
+          "possible_keys": "fk_payments_order,idx_payments_order_status,idx_payments_expiry",
+          "key": "idx_payments_expiry",
+          "key_len": "122",
+          "ref": "NULL",
+          "rows": "500",
+          "Extra": "Using index condition; Using filesort"
+        },
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "o",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY,uq_orders_id_currency,uq_orders_id_user,uq_orders_id_coupon",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.p.order_id",
+          "rows": "1",
+          "Extra": ""
+        },
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "u",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.o.user_id",
+          "rows": "1",
+          "Extra": "Using where"
+        },
+        {
+          "id": "1",
+          "select_type": "SIMPLE",
+          "table": "v",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "furniture_shop_test_perf_ops_20261119.p.verified_by",
+          "rows": "1",
+          "Extra": "Using where"
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "EXPLAIN estimates only; SELECT list projections are not executed.",
+    "No DDL/DML, ANALYZE TABLE, cache flush, optimizer hints or index changes.",
+    "Pool utilization, query runtime, Redis and provider failures are not measured."
+  ]
+}

@@ -1,6 +1,6 @@
 # Database nội thất — furniture_shop
 
-Schema đã được người dùng chốt: 33 bảng nghiệp vụ chính và toàn bộ 12 bảng mở rộng, tổng cộng **45 bảng**. Database được sử dụng là `furniture_shop`; database `eshop` cũ đã được xóa theo yêu cầu trước đó và các script khởi tạo/seed cũ cũng đã được dọn khỏi source.
+Schema bootstrap có 33 bảng nghiệp vụ chính và 12 bảng mở rộng, tổng cộng **45 bảng**. Runtime hiện tại có **47 bảng** sau V008 bổ sung hai bảng thông báo. Database được sử dụng là `furniture_shop`; database `eshop` cũ và các script khởi tạo/seed cũ đã được dọn theo yêu cầu.
 
 ## Kết nối bằng HeidiSQL
 
@@ -15,7 +15,9 @@ Mật khẩu không được ghi trong repository, SQL hay tài liệu này. Kh�
 - `V001__create_furniture_shop.sql`: bootstrap một lần, tạo database và 45 bảng, seed 3 quyền và 1 kho chính.
 - `V002__orders_request_fingerprint.sql`, `V003__shipments_idempotency.sql`, `V004__shipment_audit_index.sql`, `V005__orders_assembly_requested.sql`: migration cộng thêm theo thứ tự sau V001; dùng các bảng đã có nên tổng số bảng vẫn là45. V005 lưu lựa chọn lắp đặt độc lập với phí.
 - `V006__payments_confirmation_note.sql`: bổ sung ghi chú đối soát nội bộ cho khoản thu thủ công; không thay đổi dữ liệu tài chính cũ. Áp dụng sau V002–V005.
-- `V007__refunds_verification_notes.sql`: hai cột ghi chú đối soát/hủy yêu cầu hoàn thủ công, chỉ nhân viên đọc. Runtime mới cần áp dụng đủ V002–V007; vẫn45bảng, không ghi đè lịch sử khoản thu/hoàn.
+- `V007__refunds_verification_notes.sql`: hai cột ghi chú đối soát/hủy yêu cầu hoàn thủ công, chỉ nhân viên đọc; không ghi đè lịch sử khoản thu/hoàn.
+- `V008__commerce_operations.sql`: ba cột hạn xác nhận/retry trên orders và hai bảng `commerce_notification_outbox`, `commerce_notifications`. Runtime có47bảng; không backfill hạn tự hủy cho đơn cũ.
+- `V009__commerce_read_indexes.sql`: ba index phục vụ danh sách đơn/khoản thu đã đo bằng EXPLAIN; không đổi số bảng. Runtime mới cần đủ V001–V009, áp dụng migration theo thứ tự.
 - `verify_schema.py`: kiểm tra tích hợp bằng MariaDB CLI, chỉ chấp nhận tên `furniture_shop` hoặc `furniture_shop_test_*`.
 - `verification-fixture.sql`: dữ liệu kiểm thử bên trong transaction; script kiểm tra sẽ rollback, không phải dữ liệu mẫu để import.
 
@@ -25,6 +27,8 @@ Kiểm tra bằng PowerShell sau khi đặt `MYSQL_PWD` trong environment tạm 
 
 ```powershell
 python docs/database/verify_schema.py --database furniture_shop
+# Khi đã áp dụng V008/V009, kiểm tra đủ47bảng:
+python docs/database/verify_schema.py --database furniture_shop --operations
 ```
 
 Script mặc định dùng client `C:\Program Files\MariaDB 12.2\bin\mariadb.exe`; có thể đổi bằng `--client`, `--host`, `--port`. Hủy environment chứa mật khẩu sau khi dùng. Chỉ chạy verification trên database development, lúc chưa có ứng dụng ghi đồng thời. Test dùng transaction rollback nhưng bộ đếm AUTO_INCREMENT vẫn có thể tăng; ID bị khuyết là bình thường.
@@ -52,6 +56,8 @@ Script mặc định dùng client `C:\Program Files\MariaDB 12.2\bin\mariadb.exe
 **Nội dung (2):** `banners`, `articles`.
 
 **Hành vi/kiểm toán/chat (4):** `tracking_events`, `audit_logs`, `chat_conversations`, `chat_messages`.
+
+**Hạ tầng thông báo bổ sung V008 (2):** `commerce_notification_outbox`, `commerce_notifications`. Outbox ghi cùng transaction nghiệp vụ; worker chuyển đến hộp thư web riêng của khách, có retry và chống gửi trùng. Chưa có gửi email/SMTP.
 
 ## Quy ước và quyết định thiết kế
 
@@ -97,11 +103,11 @@ Cấu hình kết nối đã chuyển sang `furniture_shop`, có thể ghi đè 
 
 Ứng dụng legacy dùng `JWT_SECRET` (Base64 của ít nhất 32 byte ngẫu nhiên). Runtime commerce mới dùng session/CSRF, không yêu cầu JWT/Gemini cho giỏ/coupon. `.env.example` liệt kê tên biến nhưng không chứa secret; Spring Boot không tự nạp file này, cần cấu hình environment trong terminal/IDE hoặc Docker Compose. File `.env` và `.env.*` cục bộ được Git bỏ qua.
 
-TV3-01/02/03 đã triển khai CartEntity/CartItemEntity/CouponEntity, REST API và React trong `org.example.eshop.commerce.CommerceApplication`; mặc định Maven chạy runtime này, chỉ scan commerce và validate các Entity của nó. Các adapter đọc users/roles/SKU/tồn từ bảng thật. Đơn hàng, checkout, payment, tracking và các module còn lại chưa migrate; code legacy vẫn được giữ riêng, không được tự động nạp vào commerce.
+Runtime `org.example.eshop.commerce.CommerceApplication` hiện có giỏ/coupon/checkout/đơn, thu và hoàn thủ công, kho/giao hàng, lắp đặt/đổi trả, hết hạn COD và hộp thư web. Maven mặc định chạy runtime này, chỉ scan commerce và validate các Entity của nó. Adapter đọc users/roles/SKU/tồn từ bảng thật. VNPAY sandbox/webhook/hoàn online chưa triển khai; code legacy vẫn giữ riêng ngoài commerce.
 
 Hướng frontend là **React**, backend **Spring Boot REST API**. Source vẫn chứa Thymeleaf/MVC legacy ngoài runtime commerce. Xem `docs/TV3_HUONG_DAN_CHAY_VA_DEMO.md` để chạy phần TV3 và database demo cô lập. Không cần đổi schema chỉ vì đổi frontend.
 
-Chưa nhập dữ liệu từ `eshop`, chưa thêm sản phẩm/ảnh mẫu, chưa tạo người dùng đăng nhập. Seed chỉ có ADMIN, STAFF, CUSTOMER và kho MAIN. Các lần verification rollback dữ liệu nghiệp vụ.
+V001 chỉ seed ADMIN, STAFF, CUSTOMER và kho MAIN. Chưa nhập dữ liệu từ `eshop`. Script demo riêng `scripts/tv3_database.py` tạo tài khoản và catalog trong DB cô lập; seed lại không reset tồn hiện có. Các lần verification rollback dữ liệu nghiệp vụ. Xem [bàn giao và demo](../TV3_BAN_GIAO_VA_DEMO.md) cho cấu hình và bằng chứng kiểm thử mới nhất.
 
 Bảng vector do Spring AI quản lý sẽ được cấu hình và đưa vào migration ở giai đoạn cập nhật app; không tự đoán tên/cấu trúc bảng phụ thuộc thư viện. Tính năng vector đã có trên server MariaDB hiện tại nhưng chưa khởi tạo cho database mới.
 

@@ -51,11 +51,14 @@ def queries(user_id):
         'customerOrdersPage0': customer + ' ORDER BY o.placed_at DESC,o.id DESC LIMIT 10 OFFSET 0',
         'customerOrdersCount': f'SELECT COUNT(*) FROM orders o WHERE o.user_id={user_id}',
         'adminOrdersPage0': admin + ' ORDER BY o.placed_at DESC,o.id DESC LIMIT 10 OFFSET 0',
+        'adminOrdersDeepPage9Size100': admin + ' ORDER BY o.placed_at DESC,o.id DESC LIMIT 100 OFFSET 900',
         'adminOrdersCount': "SELECT COUNT(*) FROM orders o LEFT JOIN users u ON u.id=o.user_id LEFT JOIN order_addresses a ON a.order_id=o.id AND a.address_type='SHIPPING' WHERE 1=1",
         'adminOrdersCancelledPage0': admin + " AND o.status='CANCELLED' ORDER BY o.placed_at DESC,o.id DESC LIMIT 10 OFFSET 0",
+        'adminOrdersCancelledPage0Size100': admin + " AND o.status='CANCELLED' ORDER BY o.placed_at DESC,o.id DESC LIMIT 100 OFFSET 0",
         'adminPaymentsPage0': payment + ' ORDER BY p.created_at DESC,p.id DESC LIMIT 10 OFFSET 0',
         'adminPaymentsCount': 'SELECT COUNT(*) FROM payments p JOIN orders o ON o.id=p.order_id LEFT JOIN users u ON u.id=o.user_id WHERE 1=1',
         'adminPaymentsPendingPage0': payment + " AND p.status='PENDING' ORDER BY p.created_at DESC,p.id DESC LIMIT 10 OFFSET 0",
+        'adminPaymentsPendingPage0Size100': payment + " AND p.status='PENDING' ORDER BY p.created_at DESC,p.id DESC LIMIT 100 OFFSET 0",
     }
 
 
@@ -90,7 +93,7 @@ def main():
         identity = sql('SELECT DATABASE() AS databaseName,VERSION() AS version')
         if not identity or identity[0].get('databaseName') != database:
             raise ValueError('Database identity mismatch.')
-        counts = sql("SELECT 'users' AS tableName,COUNT(*) AS rowCount FROM users UNION ALL SELECT 'orders',COUNT(*) FROM orders UNION ALL SELECT 'order_items',COUNT(*) FROM order_items UNION ALL SELECT 'payments',COUNT(*) FROM payments UNION ALL SELECT 'refunds',COUNT(*) FROM refunds UNION ALL SELECT 'carts',COUNT(*) FROM carts UNION ALL SELECT 'cart_items',COUNT(*) FROM cart_items")
+        counts = sql("SELECT 'users' AS tableName,COUNT(*) AS rowCount FROM users UNION ALL SELECT 'orders',COUNT(*) FROM orders UNION ALL SELECT 'order_items',COUNT(*) FROM order_items UNION ALL SELECT 'payments',COUNT(*) FROM payments UNION ALL SELECT 'refunds',COUNT(*) FROM refunds UNION ALL SELECT 'carts',COUNT(*) FROM carts UNION ALL SELECT 'cart_items',COUNT(*) FROM cart_items UNION ALL SELECT 'product_variants',COUNT(*) FROM product_variants UNION ALL SELECT 'inventory_reservations',COUNT(*) FROM inventory_reservations UNION ALL SELECT 'coupon_redemptions',COUNT(*) FROM coupon_redemptions UNION ALL SELECT 'commerce_notification_outbox',COUNT(*) FROM commerce_notification_outbox UNION ALL SELECT 'commerce_notifications',COUNT(*) FROM commerce_notifications")
         indexes = sql("SELECT TABLE_NAME,INDEX_NAME,NON_UNIQUE,SEQ_IN_INDEX,COLUMN_NAME,CARDINALITY FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('orders','payments','refunds','order_items','shipments','order_addresses','carts','cart_items') ORDER BY TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX")
         report = {'schemaVersion': 1, 'capturedAtUtc': datetime.now(timezone.utc).isoformat(),
                   'database': database, 'server': identity[0]['version'], 'dataset': counts,

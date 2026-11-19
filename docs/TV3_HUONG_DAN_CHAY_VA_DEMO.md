@@ -1,4 +1,6 @@
-# Chạy TV3-01–07 — React + Spring Boot + MariaDB
+# Chạy TV3 — React + Spring Boot + MariaDB
+
+Hướng dẫn bàn giao cập nhật ngày19/11/2026: [TV3_BAN_GIAO_VA_DEMO.md](TV3_BAN_GIAO_VA_DEMO.md). Runtime hiện dùng V001–V009,47bảng; gồm cả thu/hoàn thủ công, lắp đặt/đổi trả, thông báo và vận hành. VNPAY sandbox vẫn chờ thông tin đăng ký.
 
 ## Phần đã có
 
@@ -35,7 +37,7 @@ python scripts/tv3_database.py seed --database furniture_shop_tv3_dev
 Remove-Item Env:TV3_DEMO_PASSWORD
 ```
 
-`create` cố ý thất bại nếu DB đã tồn tại; không xóa/ghi đè DB. DB mới gồm45 bảng V001 và V002–V005 thêm request fingerprint/lựa chọn lắp đặt. DB demo đã có cần chạy `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev` trước khi chạy bản mới. Seed tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU và tồn MAIN; mật khẩu lấy từ environment và hash bằng BCrypt, không in ra. Không dùng chung mật khẩu tài khoản thật. Script từ chối database `furniture_shop` chính.
+`create` cố ý thất bại nếu DB đã tồn tại; không xóa/ghi đè DB. DB mới áp dụng V001–V009 và có47bảng. DB demo đã có cần chạy `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev` trước khi chạy bản mới. Seed tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU và tồn MAIN; mật khẩu lấy từ environment và hash bằng BCrypt, không in ra. Seed lại không reset tồn hiện có. Modena yêu cầu kỹ thuật lắp đặt, Oslo không yêu cầu. Không dùng chung mật khẩu tài khoản thật. Script từ chối database `furniture_shop` chính.
 
 Khi DB demo trên máy đã được chuẩn bị, không cần tạo lại. Có thể đặt lại mật khẩu demo bằng cách chạy `seed` với environment do bạn chọn. Script chỉ chấp nhận `furniture_shop_tv3_dev` hoặc `furniture_shop_test_*`.
 
@@ -136,7 +138,7 @@ Full regression suite còn chứa legacy SpringBoot smoke test, cần schema leg
 
 Mặc định `PAYMENT_BANK_MODE=UNCONFIGURED`, không công khai số tài khoản và không cho tạo lần BANK_TRANSFER mới. COD vẫn dùng được. Đơn đã tạo bằng BANK_TRANSFER vẫn xem được lịch sử và thông báo chưa cấu hình. Khi cửa hàng có nhu cầu nhận chuyển khoản thủ công thật, dùng MANUAL và đặt đủ PAYMENT_BANK_NAME, PAYMENT_BANK_ACCOUNT_NUMBER, PAYMENT_BANK_ACCOUNT_HOLDER trong environment riêng; ứng dụng chỉ kiểm tra định dạng, không xác minh tài khoản và không gọi ngân hàng. Không ghi thông tin nhạy cảm vào Git.
 
-Đặt hàng đã tạo sẵn một khoản PENDING; khách không cần tạo lần thứ hai. Chỉ tạo lại khi lần trước đã FAILED/EXPIRED; PENDING quá timestamp vẫn chờ job phối hợp TV3-11 chuyển trạng thái. Tạo lại dùng số tiền server tính từ tổng đơn trừ khoản SUCCEEDED. Hoàn tiền không mở lại công nợ đơn cũ. Không có nút khách tự đánh dấu đã trả tiền.
+Đặt hàng đã tạo sẵn một khoản PENDING; khách không cần tạo lần thứ hai. Chỉ tạo lại khi lần trước đã FAILED/EXPIRED. Job chỉ hết hạn COD mới chưa xác nhận sau24giờ và đủ điều kiện an toàn; không tự hết hạn khoản chuyển khoản chưa đối soát hoặc đơn cũ không có hạn. Tạo lại dùng số tiền server tính từ tổng đơn trừ khoản SUCCEEDED. Hoàn tiền không mở lại công nợ đơn cũ. Không có nút khách tự đánh dấu đã trả tiền.
 
 Nhân viên chỉ xác minh COD/MANUAL_BANK sau khi đối chiếu biên nhận/sao kê (trong demo dùng chứng từ minh họa). Số tiền, tài khoản nhân viên và thời gian UTC do server quyết định. Ghi chú đối soát không xuất hiện trong API khách. Nếu mất phản hồi, React giữ nguyên nội dung và gửi lại cùng bằng chứng; không đổi mã để thử thu lại. Mã biên nhận đã gắn khoản khác bị từ chối, khoản vượt công nợ cần đối soát thủ công. Cổng thanh toán/webhook là TV3-09, thực hiện hoàn tiền là TV3-10; TV3-08 không giả lập các giao dịch đó thành đã hoàn tất.
 
@@ -148,7 +150,7 @@ Hủy đơn đã thu tạo sẵn PENDING, giữ ngân sách bằng số cần ho
 
 Nếu chưa chuyển tiền và yêu cầu cũ cần thay bằng các khoản từng phần, dùng **hủy yêu cầu chưa gửi tiền** với lý do/xác nhận rõ ràng, rồi lập yêu cầu thay thế theo ngân sách server trả. Đây không phải xóa nghĩa vụ hoàn; khoản chưa được trả lại vẫn cần xử lý. Không hủy yêu cầu có tiền đã gửi hoặc trạng thái chưa rõ. Số PENDING và SUCCEEDED đều trừ vào hạn mức; hai yêu cầu đồng thời không thể giữ vượt khoản đã thu.
 
-Đơn chưa hủy chỉ được đề nghị theo phiếu TV4 cùng đơn có resolution REFUND, đã duyệt và thực nhận hàng (RECEIVED/COMPLETED). Giới hạn tính theo số lượng đã nhận và giá snapshot sau giảm giá; không tự cộng phí giao/lắp. TV3 chỉ đọc bằng chứng TV4, không tạo phiếu trả giả, duyệt thay hay cập nhật kho. Kiểm thử return dùng fixture DB; luồng trả hàng TV4 thực tế chưa được chứng minh bằng E2E ở phần này.
+Đơn chưa hủy chỉ được đề nghị theo phiếu TV4 cùng đơn có resolution REFUND, đã duyệt và thực nhận hàng (RECEIVED/COMPLETED). Giới hạn tính theo số lượng đã nhận và giá snapshot sau giảm giá; không tự cộng phí giao/lắp. Tại `/orders/{id}/returns`, khách tạo yêu cầu theo lượng đã giao. Nhân viên dùng `/admin/orders/{id}/aftercare` để duyệt/từ chối, xác nhận thực nhận/kiểm định và quyết định nhập lại đúng kho. Service ghi movement RETURN một lần; service hoàn tiền đọc bằng chứng này. Chrome đã kiểm chứng luồng thực qua API/MariaDB, có mất phản hồi và replay.
 
 Khi mất mạng, lỗi đọc JSON,401/403/429 hoặc lỗi chưa rõ, React giữ nguyên key/body/chứng từ theo nhân viên và tài nguyên, kể cả tải lại trang. Đăng nhập lại bằng đúng tài khoản rồi thử lại yêu cầu đã gửi. Lỗi nghiệp vụ chắc chắn giữ nội dung thành bản nháp để đối chiếu và sửa; không tự tạo lệnh hoàn mới khi chưa biết kết quả cũ.
 
@@ -156,6 +158,15 @@ V007 thêm hai cột ghi chú riêng; đã áp dụng cộng thêm trên DB chí
 
 ## Hiệu năng đọc độc lập TV3-11
 
-Xem `tests/performance/tv3/README.md` và `docs/performance/TV3_READ_PERFORMANCE_2026-11-17.md` để chạy lại tải GET/EXPLAIN có guard DB cô lập. Lần đo demo160request có0lỗi, p95~39.5ms; dataset nhỏ, thời gian ngắn và có thể trùng Vitest nên không suy ra năng lực production. Chưa đo DB pool/Redis/provider failure; chưa có job hết hạn, thông báo bền hay job đối soát. Không cache quyết định tiền, tồn, coupon hoặc quyền.
+Xem [báo cáo19/11](performance/TV3_READ_PERFORMANCE_2026-11-19.md) và `tests/performance/tv3/README.md`. Dataset cô lập có1000đơn/3000dòng/1003SKU; hai lượt tổng3200GET/0lỗi. Ba index cải thiện plan trang đầu, nhưng p95 thực tế40.150→43.508ms nên chưa chứng minh tăng tốc HTTP. Pool quan sát tối đa3active/0awaiting; deep offset vẫn phải scan. Không cache quyết định tiền, tồn, coupon hoặc quyền; chưa dùng Redis/provider reconciliation.
+
+## Vận hành và thông báo TV3-11/12
+
+- COD mới có hạn xác nhận24giờ (`ORDER_CONFIRMATION_TTL_SECONDS=86400`). Worker chỉ hủy đơn còn PENDING_CONFIRMATION chưa thu/chưa xuất, trả giữ hàng/lượt mã một lần, payment chờ chuyển EXPIRED, lịch sử/audit ghi tác nhân hệ thống. Đơn cũ có hạn NULL, chuyển khoản, đã thu/đã xác nhận/đã xuất và đơn0đồng không bị tự hủy.
+- Outbox ghi cùng transaction nghiệp vụ; worker giao vào `/notifications`, có retry bền và chống trùng. Khách chỉ đọc hộp thư của mình; ghi chú/chứng từ riêng không đi vào thông báo. Đây là hộp thư web, chưa gửi email.
+- STAFF/ADMIN mở `/admin/operations` để xem hàng đợi, lỗi DEAD, hạn đơn cần xử lý và pool Hikari thực; chạy batch hoặc retry DEAD có lý do/audit. `COMMERCE_JOBS_ENABLED=false` tắt lịch nền; thao tác thủ công vẫn dùng cùng kiểm tra điều kiện. Test Maven/commerce mặc định tắt lịch để tránh job tác động fixture.
+- Lắp đặt tại aftercare chỉ ghi sau DELIVERED thật, có nhân viên/thời điểm/bằng chứng; đủ giao/lắp/thu mới hoàn tất đơn. Kịch bản bàn giao đầy đủ và cấu hình từng job nằm trong [hướng dẫn mới](TV3_BAN_GIAO_VA_DEMO.md).
+
+Kiểm thử19/11: Java180ca (179đạt,1Gemini live bỏ qua), React142đạt/13file, build63module, Chrome7/7đạt; schema47bảng và22kiểm tra rollback đạt; harness tải15/15đạt. OpenAPI1.5.0 có52operation, Postman syntax lint không có lỗi. Đây là bằng chứng cục bộ, chưa phải nghiệm thu VNPAY hay triển khai production.
 
 Kịch bản Chrome mới: thu DEMO→khách hủy→xem PENDING refund→nhân viên hủy yêu cầu chưa gửi→tạo thay thế→cố ý mất phản hồi/tải lại/gửi cùng key→xác minh hoàn với chứng từ giả→mất phản hồi/tải lại/gửi cùng chứng từ→khách xem lịch sử đã hoàn, không thấy ghi chú riêng. Đây là transaction/API/MariaDB thật trên dữ liệu demo; không phải giao dịch ngân hàng hay sandbox provider.

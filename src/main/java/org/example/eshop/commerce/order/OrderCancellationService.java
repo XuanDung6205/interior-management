@@ -26,6 +26,11 @@ public class OrderCancellationService {
     }
     @Transactional(propagation=Propagation.MANDATORY)
     public void cancelLocked(long id,long actor,String reason,boolean staff){
+        cancelCore(id,actor,reason,staff,false);
+    }
+    @Transactional(propagation=Propagation.MANDATORY)
+    public void cancelExpiredLocked(long id,String reason){cancelCore(id,null,reason,false,true);}
+    private void cancelCore(long id,Long actor,String reason,boolean staff,boolean expired){
         if(reason==null||reason.isBlank()||reason.length()>1000)throw CommerceException.invalid(Map.of("reason","Nhập lý do hủy từ1 đến1000 ký tự."));
         var order=store.find(id,true);String before=order.get("status").toString();
         if("CANCELLED".equals(before))return;
@@ -44,11 +49,11 @@ public class OrderCancellationService {
                 if(remainder.signum()>0)store.insert("INSERT INTO refunds(order_id,payment_id,provider,idempotency_key,amount,currency,status,reason,created_at,updated_at) VALUES(?,?,?, ?,?,?,'PENDING',?,?,?)",id,payment,p.get("provider"),"cancel:"+payment,remainder,p.get("currency"),"Hủy đơn: "+reason.trim().substring(0,Math.min(reason.trim().length(),990)),now,now);
             }
         }
-        store.jdbc().update("UPDATE payments SET status='CANCELLED',updated_at=? WHERE order_id=? AND status='PENDING'",now,id);
+        store.jdbc().update("UPDATE payments SET status=?,updated_at=? WHERE order_id=? AND status='PENDING'",expired?"EXPIRED":"CANCELLED",now,id);
         store.jdbc().update("UPDATE shipments SET status='CANCELLED',installation_status=CASE WHEN installation_required=1 AND installation_status IN ('PENDING','SCHEDULED') THEN 'CANCELLED' ELSE installation_status END WHERE order_id=? AND status IN ('PENDING','READY')",id);
         store.jdbc().update("UPDATE coupon_redemptions SET status='RELEASED',expires_at=NULL WHERE order_id=? AND status IN ('RESERVED','APPLIED')",id);
         store.jdbc().update("UPDATE orders SET status='CANCELLED',cancelled_at=?,cancel_reason=?,updated_at=? WHERE id=?",now,reason.trim(),now,id);
         store.insert("INSERT INTO order_status_history(order_id,from_status,to_status,changed_by,note,changed_at) VALUES(?,?,'CANCELLED',?,?,?)",id,before,actor,reason.trim(),now);
-        audit.append(actor,id,"ORDER_STATUS_CHANGED",Map.of("status",before),Map.of("status","CANCELLED"));
+        if(expired)audit.appendSystem(id,"ORDER_EXPIRED",Map.of("status",before),Map.of("status","CANCELLED"));else audit.append(actor,id,"ORDER_STATUS_CHANGED",Map.of("status",before),Map.of("status","CANCELLED"));
     }
 }

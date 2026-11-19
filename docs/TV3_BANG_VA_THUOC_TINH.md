@@ -1,13 +1,16 @@
 # TV3 — Các bảng và thuộc tính theo schema hiện tại
 
-Nguồn bootstrap: [V001__create_furniture_shop.sql](database/V001__create_furniture_shop.sql). Runtime bổ sung hai cột orders qua [V002](database/V002__orders_request_fingerprint.sql) và [V005](database/V005__orders_assembly_requested.sql); các định nghĩa bootstrap bên dưới được giữ nguyên để đối chiếu.
+Nguồn bootstrap: [V001__create_furniture_shop.sql](database/V001__create_furniture_shop.sql). Runtime bổ sung các cột qua V002, V005–V008 và index qua V009; các định nghĩa bootstrap bên dưới được giữ nguyên để đối chiếu, phần bổ sung được ghi riêng.
 
-Bạn sở hữu 11 bảng: 2 giỏ hàng, 4 đơn hàng, 2 khuyến mãi và 3 thanh toán/hoàn tiền. Trách nhiệm gồm persistence/Service/REST Controller/DTO, React page/component và API integration liên quan, kiểm thử và tài liệu. Bootstrap có139 thuộc tính; hiện có144 sau V002, V005, V006 và V007. Frontend dùng React thay cho Thymeleaf.
+Bạn sở hữu 11 bảng nghiệp vụ: 2 giỏ hàng, 4 đơn hàng, 2 khuyến mãi và 3 thanh toán/hoàn tiền; thêm hai bảng hạ tầng thông báo ở V008. Trách nhiệm gồm persistence/Service/REST Controller/DTO, React page/component và API integration liên quan, kiểm thử và tài liệu. Bootstrap có139 thuộc tính; 11 bảng hiện có147 sau V002–V008. Tính thêm23 thuộc tính của hai bảng thông báo là **13 bảng / 170 thuộc tính**. Frontend dùng React thay cho Thymeleaf.
 
 Các cột orders bổ sung sau bootstrap:
 
 - `request_fingerprint CHAR(64) ascii_bin NULL` (V002): hash nội dung đặt hàng để phát hiện dùng lại idempotency key với nội dung khác; đơn lịch sử có thể NULL.
 - `assembly_requested BOOLEAN NOT NULL DEFAULT FALSE` (V005): khách có chọn dịch vụ lắp đặt, độc lập với phí và `order_items.assembly_required` (yêu cầu kỹ thuật của sản phẩm). Đơn cũ có phí lắp>0 được backfill TRUE.
+- `confirmation_expires_at DATETIME(6) NULL` (V008): hạn xác nhận đơn COD mới, mặc định24giờ; NULL ở đơn lịch sử/chuyển khoản/0đồng. Xác nhận hoặc đổi sang chuyển khoản sẽ bỏ hạn. Job chỉ hủy khi đủ điều kiện an toàn theo bằng chứng hiện tại.
+- `expiry_attempts INT NOT NULL DEFAULT 0` (V008): số lần xử lý hết hạn bị lỗi; lưu bền để theo dõi retry.
+- `expiry_retry_after DATETIME(6) NULL` (V008): thời điểm sớm nhất job thử lại sau lỗi; không đổi hạn xác nhận ban đầu.
 
 Cột payments bổ sung: `confirmation_note VARCHAR(1000) NULL` ([V006](database/V006__payments_confirmation_note.sql)): ghi chú đối soát chỉ STAFF/ADMIN đọc được; không trả trong API khách hàng. Mã biên nhận nằm ở `provider_transaction_id`, người xác minh ở `verified_by`, thời điểm server xác minh ở `paid_at`; xác nhận lại cùng bằng chứng không ghi đè các trường này.
 
@@ -356,4 +359,41 @@ TV3-01/02/03 hiện đã có implementation riêng trong `commerce`: giỏ DB v�
 - Controller MVC trả tên template cần chuyển thành REST endpoint trả DTO JSON; thay form/redirect Thymeleaf bằng request và điều hướng ở React.
 - Không chỉ đổi tên bảng để chạy: cần thay mapping, DTO, service, validation, giao diện và kiểm thử theo toàn bộ quy tắc trên.
 
-Đã đối chiếu đủ **11 bảng / 139 thuộc tính**, bao gồm cột generated, với file SQL nguồn.
+Định nghĩa chi tiết11bảng bên trên đối chiếu bootstrap139thuộc tính. Các cột runtime bổ sung được giải thích đầu tài liệu; V009 chỉ thêm index.
+
+## 12. `commerce_notification_outbox` — Sự kiện thông báo bền
+
+Nguồn: [V008](database/V008__commerce_operations.sql). Ghi cùng transaction thay đổi đơn/thu/hoàn/hậu mãi; không chứa ghi chú nội bộ hoặc chứng từ. Hạ tầng này phối hợp với TV1.
+
+- `id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY`: mã sự kiện.
+- `event_key VARCHAR(100) ascii_bin NOT NULL UNIQUE`: khóa nghiệp vụ chống tạo sự kiện trùng.
+- `order_id BIGINT NOT NULL`: FK đơn liên quan.
+- `recipient_user_id BIGINT NOT NULL`: FK người nhận.
+- `notification_type VARCHAR(50) NOT NULL`: loại thông báo công khai.
+- `title VARCHAR(200) NOT NULL`: tiêu đề an toàn cho khách.
+- `body VARCHAR(1000) NOT NULL`: nội dung an toàn cho khách.
+- `state VARCHAR(20) NOT NULL DEFAULT 'PENDING'`: PENDING/RETRY/SENT/DEAD.
+- `attempts INT NOT NULL DEFAULT 0`: số lần giao thất bại, không âm.
+- `next_attempt_at DATETIME(6) NOT NULL`: thời điểm đủ điều kiện giao tiếp.
+- `last_error VARCHAR(100) NULL`: mã lỗi an toàn, không lưu stacktrace/secret.
+- `created_at DATETIME(6) NOT NULL`: thời điểm ghi sự kiện.
+- `updated_at DATETIME(6) NOT NULL`: thời điểm cập nhật trạng thái.
+- `sent_at DATETIME(6) NULL`: thời điểm đã giao vào hộp thư web.
+
+Index `(state,next_attempt_at,id)` chọn batch đến hạn. Chuyển sang SENT và insert hộp thư trong một transaction. Sau5lỗi chuyển DEAD; nhân viên chỉ retry với lý do được audit.
+
+## 13. `commerce_notifications` — Hộp thư web của khách
+
+- `id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY`: mã thông báo.
+- `outbox_id BIGINT NOT NULL UNIQUE`: FK sự kiện, bảo đảm một sự kiện chỉ giao một lần.
+- `recipient_user_id BIGINT NOT NULL`: FK người sở hữu hộp thư.
+- `order_id BIGINT NOT NULL`: FK đơn dùng để mở chi tiết.
+- `notification_type VARCHAR(50) NOT NULL`: loại thông báo công khai.
+- `title VARCHAR(200) NOT NULL`: tiêu đề.
+- `body VARCHAR(1000) NOT NULL`: nội dung.
+- `created_at DATETIME(6) NOT NULL`: thời điểm giao.
+- `read_at DATETIME(6) NULL`: thời điểm đọc đầu tiên; đọc lại không ghi đè.
+
+Index theo `(recipient_user_id,created_at,id)` và `(recipient_user_id,read_at,created_at,id)`. API kiểm tra chủ sở hữu ở backend; chưa có gửi email. FK cascade của hai bảng phục vụ quan hệ dữ liệu và dọn fixture; ứng dụng không cung cấp xóa lịch sử đơn/tiền.
+
+Phần hậu mãi tích hợp các bảng TV4 hiện có `shipments`, `shipment_items`, `return_requests`, `return_items`, `inventory_balances`, `inventory_movements`: TV3 dùng service giao/lắp/nhận trả cùng transaction và bằng chứng thật, không sửa tồn bằng CRUD riêng hoặc tự coi duyệt trả hàng là đã hoàn tiền. Xem [contract](api/TV3_OPERATIONS_HANDOFF_CONTRACT.md).

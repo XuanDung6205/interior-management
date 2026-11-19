@@ -1,8 +1,9 @@
 # TV3 isolated read performance
 
-This dependency-free Python harness implements the independent read-performance
-portion of TV3-11. Expiry jobs, durable notifications, gateway reconciliation,
-Redis failure behavior and production capacity remain separate work.
+This dependency-free Python harness measures actual commerce reads and the
+staff-protected Hikari/job/outbox endpoint. Larger data is an explicitly bounded
+SQL test fixture on one newly-created disposable database. It is not checkout,
+payment or fulfillment E2E evidence, nor a production capacity claim.
 
 ## Safety and measured routes
 
@@ -15,15 +16,19 @@ Authentication, cookies, CSRF tokens and raw response bodies are never reported.
 The only allowed POST is `/api/session/login`. Redirects and system proxies are
 disabled; HTTPS retains certificate validation and does not inherit TLS key logging.
 
-Each worker reads the same four routes in order:
+Each worker reads the same eight routes in order:
 
 - `GET /api/cart` as the customer.
 - `GET /api/orders?page=0&size=10` as the customer.
 - `GET /api/admin/orders?page=0&size=10` as staff/admin.
 - `GET /api/admin/payments?page=0&size=10` as staff/admin.
+- `GET /api/admin/orders?page=9&size=100` as staff/admin (deep page).
+- `GET /api/admin/payments?page=0&size=100&status=PENDING` as staff/admin.
+- `GET /api/admin/orders?page=0&size=100&status=CANCELLED` as staff/admin.
+- `GET /api/admin/operations` as staff/admin.
 
 No catalog seed, cart edit, order checkout, payment/refund operation, logout or
-arbitrary route is implemented. Existing isolated data is used as-is. The current
+arbitrary route is implemented in the HTTP harness. Existing isolated data is used as-is. The current
 cart service's GET is read-only. Successful login still creates an HTTP session;
 this tool does not pretend authentication is side-effect-free.
 
@@ -47,13 +52,19 @@ python tests/performance/tv3/read_load.py `
   --output docs/performance/tv3-read-load.json
 ```
 
-Defaults yield 160 measured requests (40 per endpoint) and 16 excluded warmups.
+Defaults yield 320 measured requests (40 per endpoint) and 32 excluded warmups.
 Each worker owns two authenticated sessions. Warmups, login and before/after
 dataset snapshots are excluded from measured counts and latency. Any warmup or
 authentication error aborts the run. Measured request failures are categorized
 without server messages; a report is still written and the process exits 1.
 There are no retries. Worker count is bounded at 8, rounds at 1,000, warmup rounds
 at 20 and each request timeout at 60 seconds.
+
+Operations samples before, within and after the workload retain only safe numeric
+pool/outbox fields and actual boolean/numeric job settings. No expiry order IDs
+or customer text is retained. `peakObserved` is the maximum sampled value, never
+a continuously measured pool maximum. Operations GETs are themselves part of the
+measured traffic and consume a connection. No background sampler is hidden.
 
 Per-endpoint and overall results include attempts, successes, categorized errors,
 nearest-rank p50/p95, maximum and attempted requests per measured wall second.
@@ -64,7 +75,54 @@ Python's urllib connection behavior is part of this workload; no browser or
 production connection-reuse claim is made. Cache state is uncontrolled: warmup
 does not prove a cache exists, and no cold-cache or hit-rate result is inferred.
 
-## Fixed database evidence
+## Dataset and fixed database evidence
+
+### Larger disposable fixture (2026-11-19)
+
+Create/migrate/seed `furniture_shop_test_perf_ops_20261119` with the repository
+helper, including V008 (latest runtime also includes V009 read indexes). `large_fixture.py` accepts **only that exact database**,
+loopback MariaDB, environment-only `DB_USERNAME`/`DB_PASSWORD`, and requires actual
+`DATABASE()` identity, 47 base tables, two seeded demo users, no orders and no
+existing performance product prefix. It never resets/deletes data. Run it once,
+before authenticating a customer (login can create an active cart):
+
+```powershell
+python tests/performance/tv3/large_fixture.py `
+  --database furniture_shop_test_perf_ops_20261119 `
+  --output docs/performance/tv3-large-fixture-2026-11-19.json
+```
+
+It adds 250 furniture models / 1,000 SKUs, 1,000 orders / 3,000 snapshot lines,
+1,000 COD/manual-bank payment fixtures, 333 coupon-discount cases, four order
+statuses, matching reservation/balance quantities and a three-line customer cart.
+These are explicit SQL fixture histories, not evidence of real financial or
+physical actions. No gateway calls, deadlines, notification delivery or real
+payment execution are produced. The selected customer sees all 1,000 orders so
+the measured deep page contains 100 rows. The seed retains its original 3 SKUs.
+No destructive teardown is implemented; the DB owner may later remove the whole
+explicitly disposable DB after retaining reports. Do not rerun against demo/main.
+
+Set the dedicated app `DB_URL` to this exact DB and `COMMERCE_JOBS_ENABLED=false`;
+verify actual datasource identity separately from the public runtime isolation
+boolean. Obtain an explicit coordinated **QUIETWINDOW** and dedicated runtime
+**READY** before sending load; do not run build/E2E concurrently. Suggested bounded
+profile is four workers, 50 rounds, two warmups, 25 ms think time: **1,600 measured
+GETs** (200 per route) and 64 excluded warmups. Supply real staff/customer demo
+credentials through the four `TV3_PERF_*` environment variables above. Record
+actual scheduling and pool evidence in the required note arguments. Run the same
+profile before/after an index only when measured plans justify that index; a
+different data size/profile is not a valid improvement comparison.
+
+Postman CLI 1.73.0 is installed and `postman performance run -h` was inspected. Its
+performance command expects a Postman collection ID (and environment IDs for
+shared variables); no suitable authenticated cloud resource is established for
+this loopback fixture. The existing stdlib runner provides exact local CSRF/
+session isolation, fixed safe GETs, strict bounded volume and safe pool snapshots
+without uploading session credentials or creating workspace/cloud resources.
+No `postman init`, signup or cloud load was forced. This is a local closed-loop
+benchmark, not a Postman hosted performance result.
+
+### Read-only plans
 
 `explain_read.py` uses the installed MariaDB CLI, `--no-defaults`, no shell, fixed
 SELECT/EXPLAIN statements, a loopback host and an exact isolated database-name

@@ -43,8 +43,8 @@ public class CommerceSecurityConfiguration {
         http.authenticationProvider(provider)
             .csrf(csrf -> csrf.csrfTokenRepository(new HttpSessionCsrfTokenRepository()).csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/admin/coupons","/api/admin/coupons/**","/api/admin/orders","/api/admin/orders/**","/api/admin/inventory","/api/admin/inventory/**","/api/admin/payments","/api/admin/payments/**","/api/admin/refunds","/api/admin/refunds/**").hasAnyRole("ADMIN","STAFF")
-                .requestMatchers("/api/cart/merge","/api/checkout","/api/checkout/**","/api/orders","/api/orders/**").authenticated()
+                .requestMatchers("/api/admin/coupons","/api/admin/coupons/**","/api/admin/orders","/api/admin/orders/**","/api/admin/inventory","/api/admin/inventory/**","/api/admin/payments","/api/admin/payments/**","/api/admin/refunds","/api/admin/refunds/**","/api/admin/aftercare/**","/api/admin/operations","/api/admin/operations/**").hasAnyRole("ADMIN","STAFF")
+                .requestMatchers("/api/cart/merge","/api/checkout","/api/checkout/**","/api/orders","/api/orders/**","/api/notifications","/api/notifications/**").authenticated()
                 .anyRequest().permitAll())
             .exceptionHandling(errors -> errors
                 .authenticationEntryPoint((request,response,error) -> json(mapper,response,401,new ApiError("AUTHENTICATION_REQUIRED","Sign in to continue.")))

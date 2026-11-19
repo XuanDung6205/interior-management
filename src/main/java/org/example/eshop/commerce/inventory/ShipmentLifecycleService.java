@@ -118,6 +118,7 @@ public class ShipmentLifecycleService {
                 """, actor, Long.toString(shipmentId), shipment.status(), request.targetStatus(),
                 request.reason().trim(), key, now);
         // Delivery evidence commits even while payment or requested installation is pending.
+        if("DELIVERED".equals(request.targetStatus()))org.example.eshop.commerce.notification.OrderNotifications.fromAudit(jdbc,clock,shipment.orderId(),"shipment:"+shipmentId+":delivered","SHIPMENT_DELIVERED",Map.of());
         // Only the shared lifecycle service may complete the order and append its audit/history.
         if ("DELIVERED".equals(request.targetStatus()) && completion.evaluate(shipment.orderId()).eligible()) {
             orders.transition(shipment.orderId(), "PROCESSING", "COMPLETED",

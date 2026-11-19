@@ -29,6 +29,7 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default="3306")
     parser.add_argument("--case", action="append", help="Run only a named rejection case (repeatable)")
+    parser.add_argument("--operations", action="store_true", help="Verify V008+ runtime (45 core plus 2 notification tables)")
     args = parser.parse_args()
     if not re.fullmatch(r"furniture_shop(?:_test_[a-z0-9_]+)?", args.database):
         parser.error("Only furniture_shop or its explicitly named test schemas are allowed")
@@ -52,13 +53,14 @@ def main():
 
     actual = set(sql("SELECT TABLE_NAME FROM information_schema.TABLES "
                      "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE='BASE TABLE';").splitlines())
-    if actual != TABLES:
-        raise AssertionError(f"Missing: {sorted(TABLES-actual)}; unexpected: {sorted(actual-TABLES)}")
+    expected=TABLES | {"commerce_notification_outbox","commerce_notifications"} if args.operations else TABLES
+    if actual != expected:
+        raise AssertionError(f"Missing: {sorted(expected-actual)}; unexpected: {sorted(actual-expected)}")
     assert sql("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() "
                "AND (ENGINE <> 'InnoDB' OR TABLE_COLLATION NOT LIKE 'utf8mb4%');") == "0"
     assert sql("SELECT GROUP_CONCAT(code ORDER BY code) FROM roles;") == "ADMIN,CUSTOMER,STAFF"
     assert sql("SELECT COUNT(*) FROM warehouses WHERE code='MAIN';") == "1"
-    print(f"PASS: {len(TABLES)} expected tables, InnoDB/utf8mb4, initial roles and warehouse")
+    print(f"PASS: {len(expected)} expected tables, InnoDB/utf8mb4, initial roles and warehouse")
 
     # Each invocation is a new connection. Both valid and invalid fixtures are
     # transaction-scoped and are rolled back explicitly or on connection close.
@@ -110,7 +112,7 @@ def main():
                     "+ (SELECT COUNT(*) FROM products WHERE slug LIKE 'verify-%');")
     assert remaining == "0", remaining
     print("PASS: all test fixtures rolled back")
-    print(f"VERIFIED: {args.database}; {len(TABLES)} tables; {len(invalid)+2} behavior checks")
+    print(f"VERIFIED: {args.database}; {len(expected)} tables; {len(invalid)+2} behavior checks")
 
 
 if __name__ == "__main__":

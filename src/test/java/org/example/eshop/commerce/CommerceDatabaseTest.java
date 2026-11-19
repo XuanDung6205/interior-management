@@ -32,6 +32,7 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 
+@org.springframework.test.context.TestPropertySource(properties="commerce.jobs.enabled=false")
 @SpringBootTest(classes=CommerceApplication.class)
 @ActiveProfiles("commerce")
 @EnabledIfEnvironmentVariable(named="TV3_TEST_DB_URL", matches=".*furniture_shop_test_.*")

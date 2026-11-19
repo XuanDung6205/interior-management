@@ -38,7 +38,7 @@ public class OrderStore {
             SELECT id,order_number AS orderNumber,status,currency,subtotal,discount_amount AS discountAmount,
               shipping_fee AS shippingFee,assembly_fee AS assemblyFee,tax_amount AS taxAmount,grand_total AS grandTotal,
               coupon_code_snapshot AS couponCode,customer_note AS customerNote,placed_at AS placedAt,
-              cancelled_at AS cancelledAt,cancel_reason AS cancelReason,assembly_requested AS assemblyRequested
+              cancelled_at AS cancelledAt,cancel_reason AS cancelReason,assembly_requested AS assemblyRequested,confirmation_expires_at AS confirmationExpiresAt
             FROM orders WHERE
             """+predicate+(lock?" FOR UPDATE":""),parameters);
         if(rows.isEmpty())throw CommerceException.notFound("Không tìm thấy đơn hàng của bạn.");return rows.get(0);

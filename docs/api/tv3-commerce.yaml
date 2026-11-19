@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: TV3 Furniture Commerce API
-  version: 1.4.0
-  description: 'TV3-01–08: session/CSRF, cart/coupons, checkout, customer/staff orders and manually verified COD/bank collections and manual refunds. Online gateway/refund integration and coordinated expiry remain subsequent work.'
+  version: 1.5.0
+  description: 'TV3 session/CSRF, cart/coupons, checkout, customer/staff orders, manually verified COD/bank collections and refunds, guarded 24-hour COD confirmation expiry, durable local web notifications, protected operations and actual delivery/installation/return aftercare. Online gateway/banking and external SMTP remain sandbox dependencies; no external message is claimed sent.'
 servers:
 - url: http://localhost:8080
   description: Local Spring Boot commerce runtime
@@ -16,6 +16,9 @@ tags:
 - name: Order administration
 - name: Manual payments
 - name: Manual refunds
+- name: Notifications
+- name: Commerce operations
+- name: Aftercare
 paths:
   /api/csrf:
     get:
@@ -1765,6 +1768,494 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CancelManualRefund'
+  /api/notifications:
+    get:
+      operationId: listOwnerNotifications
+      tags:
+      - Notifications
+      summary: List the current owner's web inbox
+      description: Session owner only; no recipient/actor override. Stable createdAt/id descending order. Web inbox
+        delivery uses the local durable DB outbox, not SMTP or email. Safe public templates exclude private staff
+        notes and proofs.
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPage'
+              example:
+                items:
+                - id: 91
+                  orderId: 501
+                  orderNumber: ORD-501
+                  type: RETURN_RECEIVED
+                  title: Cửa hàng đã nhận lại hàng
+                  body: Số lượng hàng trả đã được ghi nhận. Yêu cầu hoàn tiền được theo dõi riêng.
+                  href: /orders/501
+                  createdAt: '2026-11-19T03:30:00Z'
+                  readAt: null
+                page: 0
+                size: 10
+                totalElements: 1
+                totalPages: 1
+                unreadCount: 1
+        '400':
+          $ref: '#/components/responses/InvalidCommerceOperation'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      - in: query
+        name: size
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+      - in: query
+        name: unreadOnly
+        schema:
+          type: boolean
+          default: false
+  /api/notifications/unread-count:
+    get:
+      operationId: getOwnerUnreadCount
+      tags:
+      - Notifications
+      summary: Count unread notifications for the current owner
+      description: Uses the authenticated session owner only; other users' unread counts are never visible.
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationUnreadCount'
+              example:
+                unreadCount: 3
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+  /api/notifications/{id}/read:
+    parameters:
+    - $ref: '#/components/parameters/CommerceResourceId'
+    post:
+      operationId: markOwnerNotificationRead
+      tags:
+      - Notifications
+      summary: Mark an owned notification read
+      description: 'Requires session cookie and CSRF. No request body. Idempotent first-read timestamp: repeated requests
+        preserve the original readAt. Foreign or missing IDs return 404.'
+      security:
+      - cookieSession: []
+      parameters:
+      - $ref: '#/components/parameters/CommerceCsrfToken'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationReadResult'
+              example:
+                id: 91
+                readAt: '2026-11-19T03:31:00Z'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+        '404':
+          $ref: '#/components/responses/OwnedResourceMissing'
+  /api/admin/operations:
+    get:
+      operationId: getCommerceOperations
+      tags:
+      - Commerce operations
+      summary: Read protected pool, job, outbox and retry attention
+      description: STAFF/ADMIN only. Actual Hikari counters, scheduler configuration, outbox state counts, bounded
+        expiry attention, and newest 20 DEAD events. Pool availability is explicit; no database URL, credentials,
+        raw errors, or session identities. No public actuator exposure.
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationsSnapshot'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+  /api/admin/operations/expiry/run:
+    post:
+      operationId: runEligibleCodExpiry
+      tags:
+      - Commerce operations
+      summary: Run one bounded batch of eligible COD expiries
+      description: STAFF/ADMIN with CSRF; no request body and no force/backdate override. Scans at most 100 due rows
+        and rechecks each under the shared order root lock in its own transaction. Only positive-total unconfirmed
+        PENDING_CONFIRMATION orders with a persisted deadline and exclusively COD/COD evidence qualify; confirmed,
+        collected, refunded, dispatched, mixed-provider, bank, zero-total, or legacy null-deadline orders are skipped.
+        Successful expiry atomically cancels the order, expires pending payments, releases unfulfilled stock/coupon
+        holds and enqueues a public notification. Failed rows retain holds and use durable backoff; late actual collection
+        follows the existing refund path.
+      security:
+      - cookieSession: []
+      parameters:
+      - $ref: '#/components/parameters/CommerceCsrfToken'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpiryBatchResult'
+              example:
+                scanned: 4
+                expired: 2
+                skipped: 1
+                failed: 1
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+  /api/admin/operations/notifications/run:
+    post:
+      operationId: runNotificationOutboxDelivery
+      tags:
+      - Commerce operations
+      summary: Deliver one bounded batch to the web inbox
+      description: STAFF/ADMIN with CSRF; no request body. Selects at most 100 due PENDING/RETRY events. Per-row lock/recheck
+        and unique delivered outbox ID make multiworker/repeated delivery safe. Notification insert and SENT transition
+        commit together; failures persist attempts/backoff and become DEAD after 5 attempts. No external messaging
+        or network calls run under DB locks.
+      security:
+      - cookieSession: []
+      parameters:
+      - $ref: '#/components/parameters/CommerceCsrfToken'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationBatchResult'
+              example:
+                scanned: 3
+                delivered: 2
+                skipped: 0
+                failed: 1
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+  /api/admin/operations/notifications/{id}/retry:
+    parameters:
+    - $ref: '#/components/parameters/CommerceResourceId'
+    post:
+      operationId: retryDeadNotificationEvent
+      tags:
+      - Commerce operations
+      summary: Requeue an inspected DEAD notification event
+      description: STAFF/ADMIN with CSRF and nonblank reason. Use an actual deadEvents.id from the operations snapshot.
+        Only DEAD can change to RETRY; resets attempts to zero, clears controlled lastError, schedules immediate eligibility,
+        and audits the action without recursively publishing a notification. Repeating after the state changes returns
+        409; this action does not force a financial or order transition.
+      security:
+      - cookieSession: []
+      parameters:
+      - $ref: '#/components/parameters/CommerceCsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetryDeadNotification'
+            example:
+              reason: Inspected delivery failure; database access restored.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationsSnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidCommerceOperation'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+        '404':
+          $ref: '#/components/responses/OwnedResourceMissing'
+        '409':
+          description: 'NOTIFICATION_NOT_DEAD: the event is no longer DEAD. Refresh operations; do not guess event
+            IDs or blindly requeue.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOTIFICATION_NOT_DEAD
+                message: Event is not in DEAD state.
+                fieldErrors: {}
+  /api/orders/{id}/returns:
+    parameters:
+    - $ref: '#/components/parameters/CommerceResourceId'
+    get:
+      operationId: getOwnedOrderAftercare
+      tags:
+      - Aftercare
+      summary: Read an owned order's returnable quantities and return history
+      description: Session owner only; wrong owner is 404. Quantities derive from real DELIVERED allocations with
+        delivered_at. Customer projection omits approvedBy, staffNote, conditionNote and all proofs/fingerprints;
+        customer mutation capability flags are false.
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerAftercareSummary'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+        '404':
+          $ref: '#/components/responses/OwnedResourceMissing'
+    post:
+      operationId: requestOwnedOrderReturn
+      tags:
+      - Aftercare
+      summary: Request a return for actually delivered unclaimed goods
+      description: Session owner with CSRF and Idempotency-Key. Order must be PROCESSING or COMPLETED. Unique current-order
+        item IDs and positive quantities must fit actual delivered unclaimed quantities; claims in REQUESTED/APPROVED/IN_TRANSIT/RECEIVED/COMPLETED
+        reserve their requested quantity. Resolution is fixed REFUND. Actor-scoped return number is RT- plus the first
+        32 SHA-256 hex characters of the server-serialized actor ID/key intent. Under the shared user/order locks,
+        replay compares stored order, normalized reason and sorted line intent before current eligibility, preserving
+        selectedReturnId even after decision/receipt. Different intent returns IDEMPOTENCY_CONFLICT; excess quantity
+        RETURN_QUANTITY_EXCEEDED; undelivered/ineligible order RETURN_NOT_READY; wrong owner 404. Requesting does
+        not restock, create a refund, or send money.
+      security:
+      - cookieSession: []
+      parameters:
+      - $ref: '#/components/parameters/CommerceCsrfToken'
+      - $ref: '#/components/parameters/AftercareIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerReturn'
+            example:
+              reason: Delivered item needs return inspection.
+              items:
+              - orderItemId: 1001
+                quantity: 1
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerReturnRequestResult'
+        '400':
+          $ref: '#/components/responses/InvalidCommerceOperation'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+        '404':
+          $ref: '#/components/responses/OwnedResourceMissing'
+        '409':
+          $ref: '#/components/responses/AftercareConflict'
+  /api/admin/aftercare/orders/{id}:
+    parameters:
+    - $ref: '#/components/parameters/CommerceResourceId'
+    get:
+      operationId: getStaffOrderAftercare
+      tags:
+      - Aftercare
+      summary: Read staff aftercare evidence and permitted actions
+      description: STAFF/ADMIN only. Includes private decision/inspection notes and approval actor; private immutable
+        proof remains in audit, not this summary. canDecide/canReceive/canCompleteInstallation reflect current state/capability.
+        Warehouse choices come from the existing safe catalog/inventory endpoint. Refund creation still uses the existing
+        manual refund APIs after actual approved receipt.
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffAftercareSummary'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+        '404':
+          $ref: '#/components/responses/OwnedResourceMissing'
+  /api/admin/aftercare/returns/{id}/decision:
+    parameters:
+    - $ref: '#/components/parameters/CommerceResourceId'
+    post:
+      operationId: decideCustomerReturn
+      tags:
+      - Aftercare
+      summary: Approve or reject a REQUESTED return
+      description: STAFF/ADMIN with CSRF. REQUESTED -> APPROVED/REJECTED; private staff reason never replaces the
+        public request reason. Approval actor is derived from the server session. Exact normalized decision/reason
+        replay is checked from append-only audit before current state and preserves the first actor; different/stale
+        intent returns RETURN_STATE_CHANGED. Rejection releases the claimed quantity for a later request. No stock
+        or financial movement.
+      security:
+      - cookieSession: []
+      parameters:
+      - $ref: '#/components/parameters/CommerceCsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecideCustomerReturn'
+            example:
+              decision: APPROVE
+              reason: Staff inspected the return request and approved receipt.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffAftercareSummary'
+        '400':
+          $ref: '#/components/responses/InvalidCommerceOperation'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+        '404':
+          $ref: '#/components/responses/OwnedResourceMissing'
+        '409':
+          $ref: '#/components/responses/AftercareConflict'
+  /api/admin/aftercare/returns/{id}/receive:
+    parameters:
+    - $ref: '#/components/parameters/CommerceResourceId'
+    post:
+      operationId: receiveApprovedCustomerReturn
+      tags:
+      - Aftercare
+      summary: Record physically received and explicitly restocked goods
+      description: STAFF/ADMIN with CSRF and acknowledged=true. APPROVED -> RECEIVED with a server approval actor;
+        the order remains PROCESSING/COMPLETED. Supply exactly all requested return lines, each once; 0 <= restockQuantity
+        <= receivedQuantity <= requested quantity, at least one received unit overall, and an active warehouse. Rechecks
+        original delivery/claim quantities under sorted user -> order root -> return/line -> warehouse shared -> variant/warehouse
+        balance locks. Only explicit positive restockQuantity increases on_hand, preserves reserved quantities, increments
+        balance version and creates one RETURN movement with unique return-item:<returnItemId>. receivedQuantity and
+        restockedQuantity persist for RefundPolicy's discounted actual-received-goods cap. Exact normalized sorted
+        receipt fingerprint replay preserves evidence and does not restock twice; different receipt returns RETURN_RECEIPT_CONFLICT;
+        other states RETURN_STATE_CHANGED. No automatic refund/payment completion, order resurrection, or change of
+        delivered shipments to RETURNED.
+      security:
+      - cookieSession: []
+      parameters:
+      - $ref: '#/components/parameters/CommerceCsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiveCustomerReturn'
+            example:
+              warehouseId: 1
+              items:
+              - returnItemId: 7001
+                receivedQuantity: 1
+                restockQuantity: 0
+                conditionNote: Received damaged item; do not place back into sellable stock.
+              acknowledged: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffAftercareSummary'
+        '400':
+          $ref: '#/components/responses/InvalidCommerceOperation'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+        '404':
+          $ref: '#/components/responses/OwnedResourceMissing'
+        '409':
+          $ref: '#/components/responses/AftercareConflict'
+  /api/admin/aftercare/shipments/{id}/installation:
+    parameters:
+    - $ref: '#/components/parameters/CommerceResourceId'
+    post:
+      operationId: completeSelectedInstallation
+      tags:
+      - Aftercare
+      summary: Attest actual completion of a selected installation
+      description: STAFF/ADMIN with CSRF, valid reference and acknowledged=true. Requires selected order assembly
+        and an installation-required shipment with both DELIVERED status and delivered_at, with installation PENDING/SCHEDULED.
+        Server records COMPLETED, UTC completion time and current staff actor in the same transaction as immutable
+        private audit proof. Exact normalized reference/note replay preserves first staff/time; different proof returns
+        INSTALLATION_ALREADY_COMPLETED; undelivered/unselected/ineligible installation returns INSTALLATION_NOT_READY.
+        For PROCESSING orders only, invokes the existing shared lifecycle transition to COMPLETED when real delivery,
+        collection and installation evidence satisfies OrderCompletionPolicy; never manufactures payment or delivery
+        evidence.
+      security:
+      - cookieSession: []
+      parameters:
+      - $ref: '#/components/parameters/CommerceCsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteInstallation'
+            example:
+              reference: INSTALLATION-PROOF-501
+              note: Private signed completion evidence checked by staff.
+              acknowledged: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffAftercareSummary'
+        '400':
+          $ref: '#/components/responses/InvalidCommerceOperation'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+        '404':
+          $ref: '#/components/responses/OwnedResourceMissing'
+        '409':
+          $ref: '#/components/responses/AftercareConflict'
 components:
   securitySchemes:
     cookieSession:
@@ -1772,6 +2263,118 @@ components:
       in: cookie
       name: JSESSIONID
       description: HttpOnly same-origin session; unsafe methods also require X-CSRF-TOKEN.
+  parameters:
+    CommerceResourceId:
+      in: path
+      name: id
+      required: true
+      description: Persisted resource ID from the corresponding server response.
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    CommerceCsrfToken:
+      in: header
+      name: X-CSRF-TOKEN
+      required: true
+      description: Token returned by GET /api/csrf for this JSESSIONID session.
+      schema:
+        type: string
+        minLength: 1
+    AftercareIdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      description: Actor-scoped across orders. Persist the exact key and request intent until the uncertain result
+        is resolved; replay is checked before current eligibility. Different order/reason/sorted line intent conflicts.
+      schema:
+        type: string
+        pattern: ^[A-Za-z0-9_-]{8,64}$
+        example: return-order-501-001
+  responses:
+    SessionRequired:
+      description: An authenticated JSESSIONID session is required.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            code: AUTHENTICATION_REQUIRED
+            message: Sign in to continue.
+            fieldErrors: {}
+    StaffOrCsrfDenied:
+      description: STAFF/ADMIN role required on admin paths, or missing/invalid CSRF token on a mutation. Customer
+        inbox and returns remain scoped to the current session owner.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            code: CSRF_INVALID
+            message: Refresh the security token and try again.
+            fieldErrors: {}
+    OwnedResourceMissing:
+      description: Resource is missing or belongs to another owner. No cross-owner details are disclosed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            code: NOT_FOUND
+            message: Resource unavailable.
+            fieldErrors: {}
+    InvalidCommerceOperation:
+      description: Malformed pagination, key, quantities, proof, reason, warehouse, duplicate item IDs, or missing
+        explicit acknowledgement.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          examples:
+            validation:
+              value:
+                code: VALIDATION_ERROR
+                message: Please correct the invalid fields.
+                fieldErrors:
+                  acknowledged: Explicit acknowledgement is required.
+            page:
+              value:
+                code: INVALID_PAGE
+                message: Invalid page or size.
+                fieldErrors: {}
+    AftercareConflict:
+      description: Persisted intent, actual delivered quantity, warehouse, or current business state conflict. Reload
+        current summary; preserve the exact uncertain request when retrying.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          examples:
+            intent:
+              value:
+                code: IDEMPOTENCY_CONFLICT
+                message: Key already used with a different intent.
+                fieldErrors: {}
+            quantity:
+              value:
+                code: RETURN_QUANTITY_EXCEEDED
+                message: Requested quantity exceeds delivered unclaimed goods.
+                fieldErrors: {}
+            receipt:
+              value:
+                code: RETURN_RECEIPT_CONFLICT
+                message: Receipt already recorded with different evidence.
+                fieldErrors: {}
+            state:
+              value:
+                code: RETURN_STATE_CHANGED
+                message: Return state changed.
+                fieldErrors: {}
+            installation:
+              value:
+                code: INSTALLATION_ALREADY_COMPLETED
+                message: Installation already recorded with different proof.
+                fieldErrors: {}
   schemas:
     ApiError:
       type: object
@@ -2407,6 +3010,12 @@ components:
         canCancel: *id028
         cancellationMessage: *id009
         assemblyRequested: *id031
+        confirmationExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: UTC server deadline for a new positive-total unconfirmed COD order (default 24 hours; configured 60..604800 seconds). Null for legacy, zero-total, BANK_TRANSFER, or confirmed orders. Browser time never releases stock; guarded server expiry decides cancellation and release.
+          example: '2026-11-20T03:30:00Z'
     CustomerOrderSummary:
       type: object
       properties:
@@ -3057,3 +3666,936 @@ components:
       description: Explicitly attest no money was sent. Only unsent manual PENDING requests
         may cancel/release their held budget. Debt is not erased; replacement may be requested.
         Exact normalized reason replays.
+    WebNotification:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - orderId
+      - orderNumber
+      - type
+      - title
+      - body
+      - href
+      - createdAt
+      - readAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        orderId:
+          type: integer
+          format: int64
+          minimum: 1
+        orderNumber:
+          type: string
+        type:
+          type: string
+          enum:
+          - ORDER_PLACED
+          - ORDER_STATUS_CHANGED
+          - ORDER_EXPIRED
+          - PAYMENT_CONFIRMED
+          - REFUND_REQUESTED
+          - REFUND_CONFIRMED
+          - REFUND_CANCELLED
+          - RETURN_REQUESTED
+          - RETURN_APPROVED
+          - RETURN_REJECTED
+          - RETURN_RECEIVED
+          - INSTALLATION_COMPLETED
+          - SHIPMENT_DELIVERED
+        title:
+          type: string
+        body:
+          type: string
+          description: Fixed public template; never includes staff notes, inspection notes, proof, or recipient identity.
+        href:
+          type: string
+          example: /orders/501
+        createdAt:
+          type: string
+          format: date-time
+          description: UTC instant.
+          example: '2026-11-19T03:30:00Z'
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: UTC instant.
+          example: '2026-11-19T03:30:00Z'
+    NotificationPage:
+      type: object
+      additionalProperties: false
+      description: totalElements follows unreadOnly; unreadCount counts every unread notification for the current session
+        owner.
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+      - unreadCount
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebNotification'
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          minimum: 0
+          format: int64
+        totalPages:
+          type: integer
+          minimum: 0
+        unreadCount:
+          type: integer
+          minimum: 0
+          format: int64
+    NotificationUnreadCount:
+      type: object
+      additionalProperties: false
+      required:
+      - unreadCount
+      properties:
+        unreadCount:
+          type: integer
+          minimum: 0
+          format: int64
+    NotificationReadResult:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - readAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        readAt:
+          type: string
+          format: date-time
+          description: UTC instant.
+          example: '2026-11-19T03:30:00Z'
+    OperationsPool:
+      type: object
+      additionalProperties: false
+      description: Actual Hikari snapshot. Counters are null and available=false when pool metrics cannot be read. No
+        datasource URL, password, or session identities.
+      required:
+      - active
+      - idle
+      - total
+      - awaiting
+      - max
+      - minIdle
+      - available
+      properties:
+        active:
+          type: integer
+          minimum: 0
+          nullable: true
+        idle:
+          type: integer
+          minimum: 0
+          nullable: true
+        total:
+          type: integer
+          minimum: 0
+          nullable: true
+        awaiting:
+          type: integer
+          minimum: 0
+          nullable: true
+        max:
+          type: integer
+          minimum: 0
+          nullable: true
+        minIdle:
+          type: integer
+          minimum: 0
+          nullable: true
+        available:
+          type: boolean
+    OperationsJobs:
+      type: object
+      additionalProperties: false
+      description: Scheduler configuration. Manual runs still apply eligibility checks; enabled=false never makes a
+        manual run force expiry or change business time.
+      required:
+      - enabled
+      - expiryEnabled
+      - notificationEnabled
+      - confirmationTtlSeconds
+      properties:
+        enabled:
+          type: boolean
+        expiryEnabled:
+          type: boolean
+        notificationEnabled:
+          type: boolean
+        confirmationTtlSeconds:
+          type: integer
+          format: int64
+          minimum: 60
+          maximum: 604800
+          example: 86400
+    NotificationOutboxCounts:
+      type: object
+      additionalProperties: false
+      required:
+      - pending
+      - retry
+      - dead
+      - sent
+      properties:
+        pending:
+          type: integer
+          minimum: 0
+          format: int64
+        retry:
+          type: integer
+          minimum: 0
+          format: int64
+        dead:
+          type: integer
+          minimum: 0
+          format: int64
+        sent:
+          type: integer
+          minimum: 0
+          format: int64
+    ExpiryAttention:
+      type: object
+      additionalProperties: false
+      required:
+      - orderId
+      - orderNumber
+      - attempts
+      - retryAt
+      properties:
+        orderId:
+          type: integer
+          format: int64
+          minimum: 1
+        orderNumber:
+          type: string
+        attempts:
+          type: integer
+          minimum: 1
+        retryAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: UTC instant.
+          example: '2026-11-19T03:30:00Z'
+    DeadNotificationEvent:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - orderId
+      - orderNumber
+      - type
+      - attempts
+      - lastError
+      - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        orderId:
+          type: integer
+          format: int64
+          minimum: 1
+        orderNumber:
+          type: string
+        type:
+          type: string
+          enum:
+          - ORDER_PLACED
+          - ORDER_STATUS_CHANGED
+          - ORDER_EXPIRED
+          - PAYMENT_CONFIRMED
+          - REFUND_REQUESTED
+          - REFUND_CONFIRMED
+          - REFUND_CANCELLED
+          - RETURN_REQUESTED
+          - RETURN_APPROVED
+          - RETURN_REJECTED
+          - RETURN_RECEIVED
+          - INSTALLATION_COMPLETED
+          - SHIPMENT_DELIVERED
+        attempts:
+          type: integer
+          minimum: 0
+        lastError:
+          type: string
+          nullable: true
+          description: Controlled generic code, never raw exceptions, SQL, or credentials.
+          example: DELIVERY_STORAGE_ERROR
+        updatedAt:
+          type: string
+          format: date-time
+          description: UTC instant.
+          example: '2026-11-19T03:30:00Z'
+    OperationsSnapshot:
+      type: object
+      additionalProperties: false
+      description: STAFF/ADMIN only. expiryAttention is bounded to 20 pending orders with failed expiry attempts; deadEvents
+        is the newest 20 DEAD outbox rows, updatedAt/id descending. Use the actual deadEvents.id for retry.
+      required:
+      - pool
+      - jobs
+      - outbox
+      - expiryAttention
+      - deadEvents
+      properties:
+        pool:
+          $ref: '#/components/schemas/OperationsPool'
+        jobs:
+          $ref: '#/components/schemas/OperationsJobs'
+        outbox:
+          $ref: '#/components/schemas/NotificationOutboxCounts'
+        expiryAttention:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpiryAttention'
+          maxItems: 20
+        deadEvents:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeadNotificationEvent'
+          maxItems: 20
+    ExpiryBatchResult:
+      type: object
+      additionalProperties: false
+      required:
+      - scanned
+      - expired
+      - skipped
+      - failed
+      properties:
+        scanned:
+          type: integer
+          minimum: 0
+          maximum: 100
+        expired:
+          type: integer
+          minimum: 0
+        skipped:
+          type: integer
+          minimum: 0
+        failed:
+          type: integer
+          minimum: 0
+    NotificationBatchResult:
+      type: object
+      additionalProperties: false
+      required:
+      - scanned
+      - delivered
+      - skipped
+      - failed
+      properties:
+        scanned:
+          type: integer
+          minimum: 0
+          maximum: 100
+        delivered:
+          type: integer
+          minimum: 0
+        skipped:
+          type: integer
+          minimum: 0
+        failed:
+          type: integer
+          minimum: 0
+    RetryDeadNotification:
+      type: object
+      additionalProperties: false
+      required:
+      - reason
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Trimmed nonblank staff reason, recorded in audit.
+    AftercareOrderItem:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - sku
+      - productName
+      - quantity
+      - deliveredQuantity
+      - claimedQuantity
+      - returnableQuantity
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        sku:
+          type: string
+        productName:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        deliveredQuantity:
+          type: integer
+          minimum: 0
+          description: Actual same-order shipment allocations with status DELIVERED and non-null delivered_at.
+        claimedQuantity:
+          type: integer
+          minimum: 0
+          description: Requested quantities in REQUESTED, APPROVED, IN_TRANSIT, RECEIVED, and COMPLETED returns.
+        returnableQuantity:
+          type: integer
+          minimum: 0
+          description: max(0, min(original quantity, actual delivered quantity) - claimed quantity), rechecked under
+            the order root lock on writes.
+    CustomerAftercareShipment:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - status
+      - installationRequired
+      - installationStatus
+      - installationCompletedAt
+      - canCompleteInstallation
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        status:
+          type: string
+          enum:
+          - PENDING
+          - READY
+          - IN_TRANSIT
+          - DELIVERED
+          - FAILED
+          - RETURNED
+          - CANCELLED
+        installationRequired:
+          type: boolean
+        installationStatus:
+          type: string
+          enum:
+          - NOT_REQUIRED
+          - PENDING
+          - SCHEDULED
+          - COMPLETED
+          - CANCELLED
+        installationCompletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: UTC instant.
+          example: '2026-11-19T03:30:00Z'
+        canCompleteInstallation:
+          type: boolean
+          enum:
+          - false
+    StaffAftercareShipment:
+      type: object
+      additionalProperties: false
+      description: canCompleteInstallation requires a PROCESSING/COMPLETED order with selected assembly and an installation-required
+        DELIVERED shipment with delivered_at and PENDING/SCHEDULED installation.
+      required:
+      - id
+      - status
+      - installationRequired
+      - installationStatus
+      - installationCompletedAt
+      - canCompleteInstallation
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        status:
+          type: string
+          enum:
+          - PENDING
+          - READY
+          - IN_TRANSIT
+          - DELIVERED
+          - FAILED
+          - RETURNED
+          - CANCELLED
+        installationRequired:
+          type: boolean
+        installationStatus:
+          type: string
+          enum:
+          - NOT_REQUIRED
+          - PENDING
+          - SCHEDULED
+          - COMPLETED
+          - CANCELLED
+        installationCompletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: UTC instant.
+          example: '2026-11-19T03:30:00Z'
+        canCompleteInstallation:
+          type: boolean
+    CustomerReturnItem:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - orderItemId
+      - sku
+      - productName
+      - quantity
+      - receivedQuantity
+      - restockedQuantity
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        orderItemId:
+          type: integer
+          format: int64
+          minimum: 1
+        sku:
+          type: string
+        productName:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        receivedQuantity:
+          type: integer
+          minimum: 0
+        restockedQuantity:
+          type: integer
+          minimum: 0
+          description: Persisted actual restock count. May be lower than receivedQuantity; only explicit restockQuantity
+            in the receipt writes stock.
+    StaffReturnItem:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - orderItemId
+      - sku
+      - productName
+      - quantity
+      - receivedQuantity
+      - restockedQuantity
+      - conditionNote
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        orderItemId:
+          type: integer
+          format: int64
+          minimum: 1
+        sku:
+          type: string
+        productName:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        receivedQuantity:
+          type: integer
+          minimum: 0
+        restockedQuantity:
+          type: integer
+          minimum: 0
+          description: Persisted actual restock count. May be lower than receivedQuantity; only explicit restockQuantity
+            in the receipt writes stock.
+        conditionNote:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: Private inspection note; omitted entirely from customer responses.
+    CustomerReturn:
+      type: object
+      additionalProperties: false
+      description: Customer projection excludes approvedBy, staffNote, conditionNote, and all private proof/fingerprints.
+      required:
+      - id
+      - returnNumber
+      - status
+      - resolution
+      - reason
+      - requestedAt
+      - canDecide
+      - canReceive
+      - items
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        returnNumber:
+          type: string
+          maxLength: 40
+          example: RT-918d7e957bde4c3f8a42accc89883049
+        status:
+          type: string
+          enum:
+          - REQUESTED
+          - APPROVED
+          - REJECTED
+          - IN_TRANSIT
+          - RECEIVED
+          - COMPLETED
+          - CANCELLED
+        resolution:
+          type: string
+          enum:
+          - REFUND
+          - EXCHANGE
+          - REPAIR
+          description: New customer requests always use REFUND; historical resolutions may still be read.
+        reason:
+          type: string
+          description: Original public customer request text; staff decisions and receipts never overwrite this.
+        requestedAt:
+          type: string
+          format: date-time
+          description: UTC instant.
+          example: '2026-11-19T03:30:00Z'
+        canDecide:
+          type: boolean
+          enum:
+          - false
+        canReceive:
+          type: boolean
+          enum:
+          - false
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerReturnItem'
+    StaffReturn:
+      type: object
+      additionalProperties: false
+      description: canDecide is true only for REQUESTED. canReceive requires APPROVED, an approval actor, and PROCESSING/COMPLETED
+        order. Receipt does not create or complete a refund.
+      required:
+      - id
+      - returnNumber
+      - status
+      - resolution
+      - reason
+      - requestedAt
+      - canDecide
+      - canReceive
+      - items
+      - approvedBy
+      - staffNote
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        returnNumber:
+          type: string
+          maxLength: 40
+          example: RT-918d7e957bde4c3f8a42accc89883049
+        status:
+          type: string
+          enum:
+          - REQUESTED
+          - APPROVED
+          - REJECTED
+          - IN_TRANSIT
+          - RECEIVED
+          - COMPLETED
+          - CANCELLED
+        resolution:
+          type: string
+          enum:
+          - REFUND
+          - EXCHANGE
+          - REPAIR
+          description: New customer requests always use REFUND; historical resolutions may still be read.
+        reason:
+          type: string
+          description: Original public customer request text; staff decisions and receipts never overwrite this.
+        requestedAt:
+          type: string
+          format: date-time
+          description: UTC instant.
+          example: '2026-11-19T03:30:00Z'
+        canDecide:
+          type: boolean
+        canReceive:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffReturnItem'
+        approvedBy:
+          type: integer
+          format: int64
+          minimum: 1
+          nullable: true
+          description: Server-derived first approval actor; never accepted from request input.
+        staffNote:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: Private staff decision reason.
+    CustomerAftercareSummary:
+      type: object
+      additionalProperties: false
+      required:
+      - orderId
+      - orderNumber
+      - orderStatus
+      - items
+      - shipments
+      - returns
+      properties:
+        orderId:
+          type: integer
+          format: int64
+          minimum: 1
+        orderNumber:
+          type: string
+        orderStatus:
+          type: string
+          enum:
+          - PENDING_CONFIRMATION
+          - CONFIRMED
+          - PROCESSING
+          - COMPLETED
+          - CANCELLED
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AftercareOrderItem'
+        shipments:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerAftercareShipment'
+        returns:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerReturn'
+    CustomerReturnRequestResult:
+      type: object
+      additionalProperties: false
+      required:
+      - orderId
+      - orderNumber
+      - orderStatus
+      - items
+      - shipments
+      - returns
+      - selectedReturnId
+      properties:
+        orderId:
+          type: integer
+          format: int64
+          minimum: 1
+        orderNumber:
+          type: string
+        orderStatus:
+          type: string
+          enum:
+          - PENDING_CONFIRMATION
+          - CONFIRMED
+          - PROCESSING
+          - COMPLETED
+          - CANCELLED
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AftercareOrderItem'
+        shipments:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerAftercareShipment'
+        returns:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerReturn'
+        selectedReturnId:
+          type: integer
+          format: int64
+          minimum: 1
+    StaffAftercareSummary:
+      type: object
+      additionalProperties: false
+      required:
+      - orderId
+      - orderNumber
+      - orderStatus
+      - items
+      - shipments
+      - returns
+      properties:
+        orderId:
+          type: integer
+          format: int64
+          minimum: 1
+        orderNumber:
+          type: string
+        orderStatus:
+          type: string
+          enum:
+          - PENDING_CONFIRMATION
+          - CONFIRMED
+          - PROCESSING
+          - COMPLETED
+          - CANCELLED
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AftercareOrderItem'
+        shipments:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffAftercareShipment'
+        returns:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffReturn'
+    CreateCustomerReturn:
+      type: object
+      additionalProperties: false
+      description: No resolution, owner, staff actor, stock, or refund fields. Resolution is fixed REFUND by the server.
+      required:
+      - reason
+      - items
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Trimmed, nonblank public customer reason.
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - orderItemId
+            - quantity
+            properties:
+              orderItemId:
+                type: integer
+                format: int64
+                minimum: 1
+              quantity:
+                type: integer
+                minimum: 1
+                maximum: 1000000
+          maxItems: 1000
+          minItems: 1
+          description: Unique orderItemId values from the current owned order; quantities cannot exceed actual returnableQuantity.
+    DecideCustomerReturn:
+      type: object
+      additionalProperties: false
+      required:
+      - decision
+      - reason
+      properties:
+        decision:
+          type: string
+          enum:
+          - APPROVE
+          - REJECT
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Trimmed nonblank private staff note; not the public customer reason.
+    ReceiveCustomerReturn:
+      type: object
+      additionalProperties: false
+      description: Warehouse must be active even when restockQuantity is zero. Stock rises only by explicit restockQuantity;
+        reservations, shipment delivery, payment, and refund state are preserved.
+      required:
+      - warehouseId
+      - items
+      - acknowledged
+      properties:
+        warehouseId:
+          type: integer
+          format: int64
+          minimum: 1
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - returnItemId
+            - receivedQuantity
+            - restockQuantity
+            properties:
+              returnItemId:
+                type: integer
+                format: int64
+                minimum: 1
+              receivedQuantity:
+                type: integer
+                minimum: 0
+              restockQuantity:
+                type: integer
+                minimum: 0
+              conditionNote:
+                type: string
+                nullable: true
+                maxLength: 1000
+                description: Optional private condition note, trimmed; null and blank normalize to empty.
+          maxItems: 1000
+          minItems: 1
+          description: Exactly all return request lines, unique returnItemId. 0 <= restockQuantity <= receivedQuantity
+            <= requested quantity for each line; at least one received unit overall.
+        acknowledged:
+          type: boolean
+          enum:
+          - true
+          description: Staff explicitly attests physical receipt and inspection.
+    CompleteInstallation:
+      type: object
+      additionalProperties: false
+      required:
+      - reference
+      - acknowledged
+      properties:
+        reference:
+          type: string
+          pattern: ^[A-Za-z0-9._:/-]{6,150}$
+          description: Trimmed immutable proof reference.
+        note:
+          type: string
+          nullable: true
+          maxLength: 1000
+          description: Optional private staff proof note, trimmed; null and blank normalize to empty.
+        acknowledged:
+          type: boolean
+          enum:
+          - true
+          description: Staff explicitly attests installation was physically completed.
