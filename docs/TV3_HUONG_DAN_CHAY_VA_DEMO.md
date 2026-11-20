@@ -2,6 +2,8 @@
 
 Hướng dẫn bàn giao cập nhật ngày19/11/2026: [TV3_BAN_GIAO_VA_DEMO.md](TV3_BAN_GIAO_VA_DEMO.md). Runtime hiện dùng V001–V009,47bảng; gồm cả thu/hoàn thủ công, lắp đặt/đổi trả, thông báo và vận hành. VNPAY sandbox vẫn chờ thông tin đăng ký.
 
+Từ20/11 có thể [build/chạy một JAR cùng origin](TV3_RELEASE.md); xem thêm [CI](TV3_CI.md) và [backup/restore](TV3_BACKUP_RESTORE.md). Các bước dưới đây vẫn dành cho phát triển bằng backend/Vite riêng.
+
 ## Phần đã có
 
 - REST contract và lỗi JSON; session login/logout, CSRF, phân quyền STAFF/ADMIN, token giỏ khách HttpOnly lưu hash trong DB.

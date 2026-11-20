@@ -1,0 +1,186 @@
+name: TV3 commerce CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: commerce-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  commerce:
+    name: MariaDB integrations and packaged browser regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      mariadb:
+        image: mariadb:12.2
+        env:
+          MARIADB_ROOT_PASSWORD: ci-${{ github.run_id }}-${{ github.run_attempt }}-disposable
+          MARIADB_ROOT_HOST: '%'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      CI: 'true'
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_USERNAME: root
+      DB_PASSWORD: ci-${{ github.run_id }}-${{ github.run_attempt }}-disposable
+      DB_URL: jdbc:mariadb://127.0.0.1:3306/furniture_shop_test_legacy_ci
+      LEGACY_TEST_DB_URL: jdbc:mariadb://127.0.0.1:3306/furniture_shop_test_legacy_ci
+      TV3_DEMO_PASSWORD: demo-${{ github.run_id }}-${{ github.run_attempt }}-disposable
+      TV3_TEST_DB_URL: jdbc:mariadb://127.0.0.1:3306/furniture_shop_test_tv3_policy_ci
+      COMMERCE_JOBS_ENABLED: 'false'
+      PAYMENT_BANK_MODE: DEMO
+      GEMINI_EMBEDDING_LIVE_TEST: 'false'
+      GEMINI_API_KEY: offline-test-placeholder
+      TV3_E2E_BASE_URL: http://127.0.0.1:8080
+      TV3_E2E_CHANNEL: chromium
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out source without persisted credentials
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Mask disposable credentials and generate session signing key
+        run: |
+          python - <<'PY'
+          import base64, os, secrets
+          for name in ('DB_PASSWORD', 'TV3_DEMO_PASSWORD'):
+              print('::add-mask::' + os.environ[name])
+          value = base64.b64encode(secrets.token_bytes(32)).decode('ascii')
+          print('::add-mask::' + value)
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as file:
+              file.write('JWT_SECRET=' + value + '\n')
+          PY
+
+      - name: Set up Java 21 (project source target remains 17)
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: pom.xml
+
+      - name: Set up Node 24
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Use matching MariaDB 12.2 client tools from the disposable service
+        env:
+          TV3_MARIADB_CONTAINER: ${{ job.services.mariadb.id }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          directory = Path(os.environ['RUNNER_TEMP']) / 'tv3-db-tools'
+          directory.mkdir()
+          container = os.environ['TV3_MARIADB_CONTAINER']
+          if not container.isalnum():
+              raise SystemExit('Invalid service container identifier')
+          for name in ('mariadb', 'mariadb-dump'):
+              path = directory / name
+              path.write_text('#!/usr/bin/env bash\nexec docker exec -i --env MYSQL_PWD '
+                              + container + ' ' + name + ' "$@"\n', encoding='utf-8')
+              path.chmod(0o700)
+          with open(os.environ['GITHUB_PATH'], 'a', encoding='utf-8') as file:
+              file.write(str(directory) + '\n')
+          PY
+
+      - name: Run operational helper tests
+        run: python -m unittest discover -s tests/operations -p 'test_*.py' -v
+
+      - name: Provision V001-V009 schema and require all 47 InnoDB tables
+        run: |
+          python scripts/tv3_database.py create --database furniture_shop_test_tv3_policy_ci --client mariadb
+          export MYSQL_PWD="$DB_PASSWORD"
+          count=$(mariadb --protocol=tcp --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USERNAME" --database=furniture_shop_test_tv3_policy_ci --batch --skip-column-names --execute="SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE='BASE TABLE' AND ENGINE='InnoDB'")
+          test "$count" = 47
+          # EshopApplicationTests loads the separate legacy context. It needs a
+          # own guarded create-drop schema, never the commerce database.
+          mariadb --protocol=tcp --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USERNAME" --execute="CREATE DATABASE furniture_shop_test_legacy_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+
+      - name: Run complete Java regression with real MariaDB
+        timeout-minutes: 12
+        run: bash ./mvnw --batch-mode --no-transfer-progress test
+
+      - name: Require database integration tests to have executed
+        run: |
+          python scripts/ci_verify_tests.py
+          cp target/ci-results/java-summary.json "$RUNNER_TEMP/tv3-java-summary.json"
+
+      - name: Install frontend dependencies and test React
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test
+
+      - name: Build portable demo JAR and checksum
+        timeout-minutes: 10
+        run: |
+          python scripts/tv3_release.py build
+          mkdir -p target/ci-results
+          cp "$RUNNER_TEMP/tv3-java-summary.json" target/ci-results/java-summary.json
+
+      - name: Seed fresh packaged-demo fixtures
+        run: |
+          python scripts/tv3_database.py create --database furniture_shop_test_ci_demo --client mariadb
+          python scripts/tv3_database.py seed --database furniture_shop_test_ci_demo --client mariadb
+
+      - name: Verify backup and recovery into a new disposable database
+        timeout-minutes: 5
+        run: |
+          python scripts/tv3_backup.py backup --database furniture_shop_test_ci_demo --output "$RUNNER_TEMP/tv3-private-backup" --client mariadb --dump-client mariadb-dump
+          python scripts/tv3_backup.py restore --backup "$RUNNER_TEMP/tv3-private-backup" --target furniture_shop_test_restore_ci --client mariadb --dump-client mariadb-dump
+
+      - name: Install Chromium for packaged browser tests
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Start packaged demo and verify routes, assets and API
+        run: |
+          python scripts/tv3_release.py run --database furniture_shop_test_restore_ci --port 8080 > "$RUNNER_TEMP/tv3-app.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/tv3-app.pid"
+          python scripts/ci_packaged_smoke.py --timeout 120
+
+      - name: Run complete browser regression against the packaged JAR
+        timeout-minutes: 10
+        working-directory: frontend
+        run: npm run test:e2e -- --reporter=line
+
+      - name: Stop packaged app
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/tv3-app.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/tv3-app.pid")" 2>/dev/null || true
+          fi
+
+      - name: Upload only sanitized summaries and verified demo files
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: tv3-demo-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            target/ci-results/java-summary.json
+            target/ci-results/packaged-summary.json
+            target/releases/nep-nha-demo.jar
+            target/releases/nep-nha-demo.jar.sha256
+            target/releases/release.json

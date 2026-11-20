@@ -181,7 +181,7 @@ Phần độc lập sandbox đã triển khai TV3-10 MANUAL (2026-11-17): API/Re
 - [ ] Phân trang/projection/fetch có chủ đích cho đơn/admin; kiểm tra EXPLAIN theo truy vấn đo được. Không cache quyết định tiền, tồn, coupon hoặc quyền; cache frontend không phải nguồn dữ liệu để đặt đơn.
 - [ ] Nghiệm thu: có số đo p95, lỗi, truy vấn và DB pool với cấu hình tải/máy/dataset ghi rõ; test Redis/provider lỗi. Không bịa số đo hoặc ghi tối ưu thành công chỉ vì thêm annotation/index.
 
-Đã có phần độc lập sandbox: harness GET có guard cô lập và EXPLAIN chỉ đọc tại tests/performance/tv3; báo cáo thực tế docs/performance/TV3_READ_PERFORMANCE_2026-11-17.md (160request/0lỗi/p95~39.5ms,8plan). Chưa có expiry/notification/reconciliation jobs, pool telemetry, Redis/provider-failure checks; baseline nhỏ không thay thế nghiệm thu toàn bộ Task11.
+Mốc17/11 có harness GET/EXPLAIN nhỏ; phần expiry, thông báo và pool telemetry đã triển khai19/11 như cập nhật cuối tài liệu. Job đối soát provider vẫn chờ sandbox; Redis không có trong dependency commerce. Baseline160request cũ không thay thế báo cáo dataset lớn19/11.
 
 ## TV3-12 — Kiểm thử xuyên suốt và bàn giao
 
@@ -192,7 +192,7 @@ Phần độc lập sandbox đã triển khai TV3-10 MANUAL (2026-11-17): API/Re
 - [ ] Chạy backend/component/E2E/schema integration phù hợp; ghi chính xác test thực tế, test mock, test sandbox và phần chưa xác minh. Smoke test phải dùng schema mới với các module thực đã tích hợp, không chỉ legacy DB.
 - [ ] Bàn giao biến môi trường mẫu, dữ liệu demo, API contract/collection, ảnh/kịch bản demo và danh sách dependency còn cần nhóm xử lý. Không commit password, JWT secret hoặc khóa provider.
 
-Đã mở rộng phần manual Task12: Chrome thật chạy đủ6kịch bản qua API/MariaDB demo, thêm thu→hủy→hoàn thủ công, mất phản hồi/tải lại/replay và lịch sử khách không lộ ghi chú. OpenAPI1.4 gồm39operations, runbook/migrationV007/dictionary cập nhật. E2E online VNPAY, hoàn online và đổi trả TV4 thực tế vẫn chờ ghép; chưa coi toàn bộ Task12 hoàn tất.
+Mốc17/11 có6kịch bản manual; từ19/11 đã có7kịch bản, gồm đổi trả TV4 thực tế và OpenAPI1.5.0/52operations như cập nhật dưới. E2E VNPAY/hoàn online vẫn chờ credential; không coi phần sandbox của Task12 đã hoàn tất.
 
 ### Cập nhật nghiệm thu19/11/2026 — phần không cần sandbox
 
@@ -202,6 +202,10 @@ Phần độc lập sandbox đã triển khai TV3-10 MANUAL (2026-11-17): API/Re
 - TV3-12: đã ghép luồng TV4 thật chọn hàng→COD→xuất/giao→thu→lắp→trả một phần→duyệt/nhận/nhập lại kho→hoàn thủ công→thông báo khách. API/MariaDB/Chrome thực có mất phản hồi/tải lại/replay; không dùng fixture SQL để thay giao/nhận trong E2E này.
 - Kết quả cuối: Java180ca/179pass/1liveGemini skip, React142pass/13file, build63module, Chrome7/7pass, schema47bảng/22behaviorcheck rollback, harness15pass. Review độc lập đã sửa việc scheduler có thể chạm fixture; Surefire và commerce test tắt lịch mặc định, regression RED→GREEN.
 - Contract OpenAPI1.5.0/52operation, V001–V009, dictionary/runbook và `docs/TV3_BAN_GIAO_VA_DEMO.md` đã cập nhật. Task09, hoàn online/đối soát provider trong Task10/11 và E2E VNPAY trong Task12 vẫn chờ credential; không tick hoàn tất toàn bộ các task này.
+
+### Cập nhật20/11/2026 — CI, recovery và gói demo
+
+Đã bổ sung [workflow CI](../../TV3_CI.md), [backup/restore](../../TV3_BACKUP_RESTORE.md) và [gói React+Spring Boot cùng origin](../../TV3_RELEASE.md). Recovery thực đã đối chiếu47bảng/702dòng; Chrome7/7đạt trên JAR dùng DB khôi phục, không qua Vite. Workflow bắt buộc các integration DB chạy thật và tách context legacy có schema riêng. Kết quả hosted CI được ghi tại PR phát hành sau khi push; lint/local tests không được gọi là hosted run.
 
 ## Điểm bắt đầu
 

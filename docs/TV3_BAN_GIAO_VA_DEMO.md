@@ -2,6 +2,8 @@
 
 Tài liệu vận hành cho runtime `org.example.eshop.commerce.CommerceApplication`, React/Vite và MariaDB. Phạm vi gồm giỏ/coupon/checkout/đơn, thu và hoàn tiền thủ công, kho/giao hàng, hết hạn COD 24 giờ, thông báo web bền vững, lắp đặt và trả hàng. Contract chính: [operations/aftercare](api/TV3_OPERATIONS_HANDOFF_CONTRACT.md), [OpenAPI](api/tv3-commerce.yaml). Những kết quả kiểm thử/đo tải ở cuối tài liệu phải đọc cùng điều kiện môi trường của chúng.
 
+Cập nhật20/11: [gói React+Spring Boot một JAR](TV3_RELEASE.md), [backup/restore có đối chiếu dữ liệu](TV3_BACKUP_RESTORE.md), [workflow CI](TV3_CI.md). Các công cụ này hỗ trợ nhóm chạy và nghiệm thu bản demo mà không cần VNPAY. Snapshot/backups là dữ liệu riêng tư, không đưa lên GitHub hoặc artifact CI.
+
 ## 1. Chủ sở hữu tích hợp của nhóm 5 thành viên
 
 Tên cá nhân chưa được cung cấp; dùng đúng mã thành viên trong [phân công nhóm](PHAN_CONG_NHOM_5_THANH_VIEN.md).
@@ -144,7 +146,7 @@ Các log trong `target/` là artifact cục bộ được Git bỏ qua; khi tái
 - **Expiry không hủy:** kiểm tra deadline UTC, trạng thái, method/provider và bằng chứng giao/thu/hoàn; NULL không tự backfill. Không ép hủy khi có tiền/stock evidence; xử lý qua quy trình nhân viên.
 - **Pool awaiting tăng:** giữ report và EXPLAIN đúng dataset/route/filter; kiểm tra transaction khóa dài và background load. Snapshot là mẫu thời điểm, không phải max liên tục; không tăng pool/index tùy tiện.
 - **Chứng chỉ doanh nghiệp:** có thể dùng `NODE_OPTIONS=--use-system-ca` hoặc truststore Windows cho Maven trong terminal phù hợp. Không tắt TLS verification.
-- **Legacy/AI:** chạy context/schema riêng; commerce không yêu cầu JWT/Gemini. Module TV1/TV2/TV5 đầy đủ, đặt lịch/bảo hành TV4, CI/deployment/backup restore theo phạm vi nhóm vẫn cần nghiệm thu riêng; adapter/bridge không chứng minh các module đó đã hoàn thành.
+- **Legacy/AI:** chạy context/schema riêng; commerce không yêu cầu JWT/Gemini. Full Java regression dùng `LEGACY_TEST_DB_URL` riêng cho test legacy có guard và tạo/xóa entity schema; không đặt create-drop toàn cục. Module TV1/TV2/TV5 đầy đủ, đặt lịch/bảo hành TV4 và triển khai production vẫn cần nghiệm thu riêng; adapter/bridge không chứng minh các module đó đã hoàn thành. Workflow CI và công cụ recovery/demo nằm ở các tài liệu20/11 phía trên; không coi kiểm tra workflow cục bộ là một hosted run đã đạt.
 
 **Đã hỗ trợ trong phạm vi không cần sandbox:** nghiệp vụ DB thật và UI quyền thật; chứng từ thu/hoàn do staff đối chiếu; COD expiry; web notifications; giao/lắp/nhận trả/restock; retry/idempotency và ngân sách hoàn. Demo trên DB cô lập có thể dùng chứng từ minh họa, phải nói rõ không có tiền thật.
 
