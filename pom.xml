@@ -176,4 +176,28 @@
         </plugins>
     </build>
 
+    <profiles>
+        <!-- The release tool builds frontend/dist first, then invokes this profile. -->
+        <profile>
+            <id>commerce-release</id>
+            <build>
+                <directory>${project.basedir}/target/commerce-release-build</directory>
+                <resources>
+                    <resource>
+                        <directory>src/main/resources</directory>
+                        <includes><include>application*.properties</include></includes>
+                    </resource>
+                    <resource>
+                        <directory>src/main/resources/static</directory>
+                        <targetPath>static</targetPath>
+                        <includes><include>images/**</include></includes>
+                    </resource>
+                    <resource>
+                        <directory>frontend/dist</directory>
+                        <targetPath>static</targetPath>
+                    </resource>
+                </resources>
+            </build>
+        </profile>
+    </profiles>
 </project>
