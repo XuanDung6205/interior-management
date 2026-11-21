@@ -11,18 +11,13 @@ public class AdminOrderQueryService {
     private final OrderStore store;private final OrderQueryService snapshots;private final OrderAdminAccess access;private final OrderLifecyclePolicy policy;
     public AdminOrderQueryService(OrderStore store,OrderQueryService snapshots,OrderAdminAccess access,OrderLifecyclePolicy policy){this.store=store;this.snapshots=snapshots;this.access=access;this.policy=policy;}
     public Map<String,Object> list(int page,int size,String status,String query){
+        return list(page,size,status,query,"","");
+    }
+    public Map<String,Object> list(int page,int size,String status,String query,String fromDate,String toDate){
         access.requireStaff();
         if(page<0||size<1||size>100)throw CommerceException.badRequest("INVALID_PAGE","Trang phải >=0 và kích thước từ1 đến100.");
-        if(status==null)status="";if(!status.isEmpty()&&!OrderLifecyclePolicy.STATUSES.contains(status))throw CommerceException.badRequest("INVALID_STATUS","Trạng thái đơn không hợp lệ.");
-        query=query==null?"":query.trim();if(query.length()>150)throw CommerceException.badRequest("INVALID_SEARCH","Từ khóa tối đa150 ký tự.");
-        String joins=" FROM orders o LEFT JOIN users u ON u.id=o.user_id LEFT JOIN order_addresses a ON a.order_id=o.id AND a.address_type='SHIPPING'";
-        String where=" WHERE 1=1";var params=new ArrayList<Object>();
-        if(!status.isEmpty()){where+=" AND o.status=?";params.add(status);}
-        if(!query.isEmpty()){
-            String pattern="%"+query.replace("=","==").replace("%","=%").replace("_","=_")+"%";
-            where+=" AND (o.order_number LIKE ? ESCAPE '=' OR u.username LIKE ? ESCAPE '=' OR u.full_name LIKE ? ESCAPE '=' OR u.email LIKE ? ESCAPE '=' OR a.recipient_name LIKE ? ESCAPE '=' OR a.phone LIKE ? ESCAPE '=')";
-            for(int i=0;i<6;i++)params.add(pattern);
-        }
+        var filter=AdminOrderSearch.parse(status,query,fromDate,toDate);
+        String joins=AdminOrderSearch.FROM,where=filter.where();var params=new ArrayList<Object>(filter.parameters());
         long total=store.jdbc().queryForObject("SELECT COUNT(*)"+joins+where,Long.class,params.toArray());params.add(size);params.add((long)page*size);
         var items=store.rows("""
             SELECT o.id,o.order_number AS orderNumber,o.status,o.currency,o.grand_total AS grandTotal,o.placed_at AS placedAt,

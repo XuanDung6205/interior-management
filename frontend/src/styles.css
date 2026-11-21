@@ -896,3 +896,52 @@ input[type='radio'] { accent-color: var(--teal); width: 18px; height: 18px; min-
 .operations-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 1rem; }
 .operations-metrics dd { margin: .5rem 0; font-size: 1.5rem; }
 .notification-count { border-radius: 1rem; background: var(--ink, #243d33); color: white; padding: .15rem .45rem; font-size: .75rem; }
+/* Order documents reuse the store typography; only the sheet is printed. */
+.admin-orders-toolbar .search-form { flex-wrap: wrap; }
+.admin-orders-toolbar .search-form > input[type="search"] { flex-basis: calc(100% - 32px); }
+.admin-orders-toolbar .search-form .order-date-filter { flex: 1 1 145px; }
+.order-date-filter { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.order-date-filter label { font-size: .75rem; }
+.order-date-filter input { min-width: 0; min-height: 44px; }
+.order-export-help { margin: 0; padding: 0 24px 16px; }
+.order-print-page { max-width: 100%; }
+.order-print-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.order-print-sheet { width: 100%; max-width: 210mm; margin: 0 auto; padding: 12mm; background: #fff; border: 1px solid var(--border, #deded5); color: #242a24; overflow-wrap: anywhere; }
+.order-print-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.order-print-sheet h1 { font-size: 2rem; margin: 8px 0; }
+.order-print-sheet h2 { font-size: 1.1rem; margin: 0 0 12px; }
+.order-print-sheet p { line-height: 1.6; }
+.order-print-sheet section { margin-top: 24px; }
+.order-print-disclaimer { padding: 12px 0; border-top: 1px solid #deded5; border-bottom: 1px solid #deded5; }
+.order-print-table { table-layout: fixed; width: 100%; border-collapse: collapse; font-size: .85rem; }
+.order-print-table .print-product-col { width: 46%; }
+.order-print-table th, .order-print-table td { padding: 10px 6px; border-bottom: 1px solid #deded5; text-align: right; vertical-align: top; overflow-wrap: anywhere; white-space: normal; }
+.order-print-table th:first-child, .order-print-table td:first-child { text-align: left; }
+.order-print-table td span { display: block; margin-top: 4px; }
+.order-print-totals { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.order-print-totals .money-breakdown { padding: 0; }
+.order-print-records { list-style: none; padding: 0; }
+.order-print-records li { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #deded5; }
+@media (max-width: 600px) {
+  .admin-orders-toolbar .search-form { width: 100%; }
+  .order-date-filter { width: 100%; }
+  .order-print-sheet { padding: 18px 12px; }
+  .order-print-heading, .order-print-records li { flex-direction: column; }
+  .order-print-totals { grid-template-columns: 1fr; gap: 0; }
+  .order-print-table { font-size: .75rem; }
+  .order-print-table th, .order-print-table td { padding: 8px 3px; }
+}
+@page { size: A4; margin: 12mm; }
+@media print {
+  html:has(.order-print-page), body:has(.order-print-page) { background: #fff; color: #000; }
+  body:has(.order-print-page) .announcement, body:has(.order-print-page) .site-header, body:has(.order-print-page) .site-footer, body:has(.order-print-page) .skip-link, .order-print-actions { display: none !important; }
+  body:has(.order-print-page) .page-shell { padding: 0; margin: 0; max-width: none; width: 100%; min-height: 0; }
+  .order-print-sheet { max-width: none; width: 100%; padding: 0; border: 0; box-shadow: none; font-size: 10pt; }
+  .order-print-sheet h1 { font-size: 20pt; }
+  .order-print-sheet h2 { break-after: avoid; }
+  .order-print-sheet .order-print-totals { display: grid; grid-template-columns: 1fr 1fr; }
+  .order-print-table { font-size: 9pt; overflow: visible; }
+  .order-print-table thead { display: table-header-group; }
+  .order-print-table tr { break-inside: avoid; page-break-inside: avoid; }
+  .order-print-sheet .status-pill { color: #000; background: none; border: 1px solid #888; }
+}

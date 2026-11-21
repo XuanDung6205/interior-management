@@ -16,6 +16,8 @@ Công cụ chạy `npm ci`, build Vite, rồi Maven profile `commerce-release` �
 
 Chỉ khi cache npm/Maven đã đầy đủ mới dùng `build --offline`. Nếu dependency chưa được cache, lệnh này dừng và không công bố gói mới. Kiểm thử chạy riêng trong CI hoặc trước khi build; build dùng `-DskipTests` và metadata ghi rõ điều đó.
 
+Trên Windows, dừng tiến trình đang chạy `target/releases/nep-nha-demo.jar` trước khi build lại; JVM giữ khóa file nên hệ điều hành có thể từ chối thay JAR đang mở. Nếu bước công bố gói báo lỗi, không coi dòng Maven BUILD SUCCESS phía trước là bản release mới đã sẵn sàng; chờ công cụ báo `Built ...nep-nha-demo.jar`.
+
 Kết quả tại `target/releases/`:
 
 - `nep-nha-demo.jar`: React build và Spring Boot commerce cùng dependency Java.
