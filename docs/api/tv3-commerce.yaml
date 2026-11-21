@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: TV3 Furniture Commerce API
-  version: 1.5.0
+  version: 1.6.0
   description: 'TV3 session/CSRF, cart/coupons, checkout, customer/staff orders, manually verified COD/bank collections and refunds, guarded 24-hour COD confirmation expiry, durable local web notifications, protected operations and actual delivery/installation/return aftercare. Online gateway/banking and external SMTP remain sandbox dependencies; no external message is claimed sent.'
 servers:
 - url: http://localhost:8080
@@ -844,7 +844,10 @@ paths:
       - Order administration
       security:
       - cookieSession: []
-      description: Requires current ADMIN or STAFF role.
+      description: >-
+        Requires current ADMIN or STAFF role. Read-only GET; no CSRF token required.
+        Shares status/query/fromDate/toDate filtering with CSV export. Order placement dates
+        use Asia/Ho_Chi_Minh (UTC+07), inclusive local days; ordering is placed_at DESC, id DESC.
       responses:
         '200':
           description: Success
@@ -853,7 +856,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AdminOrderPage'
         '400':
-          description: Invalid fields/query
+          description: Invalid fields/query, including INVALID_DATE_RANGE for malformed dates or fromDate after toDate.
           content:
             application/json:
               schema:
@@ -865,7 +868,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
         '403':
-          description: Staff role or CSRF required
+          description: Current STAFF or ADMIN role required.
           content:
             application/json:
               schema:
@@ -913,6 +916,168 @@ paths:
           type: string
           maxLength: 150
         description: Literal search across order/customer/recipient fields; percent and underscore are not wildcards.
+      - $ref: '#/components/parameters/OrderFromDate'
+      - $ref: '#/components/parameters/OrderToDate'
+  /api/orders/{id}/print:
+    get:
+      operationId: getOwnedPrintableOrder
+      summary: Get a fresh safe order slip snapshot for the current owner
+      tags:
+      - Orders
+      security:
+      - cookieSession: []
+      description: >-
+        Read-only JSON for the browser print/save-PDF page; no CSRF token or business side effects.
+        Ownership is checked server-side. Another owner's order returns 404 without disclosing details.
+        Original order totals are preserved; an order slip does not establish payment collection.
+      parameters:
+      - $ref: '#/components/parameters/CommerceResourceId'
+      responses:
+        '200':
+          description: Safe snapshot with server-computed collection/refund summaries.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum: [no-store]
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintableOrder'
+        '400':
+          $ref: '#/components/responses/InvalidCommerceOperation'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '404':
+          $ref: '#/components/responses/OwnedResourceMissing'
+  /api/admin/orders/{id}/print:
+    get:
+      operationId: getStaffPrintableOrder
+      summary: Get a fresh safe order slip snapshot as staff
+      tags:
+      - Order administration
+      security:
+      - cookieSession: []
+      description: >-
+        Current STAFF or ADMIN role is required by both Spring security and the service,
+        including direct service invocation. Read-only GET; no CSRF token or business side effects.
+        Uses exactly the owner's safe print allowlist, without staff-only order details.
+      parameters:
+      - $ref: '#/components/parameters/CommerceResourceId'
+      responses:
+        '200':
+          description: Safe snapshot with server-computed collection/refund summaries.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum: [no-store]
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintableOrder'
+        '400':
+          $ref: '#/components/responses/InvalidCommerceOperation'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          description: Current STAFF or ADMIN role required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          $ref: '#/components/responses/OwnedResourceMissing'
+  /api/admin/orders/export.csv:
+    get:
+      operationId: exportStaffOrdersCsv
+      summary: Download all matching staff orders as a bounded spreadsheet CSV
+      tags:
+      - Order administration
+      security:
+      - cookieSession: []
+      description: |-
+        Current STAFF or ADMIN role is required by Spring security and the service, including
+        direct service invocation. Read-only GET; no CSRF token or business side effects.
+        Uses the same status/query/fromDate/toDate filter as GET /api/admin/orders and ordering
+        placed_at DESC, id DESC. Exports all matching rows, independently of the current page.
+        Pagination, custom sorting, arbitrary IDs and SQL are not export inputs. Fetches at most
+        5001 orders and rejects more than 5000 with 400 EXPORT_TOO_LARGE before publishing CSV.
+        No matches yields the header only.
+
+        UTF-8 BOM; comma delimiter; CRLF records; every cell double-quoted with embedded quotes
+        doubled. Exactly 14 columns in order: Mã đơn; Ngày đặt (UTC+07:00); Trạng thái; Người nhận;
+        Điện thoại; Tiền hàng; Giảm giá; Phí giao hàng; Phí lắp đặt; Thuế bổ sung; Tổng đơn;
+        Tiền tệ; Đã thu; Đã hoàn. Amounts are fixed two-decimal dot strings without currency
+        symbols; status is the stable server code; one row represents one order. Order totals
+        are not asserted to be revenue. Collection/refund amounts are computed server-side.
+
+        Human spreadsheet display export: prefix dangerous text with a tab when ASCII/full-width
+        =,+,-,@ follows leading whitespace/control/format characters; leading tab/CR/LF is also
+        treated as untrusted. This changes display text and is not lossless round-trip import
+        or a universal safety guarantee after external transformations. Excludes full addresses,
+        user directory data, internal notes, staff IDs, proof/reference credentials and hashes.
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum: ['', PENDING_CONFIRMATION, CONFIRMED, PROCESSING, COMPLETED, CANCELLED]
+      - in: query
+        name: query
+        description: Literal search across order/customer/recipient fields; percent and underscore are not wildcards.
+        schema:
+          type: string
+          maxLength: 150
+      - $ref: '#/components/parameters/OrderFromDate'
+      - $ref: '#/components/parameters/OrderToDate'
+      responses:
+        '200':
+          description: Complete CSV download for at most 5000 matching orders; header-only for no matches.
+          headers:
+            Content-Disposition:
+              description: Attachment with a server-generated UTC timestamp filename.
+              schema:
+                type: string
+                example: attachment; filename="orders-20261121T030000Z.csv"
+            Cache-Control:
+              schema:
+                type: string
+                enum: [no-store]
+            X-Content-Type-Options:
+              schema:
+                type: string
+                enum: [nosniff]
+          content:
+            text/csv;charset=UTF-8:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Invalid filters/date range, or more than 5000 matching orders. No partial CSV is sent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                dateRange:
+                  value:
+                    code: INVALID_DATE_RANGE
+                    message: Invalid order placement date range.
+                    fieldErrors: {}
+                exportLimit:
+                  value:
+                    code: EXPORT_TOO_LARGE
+                    message: Narrow the filters to export at most 5000 orders.
+                    fieldErrors: {}
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          description: Current STAFF or ADMIN role required.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /api/admin/orders/{id}:
     get:
       operationId: getAdminOrder
@@ -2264,6 +2429,32 @@ components:
       name: JSESSIONID
       description: HttpOnly same-origin session; unsafe methods also require X-CSRF-TOKEN.
   parameters:
+    OrderFromDate:
+      in: query
+      name: fromDate
+      required: false
+      description: >-
+        Order placement day in Asia/Ho_Chi_Minh (UTC+07), YYYY-MM-DD. Inclusive start at local
+        midnight; may be omitted. Malformed dates or fromDate after toDate return 400 INVALID_DATE_RANGE.
+      schema:
+        type: string
+        format: date
+        pattern: '^\d{4}-\d{2}-\d{2}$'
+        example: '2026-11-21'
+    OrderToDate:
+      in: query
+      name: toDate
+      required: false
+      description: >-
+        Order placement day in Asia/Ho_Chi_Minh (UTC+07), YYYY-MM-DD. Inclusive end day,
+        implemented as the next local midnight exclusive UTC bound; may be omitted.
+        For 2026-11-21 the upper bound is 2026-11-21T17:00:00Z exclusive.
+        Malformed dates or fromDate after toDate return 400 INVALID_DATE_RANGE.
+      schema:
+        type: string
+        format: date
+        pattern: '^\d{4}-\d{2}-\d{2}$'
+        example: '2026-11-21'
     CommerceResourceId:
       in: path
       name: id
@@ -2965,6 +3156,83 @@ components:
         amount: *id029
         currency: *id009
         reason: *id009
+    PrintableOrder:
+      type: object
+      additionalProperties: false
+      description: >-
+        Same explicit safe allowlist for owner and staff print routes. Nested address, item,
+        payment and refund projections reuse the public DTOs. Excludes customer user/directory
+        fields, internal notes, staff identities, proofs, audit JSON and bank credentials.
+        Original totals remain unchanged; the three summary amounts are computed by the server
+        from actual persisted payment/refund statuses, never supplied by the browser.
+      required:
+      - id
+      - orderNumber
+      - status
+      - currency
+      - placedAt
+      - subtotal
+      - discountAmount
+      - shippingFee
+      - assemblyFee
+      - taxAmount
+      - grandTotal
+      - couponCode
+      - assemblyRequested
+      - customerNote
+      - shippingAddress
+      - items
+      - payments
+      - refunds
+      - collectedAmount
+      - refundedAmount
+      - pendingRefundAmount
+      properties:
+        id: *id027
+        orderNumber: *id009
+        status: *id009
+        currency: *id009
+        placedAt:
+          type: string
+          format: date-time
+        subtotal: *id029
+        discountAmount: *id029
+        shippingFee: *id029
+        assemblyFee: *id029
+        taxAmount: *id029
+        grandTotal: *id029
+        couponCode: *id026
+        assemblyRequested: *id028
+        customerNote: *id026
+        shippingAddress:
+          $ref: '#/components/schemas/CheckoutAddress'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderPayment'
+        refunds:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderRefund'
+        collectedAmount:
+          type: string
+          pattern: '^\d+\.\d{2}$'
+          description: Gross amount of SUCCEEDED collections, preserving original order totals.
+          example: '50000.00'
+        refundedAmount:
+          type: string
+          pattern: '^\d+\.\d{2}$'
+          description: Amount of SUCCEEDED refunds.
+          example: '0.00'
+        pendingRefundAmount:
+          type: string
+          pattern: '^\d+\.\d{2}$'
+          description: Amount held by PENDING refunds; not confirmed refunded money.
+          example: '0.00'
     CustomerOrder:
       type: object
       properties:

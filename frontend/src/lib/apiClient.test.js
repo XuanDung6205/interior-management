@@ -3,6 +3,25 @@ import { createApiClient } from './apiClient';
 
 const response = (body, status = 200) => new Response(body == null ? null : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
+describe('authenticated CSV download', () => {
+  it('downloads a CSV blob with credentials and a safe filename', async () => {
+    const fetcher = vi.fn(async () => new Response('\ufeff"Mã đơn"\r\n', { headers: { 'Content-Type': 'text/csv;charset=UTF-8', 'Content-Disposition': 'attachment; filename="orders-20261121.csv"' } }));
+    const result = await createApiClient(fetcher).download('/admin/orders/export.csv?query=An');
+    expect(result.filename).toBe('orders-20261121.csv');
+    expect(result.blob.type).toContain('text/csv');
+    expect(fetcher.mock.calls[0]).toEqual(['/api/admin/orders/export.csv?query=An', expect.objectContaining({ method: 'GET', credentials: 'include', cache: 'no-store', headers: { Accept: 'text/csv' } })]);
+  });
+  it.each(['text/html', 'application/json'])('rejects a successful %s document', async type => {
+    const api = createApiClient(async () => new Response('<html>login</html>', { headers: { 'Content-Type': type } }));
+    await expect(api.download('/admin/orders/export.csv')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  });
+  it('retains export errors and sanitizes untrusted download filenames', async () => {
+    await expect(createApiClient(async () => response({ code: 'EXPORT_TOO_LARGE', message: 'Thu hẹp bộ lọc.' }, 400)).download('/admin/orders/export.csv')).rejects.toMatchObject({ status: 400, code: 'EXPORT_TOO_LARGE' });
+    const api = createApiClient(async () => new Response('csv', { headers: { 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename="../../secret.html"' } }));
+    expect((await api.download('/admin/orders/export.csv')).filename).toBe('orders.csv');
+  });
+});
+
 describe('session and CSRF boundary', () => {
   it('preserves an intentional abort while reading a response body', async () => {
     const aborted = new DOMException('The operation was aborted.', 'AbortError');

@@ -7,6 +7,7 @@ Runtime commerce dùng **Spring Boot REST API + React + MariaDB**, main class `o
 - [Build/chạy demo bằng một JAR](docs/TV3_RELEASE.md): React và API cùng origin, không cần mở Vite/Docker khi chạy gói.
 - [Hướng dẫn phát triển và demo](docs/TV3_HUONG_DAN_CHAY_VA_DEMO.md): chạy backend/frontend riêng.
 - [Bàn giao nghiệp vụ TV3–TV4](docs/TV3_BAN_GIAO_VA_DEMO.md): phân quyền, dữ liệu demo, giao/lắp/trả/hoàn thủ công, thông báo và COD24giờ.
+- [In phiếu đơn và xuất CSV](docs/TV3_IN_DON_VA_XUAT_CSV.md): in/Lưu PDF theo quyền và tải tất cả đơn theo bộ lọc ngày/trạng thái/từ khóa.
 - [Backup/restore MariaDB](docs/TV3_BACKUP_RESTORE.md): snapshot riêng tư, checksum, phục hồi vào DB test mới và đối chiếu47bảng.
 - [GitHub CI](docs/TV3_CI.md): integration MariaDB, test React, gói JAR, recovery và Chrome cùng origin; trạng thái hosted execution phải đọc cùng bằng chứng thực tế.
 - [Schema và migration](docs/database/README.md), [OpenAPI](docs/api/tv3-commerce.yaml).

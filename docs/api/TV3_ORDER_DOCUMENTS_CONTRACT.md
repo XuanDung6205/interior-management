@@ -1,0 +1,25 @@
+# TV3 order print and CSV export contract
+
+Scope accepted2026-11-21: the two small follow-ups, print order slips and staff CSV exports. Spring commerce/React/MariaDB stay unchanged; no sandbox or new schema. Native print uses the browser's print/save-PDF dialog, not a new PDF service.
+
+## Printable order
+
+- Owner GET `/api/orders/{id}/print`; staff GET `/api/admin/orders/{id}/print`. JSON, session auth, owner404 for another customer's order; staff service role check even on direct invocation. GET reads have no business side effects. Responses use `Cache-Control: no-store`.
+- Customer and staff printable payloads intentionally share the same allowlist: id,orderNumber,status,currency,placedAt,subtotal,discountAmount,shippingFee,assemblyFee,taxAmount,grandTotal,couponCode,assemblyRequested,customerNote,shippingAddress,items,payments,refunds, and `collectedAmount`, `refundedAmount`, `pendingRefundAmount` as decimal strings. Reuse safe public shipping/item/payment/refund projections; no user directory, internal notes, staff identities, proofs, audit JSON or bank credentials. Server computes financial summaries from actual statuses, preserving original order totals.
+- React routes `/orders/:id/print` and `/admin/orders/:id/print`, private/staff respectively; visible link on order detail. Load fresh safe snapshot from server on entering; abort/reset on actor/id change; no localStorage for document content. Show loading/error/retry and print button only after valid data. React text escaping, no HTML insertion from notes/names.
+- A4-oriented sheet with item table, shipping snapshot, price breakdown, assembly choice and actual collected/refund summaries. Clear order slip identity; order placement is not a receipt proving payment. Hide app navigation/actions in print media, wrap long content, repeat table header across pages, no clipping mobile or print. User activates print; do not automatically open dialogs.
+
+## Shared staff filters and CSV
+
+- Staff list GET `/api/admin/orders` keeps existing pagination/status/query and adds optional `fromDate`, `toDate` (`YYYY-MM-DD`). Dates refer to Vietnam local order placement days (Asia/Ho_Chi_Minh, UTC+07); start inclusive, end day inclusive via next-day exclusive UTC bound. Either bound may be omitted; invalid date/reversed range returns400 `INVALID_DATE_RANGE`. Status/query rules and literal SQL LIKE escaping preserved. Customer list API unchanged.
+- Staff GET `/api/admin/orders/export.csv?status=&query=&fromDate=&toDate=` uses exactly that shared filter and ordering placed_at DESC,id DESC, exports ALL matching rows, not only current page. Maximum5000orders; fetch at most5001 and reject400 `EXPORT_TOO_LARGE` before publishing any CSV. Empty result is header-only. No arbitrary SQL, sort, IDs, pagination or client-side data source.
+- CSV14columns: `Mã đơn`, `Ngày đặt (UTC+07:00)`, `Trạng thái`, `Người nhận`, `Điện thoại`, `Tiền hàng`, `Giảm giá`, `Phí giao hàng`, `Phí lắp đặt`, `Thuế bổ sung`, `Tổng đơn`, `Tiền tệ`, `Đã thu`, `Đã hoàn`. Amounts fixed2decimal dot strings, no currency symbols. Status is the stable server code. Each row represents an order; totals are not asserted to be revenue.
+- UTF-8 BOM, comma-separated, CRLF, double-quote every cell and double embedded quotes. Human-spreadsheet export: neutralize formula-leading ASCII/full-width =,+,-,@ after leading whitespace/control/format characters; leading tab/CR/LF also treated as untrusted. Tab text prefix for dangerous formula text, documented as display sanitization, not lossless round-trip import; no claim universal safety after external transformations. Test commas/quotes/newlines, unicode and deliberate formula payloads.
+- Content-Type `text/csv;charset=UTF-8`, attachment filename `orders-<UTCtimestamp>.csv`, `Cache-Control:no-store`, `X-Content-Type-Options:nosniff`. No internal notes, proofs, staff IDs, hashes or full addresses in CSV.
+- UI has date filters and button `Xuất CSV` near existing controls, busy/error states, exports only applied URL filters (draft search is not applied). Authenticated fetch with CSV Accept, reject unexpected successful HTML/JSON, safe filename handling, revoke download object URLs. Failed403/401 cannot download a document; do not persist sensitive document content.
+
+## Verification
+
+Real MariaDB integration covers owner/staff/CSRF boundaries, safe projections/snapshot changes, date edges in UTC+07, matching list/export filters/literal wildcards, stable ordering, empty/header-only,5000limit and CSV text safety. React tests cover routes/date filters/current filter download/error/printing/escaping. Chrome against actual packaged JAR covers owner/staff print+refresh, CSV content/file download and print-media/mobile layout; previous7flows remain valid. Check OpenAPI1.6.0 against actual responses. No mutation to existing business records for fixture shortcuts.
+
+Sources: [RFC4180](https://datatracker.ietf.org/doc/rfc4180/), [OWASP CSV injection](https://community.owasp.org/attacks/CSV_Injection), [MDN printing](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Media_queries/Printing).

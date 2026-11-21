@@ -3,6 +3,7 @@ package org.example.eshop.commerce.common;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,7 +17,7 @@ import java.util.Map;
 public class CommerceExceptionHandler {
     @ExceptionHandler(CommerceException.class)
     public ResponseEntity<ApiError> commerce(CommerceException exception) {
-        return ResponseEntity.status(exception.getStatus()).body(new ApiError(exception.getCode(),exception.getMessage(),exception.getFieldErrors()));
+        return ResponseEntity.status(exception.getStatus()).contentType(MediaType.APPLICATION_JSON).body(new ApiError(exception.getCode(),exception.getMessage(),exception.getFieldErrors()));
     }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> validation(MethodArgumentNotValidException exception) {

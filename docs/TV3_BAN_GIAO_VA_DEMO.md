@@ -151,3 +151,5 @@ Các log trong `target/` là artifact cục bộ được Git bỏ qua; khi tái
 **Đã hỗ trợ trong phạm vi không cần sandbox:** nghiệp vụ DB thật và UI quyền thật; chứng từ thu/hoàn do staff đối chiếu; COD expiry; web notifications; giao/lắp/nhận trả/restock; retry/idempotency và ngân sách hoàn. Demo trên DB cô lập có thể dùng chứng từ minh họa, phải nói rõ không có tiền thật.
 
 **Chờ tích hợp có cấu hình riêng:** VNPAY/gateway sandbox thực, chữ ký callback/webhook, đối soát timeout/thu/hoàn tự động; SMTP/email có provider thật. Không có khóa ngân hàng/SMTP thì không tuyên bố gửi email, chuyển khoản hay hoàn online thành công. Không có Redis dependency trong commerce hiện tại; không cần cài Redis để demo phần này.
+
+Cập nhật21/11: [hướng dẫn in đơn/lưu PDF và xuất CSV](TV3_IN_DON_VA_XUAT_CSV.md), [contract tính năng](api/TV3_ORDER_DOCUMENTS_CONTRACT.md), [OpenAPI 1.6.0 — 55 operations](api/tv3-commerce.yaml). Bản in dùng hộp thoại trình duyệt; CSV lấy toàn bộ bộ lọc staff đã áp dụng, giới hạn 5.000 đơn, ngày đặt tính theo UTC+07. Đợt này không thêm bảng/migration; kết quả kiểm thử mới chờ tích hợp xác nhận, không dùng số liệu19/11 ở trên thay thế.

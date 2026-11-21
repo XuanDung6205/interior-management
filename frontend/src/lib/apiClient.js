@@ -11,7 +11,7 @@ export class ApiError extends Error {
 export function createApiClient(fetcher = (...args) => fetch(...args)) {
   let csrf;
   let csrfPromise;
-  async function request(path, { method = 'GET', body, signal, form = false, headers: extraHeaders = {} } = {}) {
+  async function request(path, { method = 'GET', body, signal, cache, form = false, headers: extraHeaders = {} } = {}) {
     const headers = { Accept: 'application/json', ...extraHeaders };
     if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
       const token = csrf || await refreshCsrf();
@@ -20,7 +20,7 @@ export function createApiClient(fetcher = (...args) => fetch(...args)) {
     if (body !== undefined) headers['Content-Type'] = form ? 'application/x-www-form-urlencoded;charset=UTF-8' : 'application/json';
     let response;
     try {
-      response = await fetcher(`/api${path}`, { method, credentials: 'include', headers, signal, ...(body !== undefined ? { body: form ? new URLSearchParams(body).toString() : JSON.stringify(body) } : {}) });
+      response = await fetcher(`/api${path}`, { method, credentials: 'include', headers, signal, ...(cache ? { cache } : {}), ...(body !== undefined ? { body: form ? new URLSearchParams(body).toString() : JSON.stringify(body) } : {}) });
     } catch (error) {
       if (error.name === 'AbortError') throw error;
       throw new ApiError(0, { code: 'NETWORK_ERROR', message: 'Chưa kết nối được máy chủ. Kiểm tra kết nối và thử lại.' });
@@ -53,8 +53,28 @@ export function createApiClient(fetcher = (...args) => fetch(...args)) {
     await refreshCsrf().catch(() => {});
     return session;
   }
+  async function download(path, { signal } = {}) {
+    let response;
+    try { response = await fetcher(`/api${path}`, { method: 'GET', credentials: 'include', cache: 'no-store', headers: { Accept: 'text/csv' }, signal }); }
+    catch (error) {
+      if (error.name === 'AbortError') throw error;
+      throw new ApiError(0, { code: 'NETWORK_ERROR', message: 'Chưa kết nối được máy chủ. Kiểm tra kết nối và thử lại.' });
+    }
+    if (!response.ok) {
+      let data;
+      try { data = await response.json(); } catch (error) { if (error.name === 'AbortError') throw error; }
+      if (response.status === 403) csrf = undefined;
+      throw new ApiError(response.status, data);
+    }
+    if (!/^text\/csv(?:;|$)/i.test(response.headers.get('Content-Type') || '')) throw new ApiError(response.status, { code: 'INVALID_RESPONSE', message: 'Máy chủ chưa trả về tệp CSV hợp lệ. Vui lòng đăng nhập và thử lại.' });
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const candidate = /(?:^|;)\s*filename="([^"]+)"/i.exec(disposition)?.[1] || /(?:^|;)\s*filename=([^;\s]+)/i.exec(disposition)?.[1];
+    const filename = candidate && /^orders-[A-Za-z0-9_-]+\.csv$/.test(candidate) ? candidate : 'orders.csv';
+    return { blob: await response.blob(), filename };
+  }
   return {
     request,
+    download,
     login: (username, password) => authenticate('/session/login', { username, password }),
     logout: () => authenticate('/session/logout'),
     mergeCart: () => request('/cart/merge', { method: 'POST' }),
