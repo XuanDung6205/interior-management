@@ -22,4 +22,7 @@ export const inventoryApi = api => ({
   shipmentStatus: (shipmentId, body, key) => api.request(`/admin/inventory/shipments/${shipmentId}/status`, {
     method: 'POST', body, headers: { 'Idempotency-Key': key },
   }),
+  shipmentSchedule: (shipmentId, body, key) => api.request(`/admin/inventory/shipments/${shipmentId}/schedule`, {
+    method: 'POST', body, headers: { 'Idempotency-Key': key },
+  }),
 });
