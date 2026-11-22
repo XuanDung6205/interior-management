@@ -37,7 +37,9 @@ public class ShipmentLifecycleService {
 
     public record ShipmentView(long id, long orderId, String orderNumber, long warehouseId,
             String warehouseCode, String carrier, String trackingNumber, String status,
-            String shippedAt, String deliveredAt, boolean replayed) {}
+            String shippedAt, String deliveredAt, String scheduledFrom, String scheduledTo,
+            boolean installationRequired, String installationStatus, String installationScheduledAt,
+            boolean replayed) {}
     public record ShipmentPage(List<ShipmentView> items, int page, int size, long totalElements, int totalPages) {}
     private record Shipment(long id, long orderId, long warehouseId, String status) {}
     private record Owner(long id, Long userId, String status, Long couponId) {}
@@ -59,12 +61,15 @@ public class ShipmentLifecycleService {
                 : new Object[]{status, size, (long) page * size};
         var items = jdbc.query("""
                 SELECT s.id,s.order_id,o.order_number,s.warehouse_id,w.code,s.carrier,s.tracking_number,
-                       s.status,s.shipped_at,s.delivered_at FROM shipments s
+                       s.status,s.shipped_at,s.delivered_at,s.scheduled_from,s.scheduled_to,
+                       s.installation_required,s.installation_status,s.installation_scheduled_at FROM shipments s
                 JOIN orders o ON o.id=s.order_id JOIN warehouses w ON w.id=s.warehouse_id
                 """ + where + " ORDER BY s.id DESC LIMIT ? OFFSET ?",
                 (rs, row) -> new ShipmentView(rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getLong(4),
                         rs.getString(5), rs.getString(6), rs.getString(7), rs.getString(8),
-                        utc(rs.getTimestamp(9)), utc(rs.getTimestamp(10)), false), args);
+                        utc(rs.getTimestamp(9)), utc(rs.getTimestamp(10)), utc(rs.getTimestamp(11)),
+                        utc(rs.getTimestamp(12)), rs.getBoolean(13), rs.getString(14),
+                        utc(rs.getTimestamp(15)), false), args);
         long count = total == null ? 0 : total;
         return new ShipmentPage(items, page, size, count, (int) Math.min(Integer.MAX_VALUE, (count + size - 1) / size));
     }
@@ -167,14 +172,19 @@ public class ShipmentLifecycleService {
         }
     }
 
+    public ShipmentView view(long id, boolean replayed) { return current(id, replayed); }
+
     private ShipmentView current(long id, boolean replayed) {
         return jdbc.query("""
                 SELECT s.id,s.order_id,o.order_number,s.warehouse_id,w.code,s.carrier,s.tracking_number,
-                       s.status,s.shipped_at,s.delivered_at FROM shipments s
+                       s.status,s.shipped_at,s.delivered_at,s.scheduled_from,s.scheduled_to,
+                       s.installation_required,s.installation_status,s.installation_scheduled_at FROM shipments s
                 JOIN orders o ON o.id=s.order_id JOIN warehouses w ON w.id=s.warehouse_id WHERE s.id=?
                 """, (rs, row) -> new ShipmentView(rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getLong(4),
                 rs.getString(5), rs.getString(6), rs.getString(7), rs.getString(8),
-                utc(rs.getTimestamp(9)), utc(rs.getTimestamp(10)), replayed), id)
+                utc(rs.getTimestamp(9)), utc(rs.getTimestamp(10)), utc(rs.getTimestamp(11)),
+                utc(rs.getTimestamp(12)), rs.getBoolean(13), rs.getString(14),
+                utc(rs.getTimestamp(15)), replayed), id)
                 .stream().findFirst().orElseThrow(() -> CommerceException.notFound("Không tìm thấy vận đơn."));
     }
 
