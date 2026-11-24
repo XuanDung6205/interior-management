@@ -20,6 +20,7 @@ function mount(path, handlers = {}, session = guest) {
     else if (url === '/api/csrf') body = { token: 'csrf', headerName: 'X-CSRF-TOKEN' };
     else if (url === '/api/cart') body = cart;
     else if (url.startsWith('/api/commerce/catalog/variants')) body = page([chair]);
+    else if (url === '/api/commerce/home/gallery') body = { items: [] };
     else if (url.startsWith('/api/admin/coupons?')) body = page([coupon]);
     else throw new Error(`Unexpected HTTP ${method} ${url}`);
     return new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -38,6 +39,33 @@ it('shows live catalog names, prices and image URLs on the home page', async () 
   await user.click(screen.getByRole('link', { name: 'Xem tất cả' }));
   expect(await screen.findByRole('heading', { name: 'Tìm món đồ dành cho bạn' })).toBeInTheDocument();
   expect(calls.some(call => call.url === '/api/cart')).toBe(true);
+});
+
+it('loads Home gallery images from the content API with accessible descriptions', async () => {
+  const gallery = { items: [{ id: 91, title: 'Góc đọc sách', imageUrl: '/images/gallery-reading-corner.jpg', altText: 'Ghế thư giãn bên tủ sách gỗ' }] };
+  const { calls } = mount('/', { 'GET /api/commerce/home/gallery': gallery });
+  expect(await screen.findByRole('img', { name: 'Ghế thư giãn bên tủ sách gỗ' })).toHaveAttribute('src', '/images/gallery-reading-corner.jpg');
+  expect(screen.getByRole('region', { name: 'Ảnh cảm hứng không gian sống' })).toBeInTheDocument();
+  expect(calls.some(call => call.url === '/api/commerce/home/gallery')).toBe(true);
+});
+
+it('rotates the Home gallery ring when the mouse enters and supports keyboard navigation', async () => {
+  mount('/', { 'GET /api/commerce/home/gallery': { items: [
+    { id: 1, title: 'Phòng khách', imageUrl: '/images/gallery-living-room.jpg', altText: 'Sofa kem' },
+    { id: 2, title: 'Bàn ăn', imageUrl: '/images/gallery-dining-room.jpg', altText: 'Bàn gỗ' },
+    { id: 3, title: 'Phòng ngủ', imageUrl: '/images/gallery-bedroom.jpg', altText: 'Giường gỗ' },
+  ] } });
+  const stage = await screen.findByRole('region', { name: 'Ảnh cảm hứng không gian sống' });
+  expect(within(stage).getByRole('img', { name: 'Sofa kem' })).toBeInTheDocument();
+  fireEvent.pointerEnter(stage, { pointerType: 'mouse' });
+  expect(within(stage).getByRole('img', { name: 'Bàn gỗ' })).toBeInTheDocument();
+  expect(stage.querySelector('.home-gallery-ring')).toHaveStyle({ transform: 'rotateY(-120deg)' });
+  expect(screen.queryByRole('button', { name: 'Ảnh tiếp theo' })).not.toBeInTheDocument();
+  fireEvent.keyDown(stage, { key: 'ArrowLeft' });
+  expect(within(stage).getByRole('img', { name: 'Sofa kem' })).toBeInTheDocument();
+  fireEvent.pointerDown(stage, { clientX: 160, pointerType: 'touch' });
+  fireEvent.pointerUp(stage, { clientX: 80, pointerType: 'touch' });
+  expect(within(stage).getByRole('img', { name: 'Bàn gỗ' })).toBeInTheDocument();
 });
 
 it('renders server totals, updates line quantity and supports removal', async () => {

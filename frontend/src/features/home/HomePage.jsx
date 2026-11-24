@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ErrorNotice, Icon, Loading, ProductImage } from '../../components/ui';
 import { formatMoney } from '../../lib/format';
 import { useCommerce } from '../../lib/session';
+import HomeGallery from './HomeGallery';
 import './home.css';
 
 const inspirations = [
@@ -62,6 +63,8 @@ export default function HomePage() {
         <div className="home-product-details"><span className="home-product-type">{item.variantName}</span><h3>{item.productName}</h3><strong>{formatMoney(item.price)}</strong><span className="home-product-arrow" aria-hidden="true"><Icon name="arrow" size={19} /></span></div>
       </Link>)}</div> : <p className="home-empty">Chưa có sản phẩm để hiển thị. Hãy thêm sản phẩm vào catalog để bắt đầu.</p>)}
     </div></section>
+
+    <HomeGallery />
 
     <section className="home-closing"><div className="home-container home-closing-inner"><span className="home-kicker">NẾP NHÀ · MỘT CHÚT BÌNH YÊN</span><h2>Chọn món đồ mình yêu.<br /><em>Gọi đó là nhà.</em></h2><p>Cùng tạo một không gian vừa vặn với nhịp sống của bạn.</p><Link to="/cart#catalog" className="home-underlined-link">Bắt đầu khám phá <Icon name="arrow" size={18} /></Link></div></section>
   </div>;

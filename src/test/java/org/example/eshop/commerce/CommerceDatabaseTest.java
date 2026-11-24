@@ -53,6 +53,7 @@ class CommerceDatabaseTest {
 
     @BeforeEach void reset() {
         assertTrue(jdbc.queryForObject("SELECT DATABASE()",String.class).startsWith("furniture_shop_test_"));
+        jdbc.update("DELETE FROM banners");
         for(String table:List.of("refunds","payment_events","payments","shipment_items","shipments","inventory_movements","inventory_reservations","coupon_redemptions","order_status_history","order_addresses","order_items","orders","cart_items","carts","coupons","user_addresses","inventory_balances","product_images","variant_materials","product_variants","products","categories","user_roles","users")) jdbc.update("DELETE FROM "+table);
         String hash=new BCryptPasswordEncoder().encode("test-password");
         for(var a:List.of(admin,customer,other)) {
@@ -74,6 +75,16 @@ class CommerceDatabaseTest {
     }
     String couponBody(String code) {
         return "{\"code\":\""+code+"\",\"discountType\":\"PERCENT\",\"discountValue\":\"10\",\"minimumOrderAmount\":\"0\",\"startsAt\":\""+Instant.now().minusSeconds(60)+"\",\"endsAt\":\""+Instant.now().plusSeconds(3600)+"\"}";
+    }
+    @Test void publicHomeGalleryShowsOnlyActiveCurrentImagesInOrder() throws Exception {
+        jdbc.update("INSERT INTO banners(title,image_url,placement,sort_order,is_active) VALUES('Second','/images/second.jpg','HOME_GALLERY',20,TRUE),('First','/images/first.jpg','HOME_GALLERY',10,TRUE),('Other','/images/other.jpg','HOME_HERO',0,TRUE),('Hidden','/images/hidden.jpg','HOME_GALLERY',0,FALSE)");
+        jdbc.update("INSERT INTO banners(title,image_url,placement,sort_order,starts_at) VALUES('Future','/images/future.jpg','HOME_GALLERY',0,DATE_ADD(CURRENT_TIMESTAMP(6), INTERVAL 1 DAY))");
+        jdbc.update("INSERT INTO banners(title,image_url,placement,sort_order,ends_at) VALUES('Expired','/images/expired.jpg','HOME_GALLERY',0,DATE_SUB(CURRENT_TIMESTAMP(6), INTERVAL 1 DAY))");
+        var response=json(mvc.perform(get("/api/commerce/home/gallery")).andExpect(status().isOk()).andReturn());
+        assertEquals(2,response.get("items").size());
+        assertEquals("First",response.get("items").get(0).get("title").asText());
+        assertEquals("/images/second.jpg",response.get("items").get(1).get("imageUrl").asText());
+        assertEquals("Second",response.get("items").get(1).get("altText").asText());
     }
     long createCoupon(String code) throws Exception {
         return json(mvc.perform(post("/api/admin/coupons").with(user(admin)).with(csrf()).contentType("application/json").content(couponBody(code))).andExpect(status().isCreated()).andReturn()).get("id").asLong();
