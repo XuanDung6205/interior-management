@@ -28,6 +28,18 @@ function mount(path, handlers = {}, session = guest) {
   return { user: userEvent.setup(), calls };
 }
 
+it('shows live catalog names, prices and image URLs on the home page', async () => {
+  const original = { ...chair, imageUrl: '/images/ghe-aalto.jpg' };
+  const { calls, user } = mount('/', { 'GET /api/commerce/catalog/variants?query=&page=0&size=6': page([original]) });
+  expect(await screen.findByRole('heading', { name: 'Ghế gỗ sồi' })).toBeInTheDocument();
+  expect(screen.getByText('1.250.000 ₫')).toBeInTheDocument();
+  expect(screen.getByRole('img', { name: 'Ghế gỗ sồi — Gỗ tự nhiên' })).toHaveAttribute('src', '/images/ghe-aalto.jpg');
+  expect(calls.some(call => call.url === '/api/cart')).toBe(false);
+  await user.click(screen.getByRole('link', { name: 'Xem tất cả' }));
+  expect(await screen.findByRole('heading', { name: 'Tìm món đồ dành cho bạn' })).toBeInTheDocument();
+  expect(calls.some(call => call.url === '/api/cart')).toBe(true);
+});
+
 it('renders server totals, updates line quantity and supports removal', async () => {
   const { user, calls } = mount('/cart', {
     'PATCH /api/cart/items/8': { ...cart, itemCount: 3, subtotal: '3750000.00', items: [{ ...cart.items[0], quantity: 3, lineTotal: '3750000.00' }] },

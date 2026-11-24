@@ -42,6 +42,8 @@ Remove-Item Env:TV3_DEMO_PASSWORD
 
 Seed riêng tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU nội thất và tồn MAIN; **Sofa Modena** có `assembly_required=true` để tái lập demo lắp đặt, **Bàn trà Oslo** giữ false để bảo toàn ca đã chọn dịch vụ nhưng sản phẩm không bắt buộc lắp. DB demo cũ chỉ cần cập nhật cờ catalog có chủ đích bởi owner; không seed/reset số dư hay lịch sử để bổ sung cờ này. Mật khẩu do người chạy cấp qua environment và được BCrypt; không có mật khẩu đăng nhập mặc định. Không chia sẻ secret thật qua tài liệu/Git. Dataset lớn cho đo tải chỉ nằm ở DB `furniture_shop_test_perf_ops_20261119`; không import nó vào DB demo lâu dài.
 
+Trang chủ React tại `/` dùng ảnh gốc Nếp Nhà trong `frontend/public/images` và lấy tên, giá, ảnh sản phẩm nổi bật từ catalog API. Sau khi seed ba SKU demo, chạy `python scripts/seed_home_images.py` với `DB_PASSWORD` trong environment để thêm đường dẫn ảnh `/images/...` vào `product_images` của `furniture_shop_tv3_dev`. Script chỉ nhận DB demo này, có thể chạy lại mà không tạo ảnh trùng; file ảnh nằm trên web server, MariaDB chỉ lưu đường dẫn. Các ảnh demo này được tạo mới cho project, không lấy từ Exclusivia.
+
 Các biến môi trường cần biết:
 
 - `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`: datasource; DB_URL phải chọn rõ demo/test trong môi trường thử nghiệm.
