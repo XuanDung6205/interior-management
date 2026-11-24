@@ -3,7 +3,7 @@ name: TV3 commerce CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, 'feat/**']
   workflow_dispatch:
 
 permissions:
