@@ -114,7 +114,7 @@ jobs:
       - name: Run operational helper tests
         run: python -m unittest discover -s tests/operations -p 'test_*.py' -v
 
-      - name: Provision V001-V010 schema and require all 47 InnoDB tables
+      - name: Provision V001-V012 schema and require all 47 InnoDB tables
         run: |
           python scripts/tv3_database.py create --database furniture_shop_test_tv3_policy_ci --client mariadb
           export MYSQL_PWD="$DB_PASSWORD"

@@ -31,7 +31,8 @@ public class SePayEventService {
         var event=store.jdbc().queryForMap("SELECT id,payload,processing_status FROM payment_events WHERE provider=? AND provider_event_id=? FOR UPDATE",SePaySettings.PROVIDER,t.eventId());
         long eventId=((Number)event.get("id")).longValue();
         if(!mapper.readTree(event.get("payload").toString()).equals(mapper.readTree(payload)))throw CommerceException.conflict("SEPAY_EVENT_CONFLICT","Mã giao dịch SePay đã tồn tại với dữ liệu khác.");
-        if(!"RECEIVED".equals(event.get("processing_status")))return result(eventId,event.get("processing_status").toString(),true);
+        boolean replay=!"RECEIVED".equals(event.get("processing_status"));
+        if(replay&&!("PROCESSED".equals(event.get("processing_status"))&&t.providerTransactionId()!=null&&t.bankAccountId()!=null))return result(eventId,event.get("processing_status").toString(),true);
         if(payment==null)return finish(eventId,"IGNORED","UNKNOWN_PAYMENT_CODE");
         long orderId=((Number)candidates.get(0).get("orderId")).longValue();
         var owners=store.jdbc().query("SELECT user_id FROM orders WHERE id=?",(rs,n)->(Long)rs.getObject(1),orderId);
@@ -45,6 +46,9 @@ public class SePayEventService {
                 && t.bank().equalsIgnoreCase(Objects.toString(p.get("sepay_bank"),""))
                 && t.account().equals(p.get("sepay_account_number"))
                 && "VND".equals(p.get("currency")) && t.amount().compareTo((BigDecimal)p.get("amount"))==0;
+        // The same canonical API event may later include optional provider UUIDs.
+        // Enrich only the verified original collection; preserve its event and money state.
+        if(replay){if(match&&"SUCCEEDED".equals(p.get("status"))&&!t.reference().isBlank()&&collectionReference(t).equals(p.get("provider_transaction_id")))metadata(payment,t);return result(eventId,event.get("processing_status").toString(),true);}
         if(!match)return finish(eventId,"FAILED","TRANSFER_MISMATCH");
         if(t.reference().isBlank())return finish(eventId,"FAILED","MISSING_BANK_REFERENCE");
         String reference=collectionReference(t);
@@ -54,6 +58,7 @@ public class SePayEventService {
             boolean sameSource=prior.stream().anyMatch(e->e.get("eventId").toString().startsWith(source));
             boolean equivalent=prior.stream().anyMatch(e->mapper.readTree(e.get("payload").toString()).equals(mapper.readTree(payload)));
             boolean duplicate=!sameSource&&reference.equals(p.get("provider_transaction_id"))&&equivalent;
+            if(duplicate)metadata(payment,t);
             return finish(eventId,duplicate?"PROCESSED":"FAILED",duplicate?null:"ADDITIONAL_TRANSFER_REQUIRES_REVIEW");
         }
         boolean late="CANCELLED".equals(order.get("status"));
@@ -64,6 +69,7 @@ public class SePayEventService {
         if(existing>0)return finish(eventId,"FAILED","REFERENCE_ALREADY_USED");
         LocalDateTime now=LocalDateTime.ofInstant(clock.instant(),ZoneOffset.UTC);
         store.jdbc().update("UPDATE payments SET status='SUCCEEDED',provider_transaction_id=?,paid_at=?,updated_at=? WHERE id=?",reference,now,now,payment);
+        metadata(payment,t);
         store.jdbc().update("UPDATE orders SET confirmation_expires_at=NULL,expiry_retry_after=NULL WHERE id=?",orderId);
         if(late)store.insert("INSERT INTO refunds(order_id,payment_id,provider,idempotency_key,amount,currency,status,reason,created_at,updated_at) VALUES(?,?,?,?,?,'VND','PENDING',?,?,?)",orderId,payment,SePaySettings.PROVIDER,"cancel:"+payment,t.amount(),"SePay Sandbox: khoản thu đến sau khi hủy đơn; chờ hoàn thủ công.",now,now);
         else if(!coupon.isEmpty()&&collected.add(t.amount()).compareTo(new BigDecimal(order.get("grandTotal").toString()))>=0){
@@ -73,7 +79,8 @@ public class SePayEventService {
         audit.appendSystem(orderId,"SEPAY_PAYMENT_CONFIRMED",Map.of("paymentId",payment,"status",p.get("status")),Map.of("paymentId",payment,"status","SUCCEEDED","amount",t.amount().toPlainString(),"lateCollection",late));
         return finish(eventId,"PROCESSED",null);
     }
-    private static String collectionReference(SePayTransfer t){try{return "SEPAY-"+HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest((t.bank().toUpperCase(Locale.ROOT)+"|"+t.account()+"|"+t.reference()).getBytes(StandardCharsets.UTF_8)));}catch(java.security.NoSuchAlgorithmException e){throw new IllegalStateException(e);}}
+    static String collectionReference(SePayTransfer t){try{return "SEPAY-"+HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest((t.bank().toUpperCase(Locale.ROOT)+"|"+t.account()+"|"+t.reference()).getBytes(StandardCharsets.UTF_8)));}catch(java.security.NoSuchAlgorithmException e){throw new IllegalStateException(e);}}
+    private void metadata(long payment,SePayTransfer t){if(t.providerTransactionId()!=null&&t.bankAccountId()!=null)store.jdbc().update("UPDATE payments SET sepay_transaction_id=COALESCE(sepay_transaction_id,?),sepay_bank_account_id=COALESCE(sepay_bank_account_id,?) WHERE id=?",t.providerTransactionId(),t.bankAccountId(),payment);}
     private Map<String,Object> finish(long id,String status,String reason){store.jdbc().update("UPDATE payment_events SET processing_status=?,error_message=?,processed_at=? WHERE id=?",status,reason,LocalDateTime.ofInstant(clock.instant(),ZoneOffset.UTC),id);return result(id,status,false);}
     private static Map<String,Object> result(long id,String status,boolean duplicate){return Map.of("success",true,"eventId",id,"processingStatus",status,"duplicate",duplicate);}
 }

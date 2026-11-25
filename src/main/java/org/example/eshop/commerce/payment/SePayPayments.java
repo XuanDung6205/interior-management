@@ -11,7 +11,8 @@ import java.util.*;
 public class SePayPayments {
     private final OrderStore store;
     private final SePaySettings settings;
-    public SePayPayments(OrderStore store,SePaySettings settings){this.store=store;this.settings=settings;}
+    private final SePayAutomationSettings automation;
+    public SePayPayments(OrderStore store,SePaySettings settings,SePayAutomationSettings automation){this.store=store;this.settings=settings;this.automation=automation;}
     /** Caller owns the order transaction. Payment auto-increment allocates never-reused codes. */
     public long insert(long order,BigDecimal amount,String key,LocalDateTime now){
         settings.validateAmount(amount);
@@ -19,7 +20,7 @@ public class SePayPayments {
                 order,SePaySettings.PROVIDER,key,amount,settings.bank(),settings.account(),settings.holder(),now,now);
         if(id>99999999)throw CommerceException.conflict("SEPAY_CODE_EXHAUSTED","Đã hết dải mã SePay; chọn phương thức khác và liên hệ quản trị viên.");
         String code="DH"+String.format(Locale.ROOT,"%08d",id);
-        store.jdbc().update("UPDATE payments SET sepay_code=?,sepay_content=? WHERE id=?",code,"SEVQR "+code,id);
+        store.jdbc().update("UPDATE payments SET sepay_code=?,sepay_content=?,expires_at=?,sepay_next_check_at=? WHERE id=?",code,"SEVQR "+code,now.plusSeconds(automation.ttlSeconds),now.plusSeconds(automation.intervalSeconds),id);
         return id;
     }
     public Map<String,Object> view(Map<String,Object> payment,boolean payable,boolean staff){

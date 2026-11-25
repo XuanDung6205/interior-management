@@ -17,7 +17,7 @@ Mật khẩu không được ghi trong repository, SQL hay tài liệu này. Kh�
 - `V006__payments_confirmation_note.sql`: bổ sung ghi chú đối soát nội bộ cho khoản thu thủ công; không thay đổi dữ liệu tài chính cũ. Áp dụng sau V002–V005.
 - `V007__refunds_verification_notes.sql`: hai cột ghi chú đối soát/hủy yêu cầu hoàn thủ công, chỉ nhân viên đọc; không ghi đè lịch sử khoản thu/hoàn.
 - `V008__commerce_operations.sql`: ba cột hạn xác nhận/retry trên orders và hai bảng `commerce_notification_outbox`, `commerce_notifications`. Runtime có47bảng; không backfill hạn tự hủy cho đơn cũ.
-- `V009__commerce_read_indexes.sql`: ba index phục vụ danh sách đơn/khoản thu đã đo bằng EXPLAIN; không đổi số bảng. Runtime mới cần đủ V001–V009, áp dụng migration theo thứ tự.
+- `V009__commerce_read_indexes.sql`: ba index phục vụ danh sách đơn/khoản thu đã đo bằng EXPLAIN; không đổi số bảng. V009 không phải bản cuối; runtime hiện cần đủ V001–V012, áp dụng migration theo thứ tự.
 - `verify_schema.py`: kiểm tra tích hợp bằng MariaDB CLI, chỉ chấp nhận tên `furniture_shop` hoặc `furniture_shop_test_*`.
 - `verification-fixture.sql`: dữ liệu kiểm thử bên trong transaction; script kiểm tra sẽ rollback, không phải dữ liệu mẫu để import.
 
@@ -103,7 +103,7 @@ Cấu hình kết nối đã chuyển sang `furniture_shop`, có thể ghi đè 
 
 Ứng dụng legacy dùng `JWT_SECRET` (Base64 của ít nhất 32 byte ngẫu nhiên). Runtime commerce mới dùng session/CSRF, không yêu cầu JWT/Gemini cho giỏ/coupon. `.env.example` liệt kê tên biến nhưng không chứa secret; Spring Boot không tự nạp file này, cần cấu hình environment trong terminal/IDE hoặc Docker Compose. File `.env` và `.env.*` cục bộ được Git bỏ qua.
 
-Runtime `org.example.eshop.commerce.CommerceApplication` hiện có giỏ/coupon/checkout/đơn, thu và hoàn thủ công, kho/giao hàng, lắp đặt/đổi trả, hết hạn COD và hộp thư web. Maven mặc định chạy runtime này, chỉ scan commerce và validate các Entity của nó. Adapter đọc users/roles/SKU/tồn từ bảng thật. VNPAY sandbox/webhook/hoàn online chưa triển khai; code legacy vẫn giữ riêng ngoài commerce.
+Runtime `org.example.eshop.commerce.CommerceApplication` hiện có giỏ/coupon/checkout/đơn, thu và hoàn thủ công, kho/giao hàng, lắp đặt/đổi trả, hết hạn COD và hộp thư web. Maven mặc định chạy runtime này, chỉ scan commerce và validate các Entity của nó. Adapter đọc users/roles/SKU/tồn từ bảng thật. SePay Test mode có HMAC Webhook, đối soát API và thực thi hoàn Sandbox; Production chưa triển khai; code legacy vẫn giữ riêng ngoài commerce.
 
 Hướng frontend là **React**, backend **Spring Boot REST API**. Source vẫn chứa Thymeleaf/MVC legacy ngoài runtime commerce. Xem `docs/TV3_HUONG_DAN_CHAY_VA_DEMO.md` để chạy phần TV3 và database demo cô lập. Không cần đổi schema chỉ vì đổi frontend.
 
@@ -123,4 +123,12 @@ V001 là bootstrap ban đầu, chưa cấu hình Flyway/Liquibase trong project.
 
 ### V010 — SePay
 
-`V010__sepay_payment_snapshots.sql` thêm 5 cột snapshot nullable và unique index cho mã DH trong `payments`, giữ nguyên 47 bảng và các khoản COD/chuyển khoản cũ. Không lưu token/secret. Script TV3 create/migrate đã áp dụng V001-V010 cho DB demo/test. Sao lưu DB đang dùng trước khi áp dụng migration.
+`V010__sepay_payment_snapshots.sql` thêm 5 cột snapshot nullable và unique index cho mã DH trong `payments`, giữ nguyên 47 bảng và các khoản COD/chuyển khoản cũ. Không lưu token/secret. Script TV3 create/migrate áp dụng toàn bộ V001–V012 cho DB demo/test. Sao lưu DB đang dùng trước khi áp dụng migration.
+
+### V011 — đối soát, hết hạn và duyệt sự kiện
+
+[V011__sepay_automation_review.sql](V011__sepay_automation_review.sql) thêm UUID giao dịch/tài khoản đã xác minh, lịch kiểm tra, lease/retry trên `payments`; note/actor/time duyệt bất biến trên `payment_events`. `expires_at` đã có từ bootstrap, chỉ lần SePay mới được đặt hạn. Không backfill đơn/lần thanh toán cũ. Kết quả tìm kiếm chưa đầy đủ hoặc API lỗi không được coi là không có tiền.
+
+### V012 — ý định hoàn Sandbox
+
+[V012__sepay_refund_execution.sql](V012__sepay_refund_execution.sql) thêm trạng thái thực thi, unique idempotency key/refund ID, snapshot giao dịch gốc, staff gửi, lease/retry/kết quả trên `refunds`. Lưu intent trước HTTP; UNKNOWN giữ ngân sách và khóa đường thủ công. Chỉ poll/retry intent đã được staff duyệt gửi. Tổng bảng vẫn47; không có khóa SePay trong DB. Xem [hướng dẫn](../TV3_SEPAY_SANDBOX.md) và [thuộc tính TV3](../TV3_BANG_VA_THUOC_TINH.md).

@@ -67,7 +67,7 @@ Khách duyệt/lọc/chọn đúng SKU trên mobile; admin quản lý được t
 - Gọi dịch vụ giữ hàng của TV4 trong transaction tạo đơn; điều phối giải phóng giữ hàng khi hủy/hết hạn theo chính sách thống nhất. Không tự sửa các bảng kho.
 - Khách xem lịch sử/chi tiết đơn, yêu cầu hủy theo trạng thái; admin tra cứu/lọc/xác nhận/xử lý đơn. Cập nhật trạng thái phải kiểm tra chuyển trạng thái hợp lệ.
 - Coupon: thời gian hiệu lực, điều kiện giá trị đơn, phần trăm/số tiền, mức giảm tối đa, giới hạn sử dụng; giữ/sử dụng/giải phóng lượt mã trong transaction.
-- COD, chuyển khoản có nhân viên xác minh và một cổng thanh toán sandbox: khởi tạo giao dịch, trang kết quả, thất bại/hủy/hết hạn, webhook kiểm tra chữ ký/số tiền/tiền tệ và chống xử lý trùng.
+- COD, chuyển khoản có nhân viên xác minh và SePay Webhooks Test mode + API v2: khởi tạo giao dịch, trang kết quả, thất bại/hủy/hết hạn, webhook kiểm tra chữ ký/số tiền/tiền tệ và chống xử lý trùng.
 - Hoàn tiền toàn phần/một phần từ yêu cầu hợp lệ của TV4 hoặc đơn hủy: khóa chống lặp ổn định, không hoàn vượt tổng đã thu, lưu kết quả thành công/thất bại.
 - Phối hợp gửi email xác nhận đơn/thanh toán bằng cơ chế retry có lưu trạng thái; không giữ transaction khóa hàng trong lúc chờ mạng/cổng thanh toán.
 - Tối ưu truy vấn lịch sử đơn/admin và xử lý concurrency; kiểm tra quyền sở hữu đơn. Không dùng cache để quyết định giá, quyền truy cập, số tiền, coupon hay trạng thái thu/hoàn tiền.
@@ -158,3 +158,9 @@ Toàn bộ nội dung/tương tác chạy được; AI tư vấn đúng dữ li�
 - Quan sát hiệu năng: [Spring Boot Actuator metrics](https://docs.spring.io/spring-boot/reference/actuator/metrics.html).
 - React/Vite: [Build a React app from scratch](https://react.dev/learn/build-a-react-app-from-scratch).
 - Bảo vệ cookie authentication trong SPA: [Spring Security CSRF](https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html).
+
+## Cập nhật TV3 ngày25/11/2026
+
+Nhóm chọn **SePay Test mode**, React + Spring Boot + MariaDB; không tiếp tục VNPAY. TV3 chịu trách nhiệm snapshot mã/người nhận, HMAC/raw-body, chống nhận trùng API/Webhook, hàng sự kiện cần kiểm tra có note bất biến, đối soát theo mã/UUID, worker lease/retry và hết hạn SePay có xác minh. COD24giờ vẫn độc lập. Hoàn Sandbox dùng intent/key bền vững, giữ ngân sách khi chưa rõ kết quả và chỉ gửi khi staff chủ động xác nhận; không được dùng nút thủ công để vượt lệnh provider đang chạy.
+
+TV1 phối hợp quản lý secret/role/CI/backup và migration V010–V012; TV4 giữ bằng chứng xuất/giao/nhận trả trước khi TV3 hoàn. TV2 không sửa snapshot tiền của đơn cũ; TV5 tính thu ròng từ khoản thành công, không suy từ note duyệt sự kiện. Xem [hướng dẫn chạy](TV3_SEPAY_SANDBOX.md), [contract](api/TV3_SEPAY_SANDBOX_CONTRACT.md) và [bàn giao](TV3_BAN_GIAO_VA_DEMO.md). Kết quả Sandbox không thay cho nghiệm thu Production.

@@ -1,6 +1,6 @@
 # Bàn giao và demo TV3–TV4 — vận hành commerce
 
-Tài liệu vận hành cho runtime `org.example.eshop.commerce.CommerceApplication`, React/Vite và MariaDB. Phạm vi gồm giỏ/coupon/checkout/đơn, thu và hoàn tiền thủ công, kho/giao hàng, hết hạn COD 24 giờ, thông báo web bền vững, lắp đặt và trả hàng. Contract chính: [operations/aftercare](api/TV3_OPERATIONS_HANDOFF_CONTRACT.md), [OpenAPI](api/tv3-commerce.yaml). Những kết quả kiểm thử/đo tải ở cuối tài liệu phải đọc cùng điều kiện môi trường của chúng.
+Tài liệu vận hành cho runtime `org.example.eshop.commerce.CommerceApplication`, React/Vite và MariaDB. Phạm vi gồm giỏ/coupon/checkout/đơn, thu/hoàn thủ công và SePay Test mode, kho/giao hàng, hết hạn COD24giờ/SePay30phút có điều kiện, thông báo web bền vững, lắp đặt và trả hàng. Contract chính: [operations/aftercare](api/TV3_OPERATIONS_HANDOFF_CONTRACT.md), [OpenAPI](api/tv3-commerce.yaml). Những kết quả kiểm thử/đo tải ở cuối tài liệu phải đọc cùng điều kiện môi trường của chúng.
 
 Cập nhật20/11: [gói React+Spring Boot một JAR](TV3_RELEASE.md), [backup/restore có đối chiếu dữ liệu](TV3_BACKUP_RESTORE.md), [workflow CI](TV3_CI.md). Các công cụ này hỗ trợ nhóm chạy và nghiệm thu bản demo mà không cần VNPAY. Snapshot/backups là dữ liệu riêng tư, không đưa lên GitHub hoặc artifact CI.
 
@@ -10,7 +10,7 @@ Tên cá nhân chưa được cung cấp; dùng đúng mã thành viên trong [p
 
 - **TV1 — kiến trúc, tài khoản, bảo mật, triển khai:** users/roles/địa chỉ/audit; session và CSRF; cấu hình/secret, backup và quan sát hạ tầng. Tài khoản, vai trò và trạng thái nạp từ DB; ID nhân viên lấy từ session. Mọi thay đổi migration cần phối hợp TV1, không tự tạo lại schema đang dùng.
 - **TV2 — catalog:** sản phẩm/SKU/giá/ảnh/thuộc tính. TV3 đọc SKU và giá DB hiện hành khi quote/checkout, lưu snapshot bất biến; thay đổi catalog không sửa lịch sử đơn. API kho TV4 là nguồn tồn khả dụng.
-- **TV3 — giỏ, coupon, checkout, đơn, tiền và điều phối vận hành:** reservation/coupon cùng transaction; xác minh thu/hoàn thủ công; job COD và outbox/inbox. Không xác nhận đã thu/hoàn từ browser, cache hay lời gọi provider chưa được đối soát.
+- **TV3 — giỏ, coupon, checkout, đơn, tiền và điều phối vận hành:** reservation/coupon cùng transaction; xác minh thu/hoàn thủ công hoặc SePay Sandbox; đối soát/hết hạn SePay, job COD và outbox/inbox. Không xác nhận đã thu/hoàn từ browser, cache hay lời gọi provider chưa được đối soát.
 - **TV4 — kho, giao/lắp, trả hàng:** nhập/điều chỉnh/chuyển/xuất kho, vận đơn, bằng chứng giao và lắp, duyệt/nhận/nhập lại hàng trả. TV3 chỉ cho hoàn đơn còn hoạt động khi phiếu trả cùng đơn đã duyệt và thực nhận đủ bằng chứng. Package bridge aftercare dùng chung order-root lock và completion policy, không thay thế toàn bộ module bảo hành/đặt lịch của TV4.
 - **TV5 — nội dung, tương tác, AI và phân tích/đo tải:** nội dung/tracking/AI; số doanh thu lấy khoản thu thành công trừ hoàn thành công. Đo tải dùng dataset/điều kiện/số liệu thực; cache catalog/nội dung thuộc chủ module. Không cache quyết định tiền, quyền, coupon, tồn hoặc trạng thái đơn.
 
@@ -25,7 +25,9 @@ V001–V007 giữ nguyên. Áp dụng tuần tự:
 1. `V001__create_furniture_shop.sql`: bootstrap **45 bảng**, seed 3 vai trò và kho MAIN; chỉ chạy khi DB chưa tồn tại.
 2. V002 request fingerprint; V003 idempotency vận đơn; V004 index audit vận đơn; V005 lựa chọn lắp đặt; V006 ghi chú xác minh khoản thu; V007 ghi chú xác minh/hủy hoàn tiền. Đây là migration cộng thêm, vẫn 45 bảng.
 3. `V008__commerce_operations.sql`: deadline/retry COD và hai bảng `commerce_notification_outbox`, `commerce_notifications`; tổng **47 bảng**. Index phục vụ expiry/inbox/outbox; đọc báo cáo hiệu năng để biết index truy vấn danh sách thực tế đã được đánh giá.
-4. `V009__commerce_read_indexes.sql`: ba index đọc `orders(placed_at,id)`, `payments(created_at,id)`, `payments(status,created_at,id)` có bằng chứng EXPLAIN, không thêm bảng; runtime đầy đủ dùng **V001–V009, vẫn 47 bảng**. Không sửa lại V008 đã áp dụng. HTTP p95 sau trial tăng 40,150 → 43,508 ms; đây không phải bằng chứng tăng tốc HTTP.
+4. `V009__commerce_read_indexes.sql`: ba index đọc `orders(placed_at,id)`, `payments(created_at,id)`, `payments(status,created_at,id)` có bằng chứng EXPLAIN, không thêm bảng; V009 giữ **47 bảng**. Không sửa lại V008 đã áp dụng. HTTP p95 sau trial tăng 40,150 → 43,508 ms; đây không phải bằng chứng tăng tốc HTTP.
+
+5. V010 thêm snapshot người nhận/mã thanh toán SePay; V011 thêm metadata đối soát, lease/retry và ghi chú duyệt sự kiện; V012 thêm ý định/thực thi hoàn SePay. Chỉ cộng cột/index, không lưu API token/HMAC và không thêm bảng. Runtime hiện dùng **V001–V012,47bảng**. Các lần SePay cũ có `expires_at=NULL` không bị backfill.
 
 DB mới cho demo riêng:
 
@@ -38,7 +40,7 @@ python scripts/tv3_database.py seed --database furniture_shop_tv3_dev
 Remove-Item Env:TV3_DEMO_PASSWORD
 ```
 
-`create` từ chối ghi đè DB có sẵn. Với DB demo đã tồn tại, dùng `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev`, không chạy lại V001. Helper áp dụng toàn bộ migration đang được phiên bản repo hỗ trợ; xác nhận đã gồm V009 trước khi khởi động bản này. DB chính chỉ áp dụng SQL cộng thêm sau backup/kiểm tra đúng DB; helper fixture/load không được trỏ vào DB chính. Không có Flyway tự động baseline hay Hibernate tự sửa schema trong commerce.
+`create` từ chối ghi đè DB có sẵn. Với DB demo đã tồn tại, dùng `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev`, không chạy lại V001. Helper áp dụng toàn bộ migration đang được phiên bản repo hỗ trợ; xác nhận đã gồm V012 trước khi khởi động bản này. DB chính chỉ áp dụng SQL cộng thêm sau backup/kiểm tra đúng DB; helper fixture/load không được trỏ vào DB chính. Không có Flyway tự động baseline hay Hibernate tự sửa schema trong commerce.
 
 Seed riêng tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU nội thất và tồn MAIN; **Sofa Modena** có `assembly_required=true` để tái lập demo lắp đặt, **Bàn trà Oslo** giữ false để bảo toàn ca đã chọn dịch vụ nhưng sản phẩm không bắt buộc lắp. DB demo cũ chỉ cần cập nhật cờ catalog có chủ đích bởi owner; không seed/reset số dư hay lịch sử để bổ sung cờ này. Mật khẩu do người chạy cấp qua environment và được BCrypt; không có mật khẩu đăng nhập mặc định. Không chia sẻ secret thật qua tài liệu/Git. Dataset lớn cho đo tải chỉ nằm ở DB `furniture_shop_test_perf_ops_20261119`; không import nó vào DB demo lâu dài.
 
@@ -124,7 +126,29 @@ Outbox là chuyển giao **nội bộ MariaDB → hộp thư web**, không gửi
 
 Không phá bảng, tắt DB hay sửa dữ liệu demo để biểu diễn lỗi. Dùng integration test failure injection cho insert inbox/audit rollback, nhiều worker, retry/restart và poison event. Redis không nằm trên đường commerce này: cache outage/hit-rate là **N/A**, không ghi “đã kiểm thử Redis fallback”.
 
-## 6. Đo hiệu năng và bằng chứng bàn giao
+## Demo SePay Test mode
+
+Theo [hướng dẫn SePay](TV3_SEPAY_SANDBOX.md), chỉ dùng mô phỏng Test mode và DB cô lập:
+
+1. Khách đặt đơn bằng SePay, kiểm tra QR/số tiền/nội dung do server tạo; không có nút tự khai đã trả.
+2. SePay mô phỏng đúng giao dịch, CLI chuyển tiếp; UI tự đọc lại trạng thái, duplicate không tăng tiền. Tắt CLI rồi dùng tìm theo mã hoặc job để minh họa khôi phục callback thiếu.
+3. Gửi sai tiền/mã rồi xem sự kiện cần kiểm tra; staff ghi note duyệt bất biến, original event và tiền giữ nguyên.
+4. Đơn mới chưa xác nhận chỉ tự hết hạn sau30phút khi lookup API hiện tại đầy đủ và không có tiền, không có bằng chứng thu/hoàn/xuất/giao, chỉ có đúng một lần thanh toán SePay mới. Đơn nhiều lần thanh toán hoặc có sự kiện FAILED/PROCESSED đã liên kết cần nhân viên xử lý; duyệt note không bỏ guard này. API lỗi hoặc kết quả chưa đầy đủ thì hoãn. Tiền đến sau hủy tạo một yêu cầu hoàn, không giữ hàng lại.
+5. Staff mở refund PENDING đủ ngân sách, gửi hoàn Sandbox có xác nhận; timeout/UNKNOWN giữ ngân sách và khóa thao tác thủ công. Đồng bộ/retry cùng intent cho tới kết quả đã xác minh. Không gửi hai đường hoàn cho một nghĩa vụ.
+
+Để gửi hoàn cần bật `SEPAY_REFUNDS_ENABLED=true` (mặc định false) và token Test có quyền ghi.
+
+Thiết lập worker mặc định: `SEPAY_AUTOMATION_ENABLED=true`, `SEPAY_PAYMENT_TTL_SECONDS=1800`, `SEPAY_RECONCILIATION_INTERVAL_SECONDS=60`, `SEPAY_BATCH_SIZE=5`, `SEPAY_LATE_RECONCILIATION_HOURS=72`. Cờ scheduler chung vẫn có hiệu lực; thiếu API token không được coi là không có giao dịch. Sandbox hoàn hoạt động không chứng minh tài khoản thật đã được mở quyền hoàn.
+
+## Nghiệm thu bổ sung ngày25/11/2026
+
+Bản commerce/SePay hiện tại đã chạy Java 252 ca (251 đạt, 1 ca AI live tùy chọn bỏ qua), đủ 18 lớp integration MariaDB; React 186/186 trong 17 file; công cụ vận hành 42/42. Gói React+Spring Boot JAR cuối build thành công. Đây là bằng chứng cục bộ, chưa phải GitHub Actions.
+
+Luồng SePay Sandbox thật đã khôi phục một lệnh hoàn bằng đúng intent/khóa đã lưu, nhận SUCCEEDED và cập nhật refund nội bộ SUCCEEDED. Tra cứu provider độc lập xác minh đúng mã hoàn, UUID giao dịch, số tiền/VND; không có tiền thật. `original_reference` null được xử lý bằng UUID khớp chính xác, còn tham chiếu có giá trị sai bị từ chối. Timeout/UNKNOWN giữ ngân sách và khóa gửi ban đầu, không mở lại đường thủ công.
+
+Chrome trên JAR cuối, sau hai sửa lỗi khôi phục UI, đã đạt 10/10 (exit 0, khoảng 1,1 phút). Xem [hướng dẫn SePay](TV3_SEPAY_SANDBOX.md). Kết quả19/11 bên dưới là lịch sử, không dùng thay số liệu25/11; không công khai token, khóa gửi hoàn hoặc định danh giao dịch cụ thể.
+
+## 6. Đo hiệu năng và bằng chứng bàn giao ngày19/11 (lịch sử)
 
 [Harness](../tests/performance/tv3/README.md) chỉ loopback, session/CSRF thật, không lưu raw body/cookie/token/password. Dataset SQL lớn chỉ cho DB được tạo mới có tên chính xác đã cho phép; có kiểm tra `DATABASE()`, schema và lịch sử rỗng. Dữ liệu này phục vụ tải GET, không được gọi là bằng chứng đặt/thu/giao/hoàn E2E.
 
@@ -142,7 +166,7 @@ Các log trong `target/` là artifact cục bộ được Git bỏ qua; khi tái
 
 ## 7. Xử lý sự cố và ranh giới còn lại
 
-- **Schema validation/unknown column/table:** kiểm tra đúng DB_URL và V002–V009. Không chạy `ddl-auto=update`, V001 hoặc seed reset để chữa DB có lịch sử. Startup không tự migrate.
+- **Schema validation/unknown column/table:** kiểm tra đúng DB_URL và V002–V012. Không chạy `ddl-auto=update`, V001 hoặc seed reset để chữa DB có lịch sử. Startup không tự migrate.
 - **401/403/CSRF:** lấy session/CSRF mới cùng cookie jar; kiểm tra actor/role trong DB. Không tắt CSRF hay cho customer vào admin. Giữ nguyên thao tác chưa rõ kết quả qua đăng nhập lại.
 - **409 checkout/state/stock:** tải state/quote server và đối chiếu trước khi đổi nội dung. Dòng đã xuất/giao không được hủy như chưa xuất. Không cập nhật trực tiếp orders/payments/inventory để qua điều kiện.
 - **Không COMPLETED:** xem thiếu khoản thu ròng, giao từng dòng, movement xuất kho, reservation còn lại hoặc lắp đặt. DELIVERED không chứng minh đã thu COD; phí lắp bằng 0 không chứng minh không chọn dịch vụ.
@@ -154,6 +178,6 @@ Các log trong `target/` là artifact cục bộ được Git bỏ qua; khi tái
 
 **Đã hỗ trợ trong phạm vi không cần sandbox:** nghiệp vụ DB thật và UI quyền thật; chứng từ thu/hoàn do staff đối chiếu; COD expiry; web notifications; giao/lắp/nhận trả/restock; retry/idempotency và ngân sách hoàn. Demo trên DB cô lập có thể dùng chứng từ minh họa, phải nói rõ không có tiền thật.
 
-**Chờ tích hợp có cấu hình riêng:** VNPAY/gateway sandbox thực, chữ ký callback/webhook, đối soát timeout/thu/hoàn tự động; SMTP/email có provider thật. Không có khóa ngân hàng/SMTP thì không tuyên bố gửi email, chuyển khoản hay hoàn online thành công. Không có Redis dependency trong commerce hiện tại; không cần cài Redis để demo phần này.
+**Ranh giới tích hợp:** dùng [SePay Test mode](TV3_SEPAY_SANDBOX.md) cho HMAC Webhook, API đối soát, job có điều kiện và thực thi hoàn Sandbox; không dùng VNPAY. Production và SMTP/email thật chưa triển khai. Không có khóa ngân hàng/SMTP thì không tuyên bố gửi email, chuyển khoản hay hoàn online thành công. Không có Redis dependency trong commerce hiện tại; không cần cài Redis để demo phần này.
 
-Cập nhật21/11: [hướng dẫn in đơn/lưu PDF và xuất CSV](TV3_IN_DON_VA_XUAT_CSV.md), [contract tính năng](api/TV3_ORDER_DOCUMENTS_CONTRACT.md), [OpenAPI 1.6.0 — 55 operations](api/tv3-commerce.yaml). Bản in dùng hộp thoại trình duyệt; CSV lấy toàn bộ bộ lọc staff đã áp dụng, giới hạn 5.000 đơn, ngày đặt tính theo UTC+07. Đợt này không thêm bảng/migration; kết quả kiểm thử mới chờ tích hợp xác nhận, không dùng số liệu19/11 ở trên thay thế.
+Cập nhật21/11: [hướng dẫn in đơn/lưu PDF và xuất CSV](TV3_IN_DON_VA_XUAT_CSV.md), [contract tính năng](api/TV3_ORDER_DOCUMENTS_CONTRACT.md), [OpenAPI](api/tv3-commerce.yaml). Bản in dùng hộp thoại trình duyệt; CSV lấy toàn bộ bộ lọc staff đã áp dụng, giới hạn 5.000 đơn, ngày đặt tính theo UTC+07. Đợt này không thêm bảng/migration; kết quả kiểm thử mới chờ tích hợp xác nhận, không dùng số liệu19/11 ở trên thay thế.

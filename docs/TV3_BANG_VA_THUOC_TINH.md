@@ -1,8 +1,8 @@
 # TV3 — Các bảng và thuộc tính theo schema hiện tại
 
-Nguồn bootstrap: [V001__create_furniture_shop.sql](database/V001__create_furniture_shop.sql). Runtime bổ sung các cột qua V002, V005–V008 và index qua V009; các định nghĩa bootstrap bên dưới được giữ nguyên để đối chiếu, phần bổ sung được ghi riêng.
+Nguồn bootstrap: [V001__create_furniture_shop.sql](database/V001__create_furniture_shop.sql). Runtime bổ sung các cột qua V002, V005–V008, V010–V012 và index qua V009/V011/V012; các định nghĩa bootstrap bên dưới được giữ nguyên để đối chiếu, phần bổ sung được ghi riêng.
 
-Bạn sở hữu 11 bảng nghiệp vụ: 2 giỏ hàng, 4 đơn hàng, 2 khuyến mãi và 3 thanh toán/hoàn tiền; thêm hai bảng hạ tầng thông báo ở V008. Trách nhiệm gồm persistence/Service/REST Controller/DTO, React page/component và API integration liên quan, kiểm thử và tài liệu. Bootstrap có139 thuộc tính; 11 bảng hiện có147 sau V002–V008. Tính thêm23 thuộc tính của hai bảng thông báo là **13 bảng / 170 thuộc tính**. Frontend dùng React thay cho Thymeleaf.
+Bạn sở hữu 11 bảng nghiệp vụ: 2 giỏ hàng, 4 đơn hàng, 2 khuyến mãi và 3 thanh toán/hoàn tiền; thêm hai bảng hạ tầng thông báo ở V008. Trách nhiệm gồm persistence/Service/REST Controller/DTO, React page/component và API integration liên quan, kiểm thử và tài liệu. Bootstrap có139 thuộc tính; 11 bảng có177 thuộc tính sau V002–V012. Tính thêm23 thuộc tính của hai bảng thông báo là **13 bảng / 200 thuộc tính**. Frontend dùng React thay cho Thymeleaf.
 
 Các cột orders bổ sung sau bootstrap:
 
@@ -15,6 +15,42 @@ Các cột orders bổ sung sau bootstrap:
 Cột payments bổ sung: `confirmation_note VARCHAR(1000) NULL` ([V006](database/V006__payments_confirmation_note.sql)): ghi chú đối soát chỉ STAFF/ADMIN đọc được; không trả trong API khách hàng. Mã biên nhận nằm ở `provider_transaction_id`, người xác minh ở `verified_by`, thời điểm server xác minh ở `paid_at`; xác nhận lại cùng bằng chứng không ghi đè các trường này.
 
 Các cột refunds bổ sung ([V007](database/V007__refunds_verification_notes.sql)): `confirmation_note VARCHAR(1000) NULL` lưu ghi chú chứng từ đã hoàn; `resolution_note VARCHAR(1000) NULL` lưu lý do hủy yêu cầu chưa gửi tiền. Chỉ STAFF/ADMIN đọc được. Mã chứng từ nằm ở `provider_refund_id`; `processed_by` ghi nhân viên xử lý và `completed_at` chỉ ghi khi xác minh hoàn thành. PENDING giữ ngân sách, không có nghĩa đã hoàn; CANCELLED giải phóng ngân sách yêu cầu nhưng không xóa nghĩa vụ còn phải hoàn. Payment gốc giữ SUCCEEDED.
+
+## Metadata SePay bổ sung (V010–V012)
+
+Các cột này giữ nguyên bảng nghiệp vụ và lịch sử, không lưu token hoặc HMAC. Các
+định nghĩa bootstrap phía dưới phục vụ đối chiếu; schema runtime phải có đủ migration.
+
+**payments** — [V010](database/V010__sepay_payment_snapshots.sql) thêm snapshot nullable:
+
+- `sepay_code VARCHAR(10) ascii_bin`: mã DH duy nhất, gắn payment, không gắn order.
+- `sepay_bank VARCHAR(50)`, `sepay_account_number VARCHAR(64) ascii_bin`, `sepay_account_holder VARCHAR(150)`, `sepay_content VARCHAR(200)`: ngân hàng/người nhận/nội dung tại lúc tạo; chỉnh cấu hình mới không sửa lần cũ.
+
+[V011](database/V011__sepay_automation_review.sql) thêm:
+
+- `sepay_transaction_id CHAR(36) ascii_bin`, `sepay_bank_account_id CHAR(36) ascii_bin`: UUID đã xác minh từ API v2, khác bank reference và numeric Webhook ID.
+- `sepay_next_check_at DATETIME(6)`, `sepay_last_check_at DATETIME(6)`, `sepay_last_check_result VARCHAR(80)`: lịch/kết quả kiểm tra có kiểm soát; không phải chứng từ đã thu.
+- `sepay_lease_token CHAR(36) ascii_bin`, `sepay_lease_until DATETIME(6)`: quyền xử lý tạm của một worker.
+- `sepay_check_attempts INT NOT NULL DEFAULT 0`: retry bền vững.
+- `expires_at` đã có từ bootstrap: lần SePay mới đặt mặc định30phút; NULL lịch sử không backfill. Hết timestamp chưa đủ chứng minh được phép hủy.
+
+**payment_events** — V011 thêm `review_note VARCHAR(1000)`, `reviewed_by BIGINT UNSIGNED`, `reviewed_at DATETIME(6)`, đều nullable. Ghi chú duyệt bất biến độc lập `processing_status`/`payload`; actor lấy từ session, không từ browser. Duyệt không tự sửa tiền.
+
+**refunds** — [V012](database/V012__sepay_refund_execution.sql) thêm:
+
+- `sepay_execution_state VARCHAR(20)`: trạng thái thực thi provider; NULL nghĩa chưa nhận cho provider. UNKNOWN/PENDING giữ `refunds.status=PENDING` và ngân sách.
+- `sepay_request_key VARCHAR(100) ascii_bin`: khóa chống trùng duy nhất, lưu trước HTTP, giữ nguyên khi retry; không đưa ra frontend.
+- `sepay_transaction_id CHAR(36) ascii_bin`, `sepay_bank_account_id CHAR(36) ascii_bin`, `sepay_original_reference VARCHAR(150) ascii_bin`: định danh khoản thu gốc bất biến của lệnh.
+- `sepay_refund_id VARCHAR(100) ascii_bin`: mã hoàn duy nhất do SePay trả về sau đối chiếu.
+- `sepay_requested_by BIGINT`, `sepay_requested_at DATETIME(6)`: staff và thời điểm chủ động gửi.
+- `sepay_checked_at DATETIME(6)`, `sepay_error_code VARCHAR(80)`: kết quả đối soát có kiểm soát.
+- `sepay_attempts INT NOT NULL DEFAULT 0`, `sepay_retry_at DATETIME(6)`: backoff/retry.
+- `sepay_lease_until DATETIME(6)`, `sepay_lease_token CHAR(36) ascii_bin`: lease xử lý, không giữ khóa tiền khi gọi API.
+
+Sau khi có provider intent, cấm confirm/cancel thủ công để tránh hai đường chi tiền.
+Các cột trừ counter đều nullable để bảo toàn quy trình hoàn cũ. Chỉ staff đã xác
+minh chứng từ hoặc kết quả provider thành công mới ghi nhận hoàn thành; note duyệt
+sự kiện không thay thế bằng chứng này.
 
 ## Quy ước đọc
 
@@ -359,7 +395,7 @@ TV3-01/02/03 hiện đã có implementation riêng trong `commerce`: giỏ DB v�
 - Controller MVC trả tên template cần chuyển thành REST endpoint trả DTO JSON; thay form/redirect Thymeleaf bằng request và điều hướng ở React.
 - Không chỉ đổi tên bảng để chạy: cần thay mapping, DTO, service, validation, giao diện và kiểm thử theo toàn bộ quy tắc trên.
 
-Định nghĩa chi tiết11bảng bên trên đối chiếu bootstrap139thuộc tính. Các cột runtime bổ sung được giải thích đầu tài liệu; V009 chỉ thêm index.
+Định nghĩa chi tiết11bảng bên trên đối chiếu bootstrap139thuộc tính. Các cột runtime bổ sung được giải thích đầu tài liệu; V009 chỉ thêm index; V010–V012 bổ sung metadata được giải thích đầu tài liệu.
 
 ## 12. `commerce_notification_outbox` — Sự kiện thông báo bền
 

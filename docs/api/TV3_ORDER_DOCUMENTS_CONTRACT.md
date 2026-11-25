@@ -20,6 +20,6 @@ Scope accepted2026-11-21: the two small follow-ups, print order slips and staff 
 
 ## Verification
 
-Real MariaDB integration covers owner/staff/CSRF boundaries, safe projections/snapshot changes, date edges in UTC+07, matching list/export filters/literal wildcards, stable ordering, empty/header-only,5000limit and CSV text safety. React tests cover routes/date filters/current filter download/error/printing/escaping. Chrome against actual packaged JAR covers owner/staff print+refresh, CSV content/file download and print-media/mobile layout; previous7flows remain valid. Check OpenAPI1.6.0 against actual responses. No mutation to existing business records for fixture shortcuts.
+Real MariaDB integration covers owner/staff/CSRF boundaries, safe projections/snapshot changes, date edges in UTC+07, matching list/export filters/literal wildcards, stable ordering, empty/header-only,5000limit and CSV text safety. React tests cover routes/date filters/current filter download/error/printing/escaping. Chrome against actual packaged JAR covers owner/staff print+refresh, CSV content/file download and print-media/mobile layout; previous7flows remain valid. Check the current OpenAPI against actual responses. No mutation to existing business records for fixture shortcuts.
 
 Sources: [RFC4180](https://datatracker.ietf.org/doc/rfc4180/), [OWASP CSV injection](https://community.owasp.org/attacks/CSV_Injection), [MDN printing](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Media_queries/Printing).

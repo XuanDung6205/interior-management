@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ErrorNotice } from '../../components/ui';
-import { formatMoney } from '../../lib/format';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { ErrorNotice, Loading } from '../../components/ui';
+import { formatDate, formatMoney } from '../../lib/format';
 import { clearPaymentRequest, readPaymentRequest, savePaymentRequest } from './paymentApi';
+const EventReviewPanel = lazy(() => import('./SePayOperations').then(module => ({ default: module.SePayEventReview })));
+const JobsPanel = lazy(() => import('./SePayOperations').then(module => ({ default: module.SePayJobs })));
+export function SePayEventReview(props) { return <Suspense fallback={<Loading text="Đang tải công cụ kiểm tra SePay…"/>}><EventReviewPanel {...props}/></Suspense>; }
+export function SePayJobs(props) { return <Suspense fallback={<Loading text="Đang tải công cụ đối soát SePay…"/>}><JobsPanel {...props}/></Suspense>; }
 
 export function SePayGuidance({ summary }) {
   const payment = summary.items.find(item => item.provider === 'SEPAY_SANDBOX' && item.status === 'PENDING' && !item.isExpired && item.sepay?.qrUrl);
@@ -13,6 +16,7 @@ export function SePayGuidance({ summary }) {
     <div className="sepay-qr-layout"><img src={details.qrUrl} alt={`QR thanh toán SePay cho khoản ${payment.id}`} width="240" height="240" referrerPolicy="no-referrer" />
       <dl className="payment-receipt-meta"><div><dt>Số tiền thử nghiệm</dt><dd>{formatMoney(payment.amount)}</dd></div><div><dt>Ngân hàng Test</dt><dd>{details.bank}</dd></div><div><dt>Số tài khoản Test</dt><dd>{details.accountNumber}</dd></div><div><dt>Chủ tài khoản Test</dt><dd>{details.accountHolder}</dd></div><div><dt>Nội dung chuyển khoản</dt><dd className="bank-account">{details.transferContent}</dd></div></dl>
     </div><p>Giữ nguyên số tiền và nội dung. Trạng thái cập nhật sau khi hệ thống xác minh giao dịch từ SePay.</p>
+    {payment.expiresAt && <><p className="notice">Hạn thanh toán thử nghiệm: {formatDate(payment.expiresAt)}.</p><p className="muted small">Hệ thống chỉ hủy đơn khi xác minh không có giao dịch phù hợp và đơn vẫn đủ điều kiện hủy. Khi chưa đối soát được, hãy làm mới để xem trạng thái từ máy chủ.</p></>}
   </div></section>;
 }
 
@@ -21,9 +25,11 @@ export function SePayReconcile({ selected, client, userId, onUpdated }) {
   const [pending,setPending]=useState(()=>readPaymentRequest('reconcile',userId,id));
   const [transactionId,setTransactionId]=useState(()=>readPaymentRequest('reconcile',userId,id)?.transactionId || '');
   const [busy,setBusy]=useState(false),[error,setError]=useState(null),[notice,setNotice]=useState('');
+  const lock=useRef(false);
   const valid=/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/.test(transactionId);
   async function submit(event){
-    event.preventDefault();if(busy||!valid||!selected.sepay?.canReconcile)return;
+    event.preventDefault();if(lock.current||!valid||!selected.sepay?.canReconcile)return;
+    lock.current=true;
     setBusy(true);setError(null);setNotice('');
     const request=pending||{transactionId};
     try{
@@ -32,27 +38,28 @@ export function SePayReconcile({ selected, client, userId, onUpdated }) {
       clearPaymentRequest('reconcile',userId,id);setPending(null);onUpdated(updated);
       setNotice(updated.reconciliation?.processingStatus==='PROCESSED'?'Đã đối soát giao dịch với SePay.':'Đã tra cứu SePay. Giao dịch cần kiểm tra thêm; chưa ghi nhận thêm khoản thu.');
     }catch(failure){setError(failure);if(failure.status===400||failure.status===404&&failure.code==='SEPAY_TRANSACTION_NOT_FOUND'||failure.status===409&&failure.code==='SEPAY_TRANSACTION_MISMATCH'){clearPaymentRequest('reconcile',userId,id);setPending(null);}}
-    finally{setBusy(false);}
+    finally{lock.current=false;setBusy(false);}
   }
-  return <section className="panel"><div className="panel-heading"><h2>Đối soát SePay Sandbox</h2></div><form className="order-section-body" onSubmit={submit}>
+  async function byCode(){
+    if(lock.current||pending||!selected.sepay?.canReconcile)return;
+    lock.current=true;setBusy(true);setError(null);setNotice('');
+    try{
+      const updated=await client.reconcileCode(id);onUpdated(updated);
+      const result=updated.reconciliationSummary;
+      setNotice(result?.complete ? `Đã tra cứu ${result.checked} giao dịch; khớp ${result.matched}. Trạng thái khoản thu đã được máy chủ đối chiếu.` : 'Kết quả chưa đầy đủ. Chưa thể kết luận không có giao dịch; hãy kiểm tra lại sau.');
+    }catch(failure){setError(failure);}finally{lock.current=false;setBusy(false);}
+  }
+  return <section className="panel"><div className="panel-heading"><h2>Đối soát SePay Sandbox</h2></div><div className="order-section-body">
+    <p>Tra cứu mã thanh toán cố định từ máy chủ. Giao dịch được kiểm tra lại trước khi ghi nhận tiền.</p>
+    {selected.sepay?.code&&<button className="button secondary" disabled={busy||!!pending||!selected.sepay?.canReconcile} onClick={byCode}>Tra cứu theo mã {selected.sepay.code}</button>}
+    <form onSubmit={submit}>
     <p>Tra cứu bằng UUID giao dịch trong SePay API v2. Hệ thống tự đối chiếu với khoản #{id}; không nhập số tiền để xác nhận thủ công.</p>
     <ErrorNotice error={error}/>{notice&&<p role="status" className="notice">{notice}</p>}
     {!selected.sepay?.canReconcile&&<p className="notice warning">Chưa cấu hình API Token SePay trên server.</p>}
     <div className="form-field"><label htmlFor="sepay-transaction-id">UUID giao dịch SePay</label><input id="sepay-transaction-id" value={transactionId} maxLength={36} disabled={busy||!!pending} onChange={event=>setTransactionId(event.target.value.trim())} required autoComplete="off"/><p className="muted small">UUID API v2 khác với mã tham chiếu ngân hàng và ID số trong Webhook.</p></div>
     {pending&&<p className="notice warning">Giữ nguyên UUID đã gửi để kiểm tra lại kết quả sau khi mất phản hồi.</p>}
     <button className="button" disabled={busy||!valid||!selected.sepay?.canReconcile}>{busy?'Đang đối soát…':pending?'Thử lại đối soát':'Đối soát với SePay'}</button>
-  </form></section>;
-}
-
-export function SePayEventReview({ client }) {
-  const [items,setItems]=useState(null),[error,setError]=useState(null),[status,setStatus]=useState('FAILED'),[page,setPage]=useState(0),[busy,setBusy]=useState(false);
-  // Lazy load: opening other payment screens never starts a provider/API request.
-  async function load(nextStatus=status,nextPage=page){setBusy(true);setError(null);try{const data=await client.events(nextStatus,nextPage);setItems(data.items);setStatus(nextStatus);setPage(nextPage);}catch(failure){setError(failure);}finally{setBusy(false);}}
-  return <section className="panel sepay-event-review"><div className="panel-heading"><h2>Giao dịch SePay cần kiểm tra</h2><button className="button secondary" disabled={busy} onClick={()=>load()}>{busy?'Đang tải…':'Tải sự kiện SePay'}</button></div><div className="order-section-body"><ErrorNotice error={error}/>
-    {items&&<><label htmlFor="sepay-event-filter">Loại sự kiện</label><select id="sepay-event-filter" value={status} disabled={busy} onChange={event=>load(event.target.value,0)}><option value="FAILED">Không khớp / cần đối soát</option><option value="IGNORED">Không tìm thấy mã thanh toán</option><option value="PROCESSED">Đã xử lý</option></select>
-      {items.length?items.map(item=><article key={item.id} className="payment-history-record"><strong>{item.code||'Không có mã'} · {formatMoney(item.amount)}</strong><p>{item.reason||'Đã xử lý'} · {item.reference}</p>{item.paymentId&&<Link className="inline-link" to={`/admin/payments/${item.paymentId}`}>Xem khoản #{item.paymentId}</Link>}</article>):<p>Không có sự kiện trong trang này.</p>}
-      <div className="actions"><button className="button secondary" disabled={busy||page===0} onClick={()=>load(status,page-1)}>Trang trước</button><span>Trang {page+1}</span><button className="button secondary" disabled={busy||items.length<25} onClick={()=>load(status,page+1)}>Trang sau</button></div></>}
-  </div></section>;
+  </form></div></section>;
 }
 
 /** Bounded, non-overlapping status reads; paused when the tab is hidden. */
