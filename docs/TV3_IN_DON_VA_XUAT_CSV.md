@@ -1,6 +1,6 @@
 # In đơn hàng và xuất CSV TV3
 
-Phạm vi ngày 21/11/2026: phiếu đơn hàng cho khách/chủ đơn và nhân viên, cùng CSV danh sách đơn dành cho STAFF/ADMIN. Dùng React + Spring Boot + MariaDB hiện tại, vẫn **47 bảng**, không thêm migration hay cấu hình VNPAY. [Contract](api/TV3_ORDER_DOCUMENTS_CONTRACT.md), [OpenAPI 1.6.0](api/tv3-commerce.yaml), [bàn giao/demo](TV3_BAN_GIAO_VA_DEMO.md).
+Phạm vi ngày 21/11/2026: phiếu đơn hàng cho khách/chủ đơn và nhân viên, cùng CSV danh sách đơn dành cho STAFF/ADMIN. Dùng React + Spring Boot + MariaDB hiện tại, vẫn **47 bảng**, không thêm migration hay cấu hình VNPAY. [Contract](api/TV3_ORDER_DOCUMENTS_CONTRACT.md), [OpenAPI](api/tv3-commerce.yaml), [bàn giao/demo](TV3_BAN_GIAO_VA_DEMO.md).
 
 ## In hoặc lưu PDF
 
@@ -28,7 +28,7 @@ CSV không chứa địa chỉ đầy đủ, ghi chú nội bộ, proof, staff I
 
 ## Kiểm chứng bàn giao
 
-OpenAPI phiên bản 1.6.0 mô tả 55 operation, gồm hai API JSON `/api/orders/{id}/print`, `/api/admin/orders/{id}/print` và GET `/api/admin/orders/export.csv`. Postman syntax lint không có lỗi; schema vẫn 47 bảng, không thêm migration.
+Tại đợt triển khai21/11, OpenAPI1.6.0 có55operation, gồm hai API JSON `/api/orders/{id}/print`, `/api/admin/orders/{id}/print` và GET `/api/admin/orders/export.csv`. Postman syntax lint không có lỗi; schema vẫn 47 bảng, không thêm migration.
 
 Đã kiểm chứng cục bộ ngày 21/11/2026:
 

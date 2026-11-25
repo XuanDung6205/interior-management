@@ -16,7 +16,8 @@ export function createBlockMessage(code) {
   };
   return Object.hasOwn(messages, code) ? messages[code] : 'Chưa thể tạo thêm yêu cầu thanh toán. Hãy làm mới để kiểm tra trạng thái đơn.';
 }
-export function PaymentNotice({ bank, sepay }) {
+export function PaymentNotice({ bank, sepay, overview }) {
+  if (overview) return <section className="notice payment-mode-notice" aria-label="Phạm vi đối soát thanh toán"><Icon name="shield" size={24}/><div><h2>Đối soát khoản thu & chứng từ</h2><p>SePay Sandbox được xác minh qua thông báo và API thử nghiệm. COD và chuyển khoản thủ công được ghi nhận theo chứng từ. Tạo yêu cầu chưa có nghĩa là đã thu tiền.</p></div></section>;
   if (sepay) return <section className="notice warning" aria-label="Phạm vi thanh toán SePay"><Icon name="shield" size={24}/><div><h2>SePay Sandbox · Không chuyển tiền thật</h2><p>Giao dịch được mô phỏng trong SePay Test mode. Hệ thống xác minh thông báo từ SePay trước khi ghi nhận khoản thu.</p></div></section>;
   const demo = bank?.isDemo || bank?.mode === 'DEMO';
   return <section className={`notice payment-mode-notice ${demo ? 'warning' : ''}`} aria-label="Phạm vi thanh toán thủ công"><Icon name="shield" size={24} /><div><h2>{demo ? 'DEMO — không chuyển tiền thật' : bank?.mode === 'MANUAL' ? 'Xác minh thủ công theo chứng từ' : 'Thu tiền thủ công · Bản học tập/demo'}</h2><p>{bank?.notice || 'Trong bản học tập/demo, chỉ dùng chứng từ giả và không chuyển tiền thật.'}</p><p>Trang này không gọi ngân hàng và không phải sandbox cổng thanh toán. Chọn phương thức hay tạo yêu cầu chưa có nghĩa là đã thu tiền.</p></div></section>;

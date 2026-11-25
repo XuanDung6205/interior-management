@@ -1,6 +1,6 @@
 # Chạy TV3 — React + Spring Boot + MariaDB
 
-Hướng dẫn bàn giao cập nhật ngày19/11/2026: [TV3_BAN_GIAO_VA_DEMO.md](TV3_BAN_GIAO_VA_DEMO.md). Runtime hiện dùng V001–V009,47bảng; gồm cả thu/hoàn thủ công, lắp đặt/đổi trả, thông báo và vận hành. VNPAY sandbox vẫn chờ thông tin đăng ký.
+Hướng dẫn chạy hiện tại (cập nhật25/11/2026): [TV3_BAN_GIAO_VA_DEMO.md](TV3_BAN_GIAO_VA_DEMO.md). Runtime dùng V001–V012,47bảng; gồm thu/hoàn thủ công, SePay Test mode có HMAC/API đối soát/hoàn, hết hạn có kiểm tra, lắp đặt/đổi trả và thông báo. Cấu hình thanh toán theo [hướng dẫn SePay](TV3_SEPAY_SANDBOX.md); không cần đăng ký VNPAY.
 
 Từ20/11 có thể [build/chạy một JAR cùng origin](TV3_RELEASE.md); xem thêm [CI](TV3_CI.md) và [backup/restore](TV3_BACKUP_RESTORE.md). Các bước dưới đây vẫn dành cho phát triển bằng backend/Vite riêng.
 
@@ -10,7 +10,7 @@ Từ20/11 có thể [build/chạy một JAR cùng origin](TV3_RELEASE.md); xem t
 - Giỏ theo SKU lưu DB: xem/thêm/sửa/xóa/xóa hết, gộp sau đăng nhập, cảnh báo ngừng bán/hết hàng và giữ giỏ sau refresh. Giỏ không giữ tồn kho.
 - Quản trị coupon: phân trang/tìm kiếm/tạo/sửa một phần/bật tắt/xóa mã chưa dùng, xung đột cho mã đã dùng; tính thử phần trăm/số tiền/cap/minimum/thời hạn.
 - Giao diện React cho khách và quản trị, desktop/mobile, loading/rỗng/lỗi, hiển thị số tiền do server tính.
-- TV3-04/05/06: báo giá checkout, đặt đơn thật có snapshot/giữ tồn và lượt coupon/chống gửi trùng; lịch sử, chi tiết và hủy đơn của khách. COD/chuyển khoản tạo payment PENDING. Hủy đơn đã thu tạo refund PENDING để Task10 xử lý; chưa kết nối cổng thanh toán hoặc thực hiện hoàn tiền.
+- TV3-04/05/06: báo giá checkout, đặt đơn thật có snapshot/giữ tồn và lượt coupon/chống gửi trùng; lịch sử, chi tiết và hủy đơn của khách. COD/chuyển khoản tạo payment PENDING. Hủy đơn đã thu tạo refund PENDING; yêu cầu này chỉ giữ ngân sách, chưa có nghĩa đã hoàn. COD/chuyển khoản thủ công xác minh bằng chứng từ; SePay Sandbox xác minh qua provider.
 - TV3-07: quản trị đơn cho STAFF/ADMIN tại `/admin/orders`: tìm/lọc/phân trang, chi tiết snapshot, ghi chú nội bộ có phát hiện sửa đồng thời, chuyển trạng thái có kiểm tra bằng chứng và audit trong cùng transaction.
 
 ## Cấu trúc và phối hợp
@@ -39,7 +39,7 @@ python scripts/tv3_database.py seed --database furniture_shop_tv3_dev
 Remove-Item Env:TV3_DEMO_PASSWORD
 ```
 
-`create` cố ý thất bại nếu DB đã tồn tại; không xóa/ghi đè DB. DB mới áp dụng V001–V009 và có47bảng. DB demo đã có cần chạy `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev` trước khi chạy bản mới. Seed tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU và tồn MAIN; mật khẩu lấy từ environment và hash bằng BCrypt, không in ra. Seed lại không reset tồn hiện có. Modena yêu cầu kỹ thuật lắp đặt, Oslo không yêu cầu. Không dùng chung mật khẩu tài khoản thật. Script từ chối database `furniture_shop` chính.
+`create` cố ý thất bại nếu DB đã tồn tại; không xóa/ghi đè DB. DB mới áp dụng V001–V012 và có47bảng. DB demo đã có cần chạy `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev` trước khi chạy bản mới. Seed tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU và tồn MAIN; mật khẩu lấy từ environment và hash bằng BCrypt, không in ra. Seed lại không reset tồn hiện có. Modena yêu cầu kỹ thuật lắp đặt, Oslo không yêu cầu. Không dùng chung mật khẩu tài khoản thật. Script từ chối database `furniture_shop` chính.
 
 Khi DB demo trên máy đã được chuẩn bị, không cần tạo lại. Có thể đặt lại mật khẩu demo bằng cách chạy `seed` với environment do bạn chọn. Script chỉ chấp nhận `furniture_shop_tv3_dev` hoặc `furniture_shop_test_*`.
 
@@ -68,9 +68,9 @@ Luồng mới: thêm SKU → `/checkout` → chọn địa chỉ đã lưu hoặ
 
 Phí mặc định là chính sách demo cấu hình ở server: giao50.000đ, miễn giao từ10triệu tiền hàng; lắp100.000đ/mỗi sản phẩm cần lắp khi khách chọn dịch vụ. Giá đã gồm thuế, không cộng thêm thuế. Có thể đổi CHECKOUT_SHIPPING_FEE, CHECKOUT_FREE_SHIPPING_THRESHOLD, CHECKOUT_ASSEMBLY_UNIT_FEE. Đây chưa phải kết nối báo phí hãng vận chuyển. Báo giá không giữ hàng; thay đổi khi đặt trả409 và yêu cầu khách xác nhận lại.
 
-Giữ hàng/coupon chưa có tự động hết hạn (Task11): tồn giữ chỉ được trả qua hủy hoặc fulfillment TV4, không bỏ qua reservation khi chỉ hết timestamp. Khi mất kết nối lúc đặt, frontend lưu request/key theo user trong sessionStorage để gửi lại đúng nội dung, kể cả sau tải lại trang. Không sửa nội dung hoặc tạo key mới để retry một kết quả chưa rõ.
+COD mới có hạn xác nhận24giờ. SePay mới có hạn thanh toán30phút và chỉ tự hủy khi API xác minh không có tiền, đủ điều kiện an toàn. Tồn/coupon chỉ được trả cùng transaction hủy hoặc fulfillment TV4; timestamp hết hạn trên trình duyệt không tự giải phóng hàng. Khi mất kết nối lúc đặt, frontend lưu request/key theo user trong sessionStorage để gửi lại đúng nội dung, kể cả sau tải lại trang. Không sửa nội dung hoặc tạo key mới để retry một kết quả chưa rõ.
 
-Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy lần lượt `docs/database/V002__orders_request_fingerprint.sql`, `V003__shipments_idempotency.sql`, `V004__shipment_audit_index.sql`, `V005__orders_assembly_requested.sql`, `V006__payments_confirmation_note.sql`, `V007__refunds_verification_notes.sql`. V003/V004 hỗ trợ xuất kho/vận đơn TV4; V005 backfill đơn cũ đã thu phí lắp thành có chọn dịch vụ và lưu lựa chọn mới kể cả phí0; V006/V007 bổ sung ghi chú đối soát riêng cho nhân viên. Không xóa lịch sử và không chạy lại V001 trên database đã tồn tại.
+Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy lần lượt `docs/database/V002__orders_request_fingerprint.sql`, `V003__shipments_idempotency.sql`, `V004__shipment_audit_index.sql`, `V005__orders_assembly_requested.sql`, `V006__payments_confirmation_note.sql`, `V007__refunds_verification_notes.sql`, sau đó V008–V012 theo [migration README](database/README.md). V003/V004 hỗ trợ xuất kho/vận đơn TV4; V005 backfill đơn cũ đã thu phí lắp thành có chọn dịch vụ và lưu lựa chọn mới kể cả phí0; V006/V007 bổ sung ghi chú đối soát riêng cho nhân viên. Không xóa lịch sử và không chạy lại V001 trên database đã tồn tại.
 
 ## Quản trị đơn hàng TV3-07
 
@@ -156,7 +156,7 @@ Nếu chưa chuyển tiền và yêu cầu cũ cần thay bằng các khoản t�
 
 Khi mất mạng, lỗi đọc JSON,401/403/429 hoặc lỗi chưa rõ, React giữ nguyên key/body/chứng từ theo nhân viên và tài nguyên, kể cả tải lại trang. Đăng nhập lại bằng đúng tài khoản rồi thử lại yêu cầu đã gửi. Lỗi nghiệp vụ chắc chắn giữ nội dung thành bản nháp để đối chiếu và sửa; không tự tạo lệnh hoàn mới khi chưa biết kết quả cũ.
 
-V007 thêm hai cột ghi chú riêng; đã áp dụng cộng thêm trên DB chính và demo trong phiên này. Hoàn tự động qua VNPAY, xử lý timeout/đối soát của provider và callback hoàn tiền vẫn chờ TV3-09/cấu hình sandbox, chưa được đánh dấu hoàn tất.
+V007 thêm hai cột ghi chú riêng; đã áp dụng cộng thêm trên DB chính và demo trong phiên này. SePay Sandbox hiện dùng ý định gửi bền vững, đối soát/retry cùng khóa và giữ ngân sách khi chưa rõ kết quả; xem [quy trình SePay](TV3_SEPAY_SANDBOX.md). Luồng thủ công không được vượt một intent provider đã nhận.
 
 ## Hiệu năng đọc độc lập TV3-11
 
@@ -169,6 +169,6 @@ Xem [báo cáo19/11](performance/TV3_READ_PERFORMANCE_2026-11-19.md) và `tests/
 - STAFF/ADMIN mở `/admin/operations` để xem hàng đợi, lỗi DEAD, hạn đơn cần xử lý và pool Hikari thực; chạy batch hoặc retry DEAD có lý do/audit. `COMMERCE_JOBS_ENABLED=false` tắt lịch nền; thao tác thủ công vẫn dùng cùng kiểm tra điều kiện. Test Maven/commerce mặc định tắt lịch để tránh job tác động fixture.
 - Lắp đặt tại aftercare chỉ ghi sau DELIVERED thật, có nhân viên/thời điểm/bằng chứng; đủ giao/lắp/thu mới hoàn tất đơn. Kịch bản bàn giao đầy đủ và cấu hình từng job nằm trong [hướng dẫn mới](TV3_BAN_GIAO_VA_DEMO.md).
 
-Kiểm thử19/11: Java180ca (179đạt,1Gemini live bỏ qua), React142đạt/13file, build63module, Chrome7/7đạt; schema47bảng và22kiểm tra rollback đạt; harness tải15/15đạt. OpenAPI1.5.0 có52operation, Postman syntax lint không có lỗi. Đây là bằng chứng cục bộ, chưa phải nghiệm thu VNPAY hay triển khai production.
+Bằng chứng lịch sử ngày19/11 (không phải tổng test hiện tại): Java180ca (179đạt,1Gemini live bỏ qua), React142đạt/13file, build63module, Chrome7/7đạt; schema47bảng và22kiểm tra rollback đạt; harness tải15/15đạt. OpenAPI1.5.0 có52operation, Postman syntax lint không có lỗi. Đây là bằng chứng cục bộ, chưa phải nghiệm thu VNPAY hay triển khai production.
 
 Kịch bản Chrome mới: thu DEMO→khách hủy→xem PENDING refund→nhân viên hủy yêu cầu chưa gửi→tạo thay thế→cố ý mất phản hồi/tải lại/gửi cùng key→xác minh hoàn với chứng từ giả→mất phản hồi/tải lại/gửi cùng chứng từ→khách xem lịch sử đã hoàn, không thấy ghi chú riêng. Đây là transaction/API/MariaDB thật trên dữ liệu demo; không phải giao dịch ngân hàng hay sandbox provider.

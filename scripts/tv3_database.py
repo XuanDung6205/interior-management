@@ -43,7 +43,9 @@ def main():
         sql((ROOT/"docs/database/V008__commerce_operations.sql").read_text(encoding="utf-8"),args.database)
         sql((ROOT/"docs/database/V009__commerce_read_indexes.sql").read_text(encoding="utf-8"),args.database)
         sql((ROOT/"docs/database/V010__sepay_payment_snapshots.sql").read_text(encoding="utf-8"),args.database)
-        print("Applied additive V002-V010 migrations to isolated DB "+args.database+".")
+        sql((ROOT/"docs/database/V011__sepay_automation_review.sql").read_text(encoding="utf-8"),args.database)
+        sql((ROOT/"docs/database/V012__sepay_refund_execution.sql").read_text(encoding="utf-8"),args.database)
+        print("Applied additive V002-V012 migrations to isolated DB "+args.database+".")
         return
     if args.action=="create":
         bootstrap=(ROOT/"docs/database/V001__create_furniture_shop.sql").read_text(encoding="utf-8")
@@ -59,7 +61,9 @@ def main():
         sql((ROOT/"docs/database/V008__commerce_operations.sql").read_text(encoding="utf-8"),args.database)
         sql((ROOT/"docs/database/V009__commerce_read_indexes.sql").read_text(encoding="utf-8"),args.database)
         sql((ROOT/"docs/database/V010__sepay_payment_snapshots.sql").read_text(encoding="utf-8"),args.database)
-        print("Created "+args.database+" with 45 core tables plus 2 notification tables and V002-V010 migrations. Existing DBs were not overwritten.")
+        sql((ROOT/"docs/database/V011__sepay_automation_review.sql").read_text(encoding="utf-8"),args.database)
+        sql((ROOT/"docs/database/V012__sepay_refund_execution.sql").read_text(encoding="utf-8"),args.database)
+        print("Created "+args.database+" with 45 core tables plus 2 notification tables and V002-V012 migrations. Existing DBs were not overwritten.")
         return
     if len(os.environ.get("TV3_DEMO_PASSWORD",""))<10:
         parser.error("Supply TV3_DEMO_PASSWORD with at least 10 characters; it is not printed.")

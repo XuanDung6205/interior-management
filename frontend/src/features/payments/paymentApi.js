@@ -1,6 +1,10 @@
 export const paymentApi = api => ({
   reconcile: (paymentId, body) => api.request(`/admin/payments/${encodeURIComponent(paymentId)}/sepay/reconcile`, { method: 'POST', body }),
-  events: (status, page) => api.request(`/admin/payments/sepay/events?${new URLSearchParams({status,page})}`),
+  reconcileCode: paymentId => api.request(`/admin/payments/${encodeURIComponent(paymentId)}/sepay/reconcile-code`, { method: 'POST', body: {} }),
+  events: (status, page, reviewStatus = 'ALL') => api.request(`/admin/payments/sepay/events?${new URLSearchParams({status,page,reviewStatus})}`),
+  reviewEvent: (id, body) => api.request(`/admin/payments/sepay/events/${encodeURIComponent(id)}/review`, { method: 'POST', body }),
+  jobs: () => api.request('/admin/payments/sepay/jobs'),
+  runJobs: () => api.request('/admin/payments/sepay/jobs/run', { method: 'POST', body: {} }),
   summary: (orderId, signal) => api.request(`/orders/${encodeURIComponent(orderId)}/payments`, { signal }),
   create: (orderId, attempt) => api.request(`/orders/${encodeURIComponent(orderId)}/payments`, { method: 'POST', body: attempt.body, headers: { 'Idempotency-Key': attempt.key } }),
   list: (page, status, method, query, signal) => api.request(`/admin/payments?${new URLSearchParams({ page, size: 10, status, method, query })}`, { signal }),

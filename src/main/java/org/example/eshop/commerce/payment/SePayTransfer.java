@@ -8,7 +8,9 @@ import java.util.regex.Pattern;
 
 /** Shared business facts from the documented webhook and API v2 representations. */
 public record SePayTransfer(String eventId,String bank,String account,String subAccount,
-        String code,String content,String direction,BigDecimal amount,String reference,String transactionDate) {
+        String code,String content,String direction,BigDecimal amount,String reference,String transactionDate,
+        String providerTransactionId,String bankAccountId) {
+    public SePayTransfer(String eventId,String bank,String account,String subAccount,String code,String content,String direction,BigDecimal amount,String reference,String transactionDate){this(eventId,bank,account,subAccount,code,content,direction,amount,reference,transactionDate,null,null);}
     private static final Pattern CODE=Pattern.compile("(?<![A-Z0-9])DH[0-9]{8}(?![A-Z0-9])");
     public static SePayTransfer webhook(JsonNode n){
         String id=text(n,"id",100,true);
@@ -20,7 +22,9 @@ public record SePayTransfer(String eventId,String bank,String account,String sub
         String direction=text(n,"transfer_type",10,true);
         BigDecimal in=money(n.get("amount_in")),out=money(n.get("amount_out"));
         if(!Set.of("in","out").contains(direction)||("in".equals(direction)?out:in).signum()!=0)throw invalid();
-        return new SePayTransfer("api:"+requestedId,text(n,"bank_brand_name",50,true),text(n,"account_number",64,true),text(n,"va",64,false),text(n,"code",100,false),text(n,"transaction_content",2000,true),direction,"in".equals(direction)?in:out,text(n,"reference_number",150,false),text(n,"transaction_date",64,true));
+        String content=text(n,"transaction_content",2000,true),code=text(n,"code",100,false);
+        if(code.isBlank()){var found=CODE.matcher(content.toUpperCase(Locale.ROOT));if(found.find()){String candidate=found.group();if(!found.find())code=candidate;}}
+        return new SePayTransfer("api:"+requestedId,text(n,"bank_brand_name",50,true),text(n,"account_number",64,true),text(n,"va",64,false),code,content,direction,"in".equals(direction)?in:out,text(n,"reference_number",150,false),text(n,"transaction_date",64,true),requestedId,optionalUuid(n,"bank_account_id"));
     }
     public boolean validCode(){
         var found=CODE.matcher(content.toUpperCase(Locale.ROOT));var codes=new ArrayList<String>();while(found.find())codes.add(found.group());
@@ -35,4 +39,5 @@ public record SePayTransfer(String eventId,String bank,String account,String sub
     private static BigDecimal money(JsonNode n){try{if(n==null||(!n.isNumber()&&!n.isTextual())||!n.asText().matches("[0-9]{1,15}(?:\\.[0-9]{1,2})?"))throw invalid();return new BigDecimal(n.asText()).setScale(2);}catch(ArithmeticException e){throw invalid();}}
     private static String text(JsonNode n,String key,int max,boolean required){var v=n.get(key);if(v==null||v.isNull()){if(required)throw invalid();return "";}if(!v.isValueNode()||v.isBoolean())throw invalid();String s=v.asText();if(s.length()>max||(required&&s.isBlank())||s.codePoints().anyMatch(Character::isISOControl))throw invalid();return s;}
     static CommerceException invalid(){return CommerceException.badRequest("SEPAY_INVALID_PAYLOAD","Dữ liệu giao dịch SePay không hợp lệ.");}
+    private static String optionalUuid(JsonNode n,String field){String value=text(n,field,100,false);if(value.isEmpty())return null;try{if(!value.matches("[a-fA-F0-9-]{36}"))throw invalid();return UUID.fromString(value).toString();}catch(IllegalArgumentException e){throw invalid();}}
 }

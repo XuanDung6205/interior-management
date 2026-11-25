@@ -2,7 +2,7 @@
 
 Bản release phục vụ giao diện React và REST API trên **cùng một địa chỉ**. Máy chạy không cần mở Vite hoặc Docker. Các trang sâu như `/orders/123`, `/admin/orders/123/aftercare` mở lại/refresh được; `/api/*` và `/assets/*` không được chuyển thành HTML React.
 
-Đây là gói runtime commerce hiện có, chưa tích hợp VNPAY sandbox hoặc các module ngoài phạm vi đã bàn giao.
+Gói này chứa runtime commerce và [SePay Test mode](TV3_SEPAY_SANDBOX.md); không gọi Production. Các module ngoài phạm vi bàn giao vẫn cần nghiệm thu riêng.
 
 ## Build từ source
 
@@ -28,7 +28,7 @@ Ba file này không chứa dữ liệu MariaDB hoặc mật khẩu. Khi chuyển
 
 ## Chuẩn bị DB
 
-Runtime yêu cầu schema V001–V009 với47bảng. Với dữ liệu demo mới, dùng script tạo/seed như [hướng dẫn bàn giao](TV3_BAN_GIAO_VA_DEMO.md); với dữ liệu đã backup, dùng [backup/restore](TV3_BACKUP_RESTORE.md) để khôi phục vào DB test mới. Không trỏ test/seed/restore vào DB chính.
+Runtime yêu cầu schema V001–V012 với47bảng. Với dữ liệu demo mới, dùng script tạo/seed như [hướng dẫn bàn giao](TV3_BAN_GIAO_VA_DEMO.md); với dữ liệu đã backup, dùng [backup/restore](TV3_BACKUP_RESTORE.md) để khôi phục vào DB test mới. Không trỏ test/seed/restore vào DB chính.
 
 ```powershell
 $env:DB_PASSWORD = Read-Host 'Mật khẩu MariaDB cho terminal này'

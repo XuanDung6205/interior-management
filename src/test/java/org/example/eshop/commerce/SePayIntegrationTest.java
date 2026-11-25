@@ -21,7 +21,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 
 @org.springframework.test.context.TestPropertySource(properties="commerce.jobs.enabled=false")
-@SpringBootTest(classes=CommerceApplication.class,properties={"commerce.payments.bank.mode=DEMO", "commerce.payments.sepay.enabled=true", "spring.datasource.hikari.transaction-isolation=TRANSACTION_READ_COMMITTED", "commerce.payments.sepay.webhook-secret=test-only-hmac-key-at-least-32-characters", "commerce.payments.sepay.bank=VietinBank", "commerce.payments.sepay.account-number=0000000001", "commerce.payments.sepay.account-holder=TEST ACCOUNT"})
+@SpringBootTest(classes=CommerceApplication.class,properties={"commerce.payments.bank.mode=DEMO", "commerce.payments.sepay.enabled=true", "commerce.payments.sepay.api-token=unit-test-token", "spring.datasource.hikari.transaction-isolation=TRANSACTION_READ_COMMITTED", "commerce.payments.sepay.webhook-secret=test-only-hmac-key-at-least-32-characters", "commerce.payments.sepay.bank=VietinBank", "commerce.payments.sepay.account-number=0000000001", "commerce.payments.sepay.account-holder=TEST ACCOUNT"})
 @ActiveProfiles("commerce")
 @EnabledIfEnvironmentVariable(named="TV3_TEST_DB_URL",matches=".*furniture_shop_test_.*")
 class SePayIntegrationTest {
@@ -29,6 +29,7 @@ class SePayIntegrationTest {
     @Autowired JdbcTemplate db;
     @Autowired ObjectMapper mapper;
     @Autowired WebApplicationContext context;
+    @Autowired org.example.eshop.commerce.payment.SePayAutomationService automation;
     MockMvc mvc;
     @org.springframework.test.context.bean.override.mockito.MockitoSpyBean org.example.eshop.commerce.order.OrderStore storeSpy;
     @org.springframework.test.context.bean.override.mockito.MockitoBean org.example.eshop.commerce.payment.SePayApiClient provider;
@@ -128,5 +129,77 @@ class SePayIntegrationTest {
         mvc.perform(get(url)).andExpect(status().isUnauthorized());mvc.perform(get(url).with(user(other))).andExpect(status().isNotFound());
         byte[] png=mvc.perform(get(url).with(user(customer))).andExpect(status().isOk()).andExpect(content().contentType("image/png")).andExpect(header().string("Cache-Control",org.hamcrest.Matchers.containsString("no-store"))).andReturn().getResponse().getContentAsByteArray();assertTrue(png.length>500);assertEquals((byte)0x89,png[0]);
         webhook(event(21001,code(p),2050000,"0000000001","VietinBank"),200);mvc.perform(get(url).with(user(customer))).andExpect(status().isConflict());
+    }
+    @Test void newAttemptsHaveDeadlineButVerifiedApiAbsenceIsRequiredForExpiry()throws Exception{
+        long a=order(customer,"SEPAY"),p=payment(a);assertNotNull(db.queryForObject("SELECT expires_at FROM payments WHERE id=?",java.sql.Timestamp.class,p));
+        db.update("UPDATE payments SET expires_at=UTC_TIMESTAMP()-INTERVAL 1 MINUTE WHERE id=?",p);
+        org.mockito.Mockito.when(provider.searchCode(code(p))).thenReturn(new org.example.eshop.commerce.payment.SePayApiClient.SearchResult(List.of(),false));
+        assertFalse((Boolean)automation.reconcile(p).get("expired"));assertEquals("PENDING_CONFIRMATION",db.queryForObject("SELECT status FROM orders WHERE id=?",String.class,a));
+        org.mockito.Mockito.when(provider.searchCode(code(p))).thenReturn(new org.example.eshop.commerce.payment.SePayApiClient.SearchResult(List.of(),true));
+        assertTrue((Boolean)automation.reconcile(p).get("expired"));assertEquals("EXPIRED",db.queryForObject("SELECT status FROM payments WHERE id=?",String.class,p));assertEquals(0,db.queryForObject("SELECT SUM(reserved_quantity) FROM inventory_balances",Integer.class));
+        webhook(event(22001,code(p),2050000,"0000000001","VietinBank"),200);assertEquals(1,count("refunds"));assertEquals("CANCELLED",db.queryForObject("SELECT status FROM orders WHERE id=?",String.class,a));
+    }
+    @Test void apiFailureAndSuspiciousTransferLeaveStockAndOrderHeld()throws Exception{
+        long a=order(customer,"SEPAY"),p=payment(a);db.update("UPDATE payments SET expires_at=UTC_TIMESTAMP()-INTERVAL 1 MINUTE WHERE id=?",p);
+        org.mockito.Mockito.when(provider.searchCode(code(p))).thenThrow(org.example.eshop.commerce.common.CommerceException.conflict("SEPAY_API_UNAVAILABLE","Unavailable"));assertThrows(Exception.class,()->automation.reconcile(p));
+        var t=org.example.eshop.commerce.payment.SePayTransfer.webhook(mapper.readTree(event(23001,code(p),1,"0000000001","VietinBank")));
+        org.mockito.Mockito.doReturn(new org.example.eshop.commerce.payment.SePayApiClient.SearchResult(List.of(t),true)).when(provider).searchCode(code(p));assertFalse((Boolean)automation.reconcile(p).get("expired"));assertEquals("PENDING_CONFIRMATION",db.queryForObject("SELECT status FROM orders WHERE id=?",String.class,a));assertEquals(1,count("payment_events"));
+    }
+    @Test void verifiedEmptySearchCannotCancelConfirmedOrLegacyNullExpiryOrders()throws Exception{
+        long a=order(customer,"SEPAY"),p=payment(a);db.update("UPDATE payments SET expires_at=NULL WHERE id=?",p);org.mockito.Mockito.when(provider.searchCode(code(p))).thenReturn(new org.example.eshop.commerce.payment.SePayApiClient.SearchResult(List.of(),true));assertFalse((Boolean)automation.reconcile(p).get("expired"));
+        db.update("UPDATE payments SET expires_at=UTC_TIMESTAMP()-INTERVAL 1 MINUTE WHERE id=?",p);db.update("UPDATE orders SET status='CONFIRMED',confirmed_at=UTC_TIMESTAMP() WHERE id=?",a);assertFalse((Boolean)automation.reconcile(p).get("expired"));assertEquals("CONFIRMED",db.queryForObject("SELECT status FROM orders WHERE id=?",String.class,a));
+    }
+    @Test void staffReviewIsImmutableIdempotentAndCannotChangeMoney()throws Exception{
+        webhook(event(24001,"DH99999999",1000,"0000000001","VietinBank"),200);long e=db.queryForObject("SELECT id FROM payment_events",Long.class);String path="/api/admin/payments/sepay/events/"+e+"/review";String body="{\"note\":\"Đã kiểm tra, sai mã đơn\",\"expectedReviewStatus\":\"OPEN\"}";
+        mvc.perform(post(path).with(user(customer)).with(csrf()).contentType("application/json").content(body)).andExpect(status().isForbidden());
+        for(int n=0;n<2;n++)mvc.perform(post(path).with(user(staff)).with(csrf()).contentType("application/json").content(body)).andExpect(status().isOk());
+        mvc.perform(post(path).with(user(staff)).with(csrf()).contentType("application/json").content(body.replace("sai mã đơn","khác"))).andExpect(status().isConflict());
+        assertEquals("IGNORED",db.queryForObject("SELECT processing_status FROM payment_events",String.class));assertEquals(0,count("payments"));assertEquals(104L,db.queryForObject("SELECT reviewed_by FROM payment_events",Long.class));
+        var reviewed=json(mvc.perform(get("/api/admin/payments/sepay/events?status=IGNORED&reviewStatus=REVIEWED").with(user(staff))).andExpect(status().isOk()).andReturn());assertEquals(1,reviewed.path("items").size());
+    }
+    @Test void expiredUnpaidOrderReleasesCouponButPaidCallbackRaceNeverLosesCollection()throws Exception{
+        db.update("INSERT INTO coupons(code,discount_type,discount_value,starts_at,ends_at) VALUES('SPTTL','PERCENT',10,'2020-01-01','2099-01-01')");long a=order(customer,"SEPAY",2,"SPTTL"),p=payment(a);db.update("UPDATE payments SET expires_at=UTC_TIMESTAMP()-INTERVAL 1 MINUTE WHERE id=?",p);
+        org.mockito.Mockito.when(provider.searchCode(code(p))).thenReturn(new org.example.eshop.commerce.payment.SePayApiClient.SearchResult(List.of(),true));
+        race(()->automation.reconcile(p),()->webhook(event(25001,code(p),1850000,"0000000001","VietinBank"),200));
+        assertEquals("SUCCEEDED",db.queryForObject("SELECT status FROM payments WHERE id=?",String.class,p));String state=db.queryForObject("SELECT status FROM orders WHERE id=?",String.class,a);
+        assertEquals("CANCELLED".equals(state)?1:0,count("refunds"));assertEquals("CANCELLED".equals(state)?"RELEASED":"APPLIED",db.queryForObject("SELECT status FROM coupon_redemptions WHERE order_id=?",String.class,a));
+    }
+    @Test void reconciliationLeasePreventsConcurrentApiCallsAndFailuresPersistBackoff()throws Exception{
+        long a=order(customer,"SEPAY"),p=payment(a);var entered=new CountDownLatch(1);var release=new CountDownLatch(1);
+        org.mockito.Mockito.when(provider.searchCode(code(p))).thenAnswer(call->{entered.countDown();assertTrue(release.await(5,TimeUnit.SECONDS));return new org.example.eshop.commerce.payment.SePayApiClient.SearchResult(List.of(),true);});
+        var pool=Executors.newSingleThreadExecutor();try{var first=pool.submit(()->automation.reconcile(p));assertTrue(entered.await(5,TimeUnit.SECONDS));var error=assertThrows(org.example.eshop.commerce.common.CommerceException.class,()->automation.reconcile(p));assertEquals("SEPAY_CHECK_BUSY",error.getCode());release.countDown();first.get(10,TimeUnit.SECONDS);}finally{release.countDown();pool.shutdownNow();}
+        org.mockito.Mockito.verify(provider,org.mockito.Mockito.times(1)).searchCode(code(p));
+        org.mockito.Mockito.when(provider.searchCode(code(p))).thenThrow(org.example.eshop.commerce.common.CommerceException.conflict("SEPAY_API_UNAVAILABLE","Unavailable"));assertThrows(Exception.class,()->automation.reconcile(p));assertEquals(1,db.queryForObject("SELECT sepay_check_attempts FROM payments WHERE id=?",Integer.class,p));assertNull(db.queryForObject("SELECT sepay_lease_token FROM payments WHERE id=?",String.class,p));assertTrue(db.queryForObject("SELECT sepay_next_check_at>UTC_TIMESTAMP()+INTERVAL 60 SECOND FROM payments WHERE id=?",Boolean.class,p));
+    }
+    @Test void jobAndCodeRoutesRequireStaffAndCsrf()throws Exception{
+        long a=order(customer,"SEPAY"),p=payment(a);mvc.perform(get("/api/admin/payments/sepay/jobs").with(user(customer))).andExpect(status().isForbidden());mvc.perform(post("/api/admin/payments/sepay/jobs/run").with(user(staff))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/payments/sepay/jobs").with(user(staff))).andExpect(status().isOk());org.mockito.Mockito.when(provider.searchCode(code(p))).thenReturn(new org.example.eshop.commerce.payment.SePayApiClient.SearchResult(List.of(),true));mvc.perform(post("/api/admin/payments/"+p+"/sepay/reconcile-code").with(user(staff)).with(csrf()).contentType("application/json").content("{}")).andExpect(status().isOk());
+    }
+    @Test void exactApiEventReplayCanEnrichMissingRefundUuidsWithoutCollectingAgain()throws Exception{
+        long a=order(customer,"SEPAY"),p=payment(a);String id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",bank="b1b2c3d4-e5f6-7890-abcd-ef1234567890";var source=org.example.eshop.commerce.payment.SePayTransfer.webhook(mapper.readTree(event(26001,code(p),2050000,"0000000001","VietinBank")));
+        var processor=context.getBean(org.example.eshop.commerce.payment.SePayEventService.class);
+        processor.process(new org.example.eshop.commerce.payment.SePayTransfer("api:"+id,source.bank(),source.account(),source.subAccount(),source.code(),source.content(),source.direction(),source.amount(),source.reference(),source.transactionDate(),id,null),p);
+        assertNull(db.queryForObject("SELECT sepay_bank_account_id FROM payments WHERE id=?",String.class,p));
+        processor.process(new org.example.eshop.commerce.payment.SePayTransfer("api:"+id,source.bank(),source.account(),source.subAccount(),source.code(),source.content(),source.direction(),source.amount(),source.reference(),source.transactionDate(),id,bank),p);
+        assertEquals(bank,db.queryForObject("SELECT sepay_bank_account_id FROM payments WHERE id=?",String.class,p));assertEquals(id,db.queryForObject("SELECT sepay_transaction_id FROM payments WHERE id=?",String.class,p));assertEquals(1,count("audit_logs"));assertEquals(1,count("payment_events"));
+    }
+    @Test void workerBoundsCallsAndRecoversRecentCancelledAndMissingMetadataOnly()throws Exception{
+        var ids=new ArrayList<Long>();for(int n=0;n<10;n++)ids.add(order(customer,"SEPAY"));
+        long recent=ids.get(5),old=ids.get(6),missing=ids.get(7),complete=ids.get(8),leased=ids.get(9);cancel(recent);cancel(old);db.update("UPDATE orders SET cancelled_at=UTC_TIMESTAMP()-INTERVAL 100 HOUR WHERE id=?",old);
+        db.update("UPDATE payments SET status='SUCCEEDED' WHERE order_id IN (?,?)",missing,complete);db.update("UPDATE payments SET sepay_transaction_id='a1b2c3d4-e5f6-7890-abcd-ef1234567890',sepay_bank_account_id='b1b2c3d4-e5f6-7890-abcd-ef1234567890' WHERE order_id=?",complete);
+        db.update("UPDATE payments SET sepay_next_check_at=UTC_TIMESTAMP()-INTERVAL 1 HOUR");db.update("UPDATE payments SET sepay_lease_until=UTC_TIMESTAMP()+INTERVAL 5 MINUTE WHERE order_id=?",leased);
+        org.mockito.Mockito.when(provider.searchCode(org.mockito.ArgumentMatchers.anyString())).thenAnswer(call->{assertFalse(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());return new org.example.eshop.commerce.payment.SePayApiClient.SearchResult(List.of(),true);});
+        assertEquals(5,automation.runBatch().get("scanned"));assertEquals(2,automation.runBatch().get("scanned"));org.mockito.Mockito.verify(provider).searchCode(code(payment(recent)));org.mockito.Mockito.verify(provider).searchCode(code(payment(missing)));
+        for(long skipped:List.of(old,complete,leased))org.mockito.Mockito.verify(provider,org.mockito.Mockito.never()).searchCode(code(payment(skipped)));
+        org.mockito.Mockito.verify(provider,org.mockito.Mockito.times(7)).searchCode(org.mockito.ArgumentMatchers.anyString());
+    }
+    @Test void dispatchMixedAndMultipleAttemptsAndReviewedMismatchEachPreventExpiry()throws Exception{
+        for(String guard:List.of("dispatch","mixed","multiple","reviewed")){
+            long a=order(customer,"SEPAY"),p=payment(a);db.update("UPDATE payments SET expires_at=UTC_TIMESTAMP()-INTERVAL 1 MINUTE WHERE id=?",p);
+            if("dispatch".equals(guard))db.update("UPDATE inventory_reservations SET fulfilled_quantity=1 WHERE order_item_id IN (SELECT id FROM order_items WHERE order_id=?)",a);
+            if(Set.of("mixed","multiple").contains(guard))db.update("INSERT INTO payments(order_id,method,provider,idempotency_key,amount,status,expires_at) VALUES(?, 'BANK_TRANSFER',?,?,1000,'PENDING',UTC_TIMESTAMP()-INTERVAL 1 MINUTE)",a,"mixed".equals(guard)?"MANUAL_BANK":"SEPAY_SANDBOX",UUID.randomUUID().toString());
+            if("reviewed".equals(guard)){webhook(event(27001,code(p),1,"0000000001","VietinBank"),200);db.update("UPDATE payment_events SET reviewed_by=104,reviewed_at=UTC_TIMESTAMP(),review_note='Đã kiểm tra' WHERE payment_id=?",p);}
+            org.mockito.Mockito.when(provider.searchCode(code(p))).thenReturn(new org.example.eshop.commerce.payment.SePayApiClient.SearchResult(List.of(),true));assertFalse((Boolean)automation.reconcile(p).get("expired"),guard);assertEquals("PENDING_CONFIRMATION",db.queryForObject("SELECT status FROM orders WHERE id=?",String.class,a));
+        }
     }
 }

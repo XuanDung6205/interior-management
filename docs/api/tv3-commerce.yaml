@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: TV3 Furniture Commerce API
-  version: 1.7.0
-  description: 'TV3 session/CSRF, cart/coupons, checkout, customer/staff orders, manually verified COD/bank collections and refunds, guarded 24-hour COD confirmation expiry, durable local web notifications, protected operations and actual delivery/installation/return aftercare. Online gateway/banking and external SMTP remain sandbox dependencies; no external message is claimed sent.'
+  version: 1.8.0
+  description: 'TV3 session/CSRF, cart/coupons, orders, manual COD/bank payments and refunds, SePay Test mode HMAC/API reconciliation and recoverable Sandbox refunds, safe COD/SePay expiry, notifications, operations and aftercare. Production banking and external SMTP are not implemented.'
 servers:
 - url: http://localhost:8080
   description: Local Spring Boot commerce runtime
@@ -2480,7 +2480,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SePayProcessingResult'
+                $ref: '#/components/schemas/SePayWebhookAcknowledgement'
         '400': &sepayPath001
           description: Invalid input
           content:
@@ -2578,6 +2578,15 @@ paths:
           minimum: 0
           maximum: 10000
           default: 0
+      - name: reviewStatus
+        in: query
+        schema:
+          type: string
+          enum:
+          - ALL
+          - OPEN
+          - REVIEWED
+          default: ALL
       responses:
         '200':
           description: 25 sanitized events, including unknown payment codes; no raw payer data or secrets
@@ -2590,18 +2599,43 @@ paths:
                     type: array
                     maxItems: 25
                     items:
-                      type: object
+                      $ref: '#/components/schemas/SePayEvent'
                   page:
                     type: integer
                   size:
                     type: integer
                     enum:
                     - 25
-        '400': *sepayPath001
-        '401': *sepayPath002
-        '403': *sepayPath003
-        '404': *sepayPath004
-        '409': *sepayPath005
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Signature or session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Configuration, API unavailable, or transaction conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /api/orders/{order}/payments/{id}/sepay/qr:
     parameters:
     - in: path
@@ -2672,6 +2706,398 @@ paths:
           description: Not owned or missing
         '409':
           description: Payment no longer payable or sandbox disabled
+  /api/admin/payments/{id}/sepay/reconcile-code:
+    post:
+      operationId: reconcileSePaySandboxPaymentCode
+      summary: Search provider by the persisted DH code
+      tags:
+      - SePay Sandbox
+      description: Staff only. Bounded API lookup outside financial locks; complete requires explicit valid pagination
+        and classified rows. No cancellation on uncertainty. Request contains no amount/code override.
+      security:
+      - cookieSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      - name: X-CSRF-TOKEN
+        in: header
+        required: true
+        description: Get a fresh token from GET /api/csrf after session changes.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+            example: {}
+      responses:
+        '200':
+          description: Success; inspect financial state, not HTTP status alone
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/ManualPaymentSummary'
+                - type: object
+                  properties:
+                    reconciliationSummary:
+                      $ref: '#/components/schemas/SePayReconciliationSummary'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: State changed, incompatible evidence, or provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/admin/payments/sepay/events/{id}/review:
+    post:
+      operationId: reviewSePaySandboxEvent
+      summary: Record immutable review note for a failed or ignored event
+      tags:
+      - SePay Sandbox
+      description: Annotates original evidence without changing event processing status or money. Same actor and normalized
+        note replays the original result; changed content409. Original review actor/time are retained.
+      security:
+      - cookieSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      - name: X-CSRF-TOKEN
+        in: header
+        required: true
+        description: Get a fresh token from GET /api/csrf after session changes.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewSePayEvent'
+            example:
+              note: Checked against Sandbox transaction
+              expectedReviewStatus: OPEN
+      responses:
+        '200':
+          description: Success; inspect financial state, not HTTP status alone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SePayEvent'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: State changed, incompatible evidence, or provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/admin/payments/sepay/jobs:
+    get:
+      operationId: getSePaySandboxJobs
+      summary: Read reconciliation configuration and queue counts
+      tags:
+      - SePay Sandbox
+      description: Staff-only operations snapshot. Pending financial amounts are not settlement proof.
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success; inspect financial state, not HTTP status alone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SePayJobSnapshot'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: State changed, incompatible evidence, or provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/admin/payments/sepay/jobs/run:
+    post:
+      operationId: runSePaySandboxJobs
+      summary: Run one bounded reconciliation and expiry batch
+      tags:
+      - SePay Sandbox
+      description: Staff/CSRF required. Uses the same lease/backoff and locked expiry guards as scheduler. Never force-cancels
+        or backdates payments; no network result is treated as empty.
+      security:
+      - cookieSession: []
+      parameters:
+      - name: X-CSRF-TOKEN
+        in: header
+        required: true
+        description: Get a fresh token from GET /api/csrf after session changes.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+            example: {}
+      responses:
+        '200':
+          description: Success; inspect financial state, not HTTP status alone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SePayJobResult'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: State changed, incompatible evidence, or provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/admin/refunds/{id}/sepay/submit:
+    post:
+      operationId: submitSePaySandboxRefund
+      summary: Approve and submit an existing eligible Sandbox refund
+      tags:
+      - SePay Sandbox
+      description: Requires refunds-enabled, API write permission, verified provider transaction and existing pending
+        budget. Persists intent/key before HTTP. Uncertain delivery returns held PENDING/UNKNOWN; repeated calls retain
+        same identity. No Production host. Proof requires matching amount/VND and established refund ID. Supplied original_reference must match; only genuinely missing/null/blank reference permits exact requested transaction UUID as identity proof.
+      security:
+      - cookieSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      - name: X-CSRF-TOKEN
+        in: header
+        required: true
+        description: Get a fresh token from GET /api/csrf after session changes.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitSePayRefund'
+            example:
+              acknowledged: true
+      responses:
+        '200':
+          description: Success; inspect financial state, not HTTP status alone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRefundSummary'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: State changed, incompatible evidence, or provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/admin/refunds/{id}/sepay/sync:
+    post:
+      operationId: syncSePaySandboxRefund
+      summary: Recover the same approved provider refund intent
+      tags:
+      - SePay Sandbox
+      description: Queries known refund ID or retries the exact original request/key. Network errors, malformed replies
+        and retryable statuses keep budget held. Manual confirm/cancel stay blocked after provider claim. No implicit
+        initial send.
+      security:
+      - cookieSession: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      - name: X-CSRF-TOKEN
+        in: header
+        required: true
+        description: Get a fresh token from GET /api/csrf after session changes.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+            example: {}
+      responses:
+        '200':
+          description: Success; inspect financial state, not HTTP status alone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRefundSummary'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: Staff role or CSRF required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: State changed, incompatible evidence, or provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
 components:
   securitySchemes:
     cookieSession:
@@ -3990,9 +4416,11 @@ components:
         actionBlockReason:
           type: string
           nullable: true
-      description: Staff-only view. Private verification/resolution notes and processor
-        identity never enter customer snapshots. PENDING reserves budget; only reconciled
-        manual receipt confirmation marks SUCCEEDED.
+        sepayExecution:
+          $ref: '#/components/schemas/SePayRefundExecution'
+      description: Staff-only view. Private notes/processor identity never enter customer snapshots. PENDING reserves
+        budget; manual proof or verified provider success settles money. Provider-claimed requests cannot be manually
+        confirmed/cancelled.
     RefundPaymentBudget:
       type: object
       properties:
@@ -5140,6 +5568,8 @@ components:
           - SANDBOX
         canReconcile:
           type: boolean
+        automation:
+          $ref: '#/components/schemas/SePayAutomationConfiguration'
     SePayPaymentInstructions:
       type: object
       description: Persisted payee/code snapshots. qrUrl only appears for a currently payable pending payment
@@ -5184,3 +5614,194 @@ components:
           - IGNORED
         duplicate:
           type: boolean
+
+    SePayAutomationConfiguration:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        ttlSeconds:
+          type: integer
+          minimum: 60
+          maximum: 86400
+          example: 1800
+        intervalSeconds:
+          type: integer
+          example: 60
+      description: Enabled reflects safe automation configuration; expiry still requires successful current provider
+        verification.
+    SePayEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        paymentId:
+          type: integer
+          format: int64
+          nullable: true
+        orderId:
+          type: integer
+          format: int64
+          nullable: true
+        providerEventId:
+          type: string
+        status:
+          type: string
+          enum:
+          - FAILED
+          - IGNORED
+          - PROCESSED
+        reason:
+          type: string
+          nullable: true
+        receivedAt:
+          type: string
+          format: date-time
+        code:
+          type: string
+          nullable: true
+        reference:
+          type: string
+          nullable: true
+        amount:
+          type: string
+          nullable: true
+        reviewStatus:
+          type: string
+          enum:
+          - OPEN
+          - REVIEWED
+        reviewNote:
+          type: string
+          nullable: true
+          maxLength: 1000
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewedBy:
+          type: integer
+          format: int64
+          nullable: true
+      description: Sanitized staff-only event with immutable review annotation. No raw payload or payer metadata.
+    ReviewSePayEvent:
+      type: object
+      required:
+      - note
+      - expectedReviewStatus
+      properties:
+        note:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Trimmed immutable staff note; whitespace-only rejected.
+        expectedReviewStatus:
+          type: string
+          enum:
+          - OPEN
+    SePayReconciliationSummary:
+      type: object
+      properties:
+        checked:
+          type: integer
+          minimum: 0
+        matched:
+          type: integer
+          minimum: 0
+        complete:
+          type: boolean
+    SePayJobResult:
+      type: object
+      properties:
+        scanned:
+          type: integer
+          minimum: 0
+        reconciled:
+          type: integer
+          minimum: 0
+        expired:
+          type: integer
+          minimum: 0
+        deferred:
+          type: integer
+          minimum: 0
+        failed:
+          type: integer
+          minimum: 0
+      description: One bounded batch, not an exhaustive all-history scan.
+    SubmitSePayRefund:
+      type: object
+      required:
+      - acknowledged
+      properties:
+        acknowledged:
+          type: boolean
+          enum:
+          - true
+          description: Staff explicitly approves this existing refund to be sent through Sandbox.
+    SePayRefundExecution:
+      type: object
+      properties:
+        state:
+          type: string
+          enum:
+          - NOT_STARTED
+          - UNKNOWN
+          - PENDING
+          - SUCCEEDED
+          - FAILED
+          - REJECTED
+        refundId:
+          type: string
+          nullable: true
+        canSubmit:
+          type: boolean
+        canSync:
+          type: boolean
+        message:
+          type: string
+      description: Present for SePay refunds. PENDING/UNKNOWN holds local budget. Never exposes idempotency key or token.
+
+    SePayJobSnapshot:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        ttlSeconds:
+          type: integer
+          minimum: 60
+          maximum: 86400
+        intervalSeconds:
+          type: integer
+          minimum: 30
+          maximum: 3600
+        batchSize:
+          type: integer
+          minimum: 1
+          maximum: 20
+        canRun:
+          type: boolean
+        queue:
+          type: object
+          properties:
+            pending:
+              type: integer
+              minimum: 0
+            due:
+              type: integer
+              minimum: 0
+            leased:
+              type: integer
+              minimum: 0
+      description: Pending-payment queue snapshot; recently cancelled recovery and successful metadata discovery may
+        also be candidates. Does not expose API credentials.
+
+    SePayWebhookAcknowledgement:
+      type: object
+      required: [success]
+      additionalProperties: false
+      properties:
+        success:
+          type: boolean
+          enum: [true]

@@ -12,6 +12,8 @@ public class SePaySettings {
     public static final String PROVIDER = "SEPAY_SANDBOX";
     private final boolean enabled;
     private final String secret, token, bank, account, holder;
+    private SePayAutomationSettings automation;
+    @org.springframework.beans.factory.annotation.Autowired void automation(SePayAutomationSettings value){automation=value;}
 
     public SePaySettings(@Value("${commerce.payments.sepay.enabled:false}") boolean enabled,
             @Value("${commerce.payments.sepay.webhook-secret:}") String secret,
@@ -28,12 +30,13 @@ public class SePaySettings {
     }
     private static boolean safe(String s){return s.codePoints().noneMatch(c->Character.isISOControl(c)||Character.getType(c)==Character.FORMAT);}
     public boolean enabled(){return enabled;}
+    public boolean canReconcile(){return enabled&&!token.isBlank();}
     public String bank(){return bank;}
     public String account(){return account;}
     public String holder(){return holder;}
     String secret(){return secret;}
     String token(){return token;}
-    public Map<String,Object> publicView(){return Map.of("enabled",enabled,"environment","SANDBOX","canReconcile",enabled&&!token.isBlank());}
+    public Map<String,Object> publicView(){return Map.of("enabled",enabled,"environment","SANDBOX","canReconcile",canReconcile(),"automation",automation==null?Map.of("enabled",false,"ttlSeconds",1800,"intervalSeconds",60):automation.view(this));}
     public void requireEnabled(){if(!enabled)throw CommerceException.conflict("SEPAY_NOT_CONFIGURED","Chưa bật cấu hình SePay Sandbox.");}
     public void validateAmount(BigDecimal amount){
         requireEnabled();
