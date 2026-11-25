@@ -9,14 +9,15 @@ import java.time.*;
 import java.util.*;
 
 @Service
-@Transactional(readOnly=true)
+@Transactional(readOnly=true,isolation=org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
 public class PaymentQueryService {
     private final OrderStore store;
     private final CheckoutQuoteService actors;
     private final OrderAdminAccess access;
     private final BankTransferSettings bank;
     private final Clock clock;
-    public PaymentQueryService(OrderStore store,CheckoutQuoteService actors,OrderAdminAccess access,BankTransferSettings bank,Clock clock){this.store=store;this.actors=actors;this.access=access;this.bank=bank;this.clock=clock;}
+    private final SePaySettings sepaySettings;private final SePayPayments sepay;
+    public PaymentQueryService(OrderStore store,CheckoutQuoteService actors,OrderAdminAccess access,BankTransferSettings bank,Clock clock,SePaySettings sepaySettings,SePayPayments sepay){this.sepaySettings=sepaySettings;this.sepay=sepay;this.store=store;this.actors=actors;this.access=access;this.bank=bank;this.clock=clock;}
     public Map<String,Object> customer(long id){return summary(store.owned(id,actors.actorId(),false),false,null);}
     public Map<String,Object> staff(long payment){access.requireStaff();return summary(store.find(orderId(payment),false),true,payment);}
     long orderId(long payment){var ids=store.jdbc().query("SELECT order_id FROM payments WHERE id=?",(rs,n)->rs.getLong(1),payment);if(ids.isEmpty())throw CommerceException.notFound("Không tìm thấy khoản thanh toán.");return ids.get(0);}
@@ -46,17 +47,21 @@ public class PaymentQueryService {
     }
     boolean expired(Map<String,Object> p){return p.get("expiresAt")!=null&&!Instant.parse(p.get("expiresAt").toString()).isAfter(clock.instant());}
     static boolean manual(Map<String,Object> p){return ("COD".equals(p.get("method"))&&"COD".equals(p.get("provider")))||("BANK_TRANSFER".equals(p.get("method"))&&"MANUAL_BANK".equals(p.get("provider")));}
-    private static final String PAYMENT_COLUMNS="p.id,p.order_id AS orderId,p.method,p.provider,p.status,p.amount,p.currency,p.provider_transaction_id AS reference,p.confirmation_note AS confirmationNote,p.verified_by AS verifierId,p.paid_at AS paidAt,p.expires_at AS expiresAt,p.created_at AS createdAt";
+    private static final String PAYMENT_COLUMNS="p.sepay_code AS sepayCode,p.sepay_bank AS sepayBank,p.sepay_account_number AS sepayAccountNumber,p.sepay_account_holder AS sepayAccountHolder,p.sepay_content AS sepayContent,p.id,p.order_id AS orderId,p.method,p.provider,p.status,p.amount,p.currency,p.provider_transaction_id AS reference,p.confirmation_note AS confirmationNote,p.verified_by AS verifierId,p.paid_at AS paidAt,p.expires_at AS expiresAt,p.created_at AS createdAt";
     List<Map<String,Object>> payments(long id,boolean lock){
         // Lock only payment rows. Joining the verifier here would acquire extra user locks out of order.
         return store.rows("SELECT "+PAYMENT_COLUMNS+(lock?"":",v.full_name AS verifierName")+" FROM payments p"+(lock?"":" LEFT JOIN users v ON v.id=p.verified_by")+" WHERE p.order_id=? ORDER BY p.id"+(lock?" FOR UPDATE":""),id);
     }
     Map<String,Object> summary(Map<String,Object> order,boolean staff,Long selected){
         long id=((Number)order.get("id")).longValue();var t=totals(id);var payments=payments(id,false);String blocked=createBlock(order,t,payments);var result=new LinkedHashMap<String,Object>();
-        result.put("orderId",id);result.put("orderNumber",order.get("orderNumber"));result.put("orderStatus",order.get("status"));result.put("currency",order.get("currency"));result.put("totalAmount",order.get("grandTotal"));result.put("collectedAmount",amount(t.collected()));result.put("pendingRefundAmount",amount(t.pending()));result.put("refundedAmount",amount(t.refunded()));result.put("netCollectedAmount",amount(t.collected().subtract(t.held()).max(BigDecimal.ZERO)));result.put("remainingAmount",amount("CANCELLED".equals(order.get("status"))?BigDecimal.ZERO:decimal(order.get("grandTotal")).subtract(t.collected()).max(BigDecimal.ZERO)));result.put("canCreate",blocked==null);result.put("createBlockReason",blocked);result.put("items",payments.stream().map(p->view(p,order,t,staff)).toList());result.put("bankTransfer",bank.forOrder(order.get("orderNumber").toString()));if(selected!=null)result.put("selectedPaymentId",selected);return result;
+        result.put("sepay",sepaySettings.publicView());result.put("orderId",id);result.put("orderNumber",order.get("orderNumber"));result.put("orderStatus",order.get("status"));result.put("currency",order.get("currency"));result.put("totalAmount",order.get("grandTotal"));result.put("collectedAmount",amount(t.collected()));result.put("pendingRefundAmount",amount(t.pending()));result.put("refundedAmount",amount(t.refunded()));result.put("netCollectedAmount",amount(t.collected().subtract(t.held()).max(BigDecimal.ZERO)));result.put("remainingAmount",amount("CANCELLED".equals(order.get("status"))?BigDecimal.ZERO:decimal(order.get("grandTotal")).subtract(t.collected()).max(BigDecimal.ZERO)));result.put("canCreate",blocked==null);result.put("createBlockReason",blocked);result.put("items",payments.stream().map(p->view(p,order,t,staff)).toList());result.put("bankTransfer",bank.forOrder(order.get("orderNumber").toString()));if(selected!=null)result.put("selectedPaymentId",selected);
+        if(staff)result.put("sepayEvents",store.rows("SELECT e.id,e.provider_event_id AS providerEventId,e.payment_id AS paymentId,e.processing_status AS status,e.error_message AS reason,e.received_at AS receivedAt,JSON_UNQUOTE(JSON_EXTRACT(e.payload,'$.reference')) AS reference FROM payment_events e JOIN payments p ON p.id=e.payment_id WHERE p.order_id=? AND e.provider=? ORDER BY e.id DESC LIMIT 25",id,SePaySettings.PROVIDER));return result;
     }
     private Map<String,Object> view(Map<String,Object> p,Map<String,Object> order,Totals t,boolean staff){
-        var result=new LinkedHashMap<>(p);result.remove("verifierId");result.remove("verifierName");result.put("isExpired",expired(p));
+        var result=new LinkedHashMap<>(p);
+        if(SePaySettings.PROVIDER.equals(p.get("provider")))result.put("sepay",sepay.view(p,"PENDING".equals(p.get("status"))&&!Set.of("CANCELLED","COMPLETED").contains(order.get("status"))&&!expired(p)&&t.collected().compareTo(decimal(order.get("grandTotal")))<0&&t.held().signum()==0,staff));
+        for(String field:List.of("sepayCode","sepayBank","sepayAccountNumber","sepayAccountHolder","sepayContent"))result.remove(field);
+        result.remove("verifierId");result.remove("verifierName");result.put("isExpired",expired(p));
         if(!staff)result.remove("confirmationNote");
         else {Object verifier=p.get("verifierId");var verifiedBy=new LinkedHashMap<String,Object>();verifiedBy.put("id",verifier);verifiedBy.put("fullName",p.get("verifierName"));result.put("verifiedBy",verifier==null?null:verifiedBy);String blocked=confirmationBlock(order,t,p);result.put("canConfirm",blocked==null);result.put("confirmationMessage",blocked==null?null:message(blocked));result.put("isLateCollection","CANCELLED".equals(order.get("status")));}
         return result;

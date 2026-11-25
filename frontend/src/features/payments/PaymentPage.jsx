@@ -4,6 +4,7 @@ import { ErrorNotice, Loading } from '../../components/ui';
 import { useCommerce } from '../../lib/session';
 import { paymentMethods } from '../orders/OrderParts';
 import { BankGuidance, createBlockMessage, PaymentAmounts, PaymentHistory, PaymentNotice } from './PaymentParts';
+import { SePayGuidance, useSePayPolling } from './SePayParts';
 import { clearPaymentRequest, creationRejections, paymentApi, readPaymentRequest, savePaymentRequest } from './paymentApi';
 
 export default function PaymentPage() {
@@ -18,6 +19,7 @@ export default function PaymentPage() {
     client.summary(id, controller.signal).then(value => { if (!controller.signal.aborted) setSummary(value); }).catch(failure => { if (!controller.signal.aborted && failure.name !== 'AbortError') setError(failure); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [client, id]);
+  const pollingWarning = useSePayPolling({ active: !!summary?.items.some(p => p.provider === 'SEPAY_SANDBOX' && p.status === 'PENDING' && p.sepay?.qrUrl), client, id, lock, onSummary: setSummary });
   useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
   async function refresh() {
     if (lock.current) return; lock.current = true; setBusy(true); setError(null);
@@ -37,11 +39,11 @@ export default function PaymentPage() {
   return <>
     <div className="breadcrumb"><Link to={`/orders/${id}`}>Đơn hàng</Link><span>/</span><span>Thanh toán</span></div>
     <div className="page-heading payment-page-heading"><div><span className="eyebrow">THEO DÕI KHOẢN THU</span><h1>{summary ? `Thanh toán đơn ${summary.orderNumber}` : 'Thanh toán đơn hàng'}</h1><p>Khoản phải thu, chứng từ và hoàn tiền được theo dõi riêng.</p></div><button className="button secondary" disabled={busy || loading} onClick={refresh}>Làm mới thanh toán</button></div>
-    <PaymentNotice bank={summary?.bankTransfer} />
+    <PaymentNotice bank={summary?.bankTransfer} sepay={summary?.items.some(p => p.provider === 'SEPAY_SANDBOX')} />{pollingWarning && <p className="notice warning" role="status">{pollingWarning}</p>}
     <div ref={errorRef} tabIndex="-1"><ErrorNotice error={error} />{error?.status === 401 && <Link className="inline-link" to="/login" state={{ returnTo: `/orders/${id}/payments` }}>Đăng nhập lại để kiểm tra yêu cầu</Link>}</div>
     {notice && <div className="notice success" role="status">{notice}</div>}
     {pending && <section className="notice warning" aria-label="Yêu cầu thanh toán chưa rõ kết quả"><h2>Giữ nguyên yêu cầu đang chờ kết quả</h2><p>Phương thức đã gửi: {paymentMethods[pending.body.method]}. Hãy gửi lại đúng yêu cầu này để nhận kết quả, không tạo yêu cầu khác sau khi mất phản hồi.</p><button className="button" disabled={busy} onClick={create}>{busy ? 'Đang kiểm tra…' : 'Thử lại yêu cầu thanh toán'}</button></section>}
-    {loading ? <Loading text="Đang tải thông tin thanh toán…" /> : summary && <div className="payments-layout"><div className="payments-main"><BankGuidance summary={summary} /><PaymentHistory items={summary.items} /></div><aside className="payments-aside"><PaymentAmounts summary={summary} />{!pending && <section className="panel payment-create"><h2>Yêu cầu thanh toán</h2>{summary.canCreate ? <><p>Chỉ tạo khi lần trước đã kết thúc. Số tiền được cửa hàng tính lại từ đơn.</p><label htmlFor="payment-method">Phương thức yêu cầu mới</label><select id="payment-method" value={method} onChange={event => setMethod(event.target.value)} disabled={busy}><option value="COD">Thanh toán khi nhận hàng</option><option value="BANK_TRANSFER" disabled={!summary.bankTransfer?.configured}>Chuyển khoản ngân hàng</option></select><button className="button full" disabled={busy || method === 'BANK_TRANSFER' && !summary.bankTransfer?.configured} onClick={create}>{busy ? 'Đang tạo…' : 'Tạo yêu cầu thanh toán'}</button></> : <p>{createBlockMessage(summary.createBlockReason)}</p>}</section>}</aside></div>}
+    {loading ? <Loading text="Đang tải thông tin thanh toán…" /> : summary && <div className="payments-layout"><div className="payments-main"><SePayGuidance summary={summary} /><BankGuidance summary={summary} /><PaymentHistory items={summary.items} /></div><aside className="payments-aside"><PaymentAmounts summary={summary} />{!pending && <section className="panel payment-create"><h2>Yêu cầu thanh toán</h2>{summary.canCreate ? <><p>Chỉ tạo khi lần trước đã kết thúc. Số tiền được cửa hàng tính lại từ đơn.</p><label htmlFor="payment-method">Phương thức yêu cầu mới</label><select id="payment-method" value={method} onChange={event => setMethod(event.target.value)} disabled={busy}>{summary.sepay?.enabled && <option value="SEPAY">SePay Sandbox · QR thử nghiệm</option>}<option value="COD">Thanh toán khi nhận hàng</option><option value="BANK_TRANSFER" disabled={!summary.bankTransfer?.configured}>Chuyển khoản ngân hàng</option></select><button className="button full" disabled={busy || method === 'BANK_TRANSFER' && !summary.bankTransfer?.configured} onClick={create}>{busy ? 'Đang tạo…' : 'Tạo yêu cầu thanh toán'}</button></> : <p>{createBlockMessage(summary.createBlockReason)}</p>}</section>}</aside></div>}
     <Link className="inline-link" to={`/orders/${id}`}>← Chi tiết đơn hàng</Link>
   </>;
 }

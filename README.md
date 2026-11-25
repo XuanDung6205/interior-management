@@ -29,3 +29,7 @@ python scripts/tv3_release.py run --database furniture_shop_tv3_dev --port 8080
 Mở `http://127.0.0.1:8080`. Startup không tự tạo schema/tài khoản; xem hướng dẫn release trước khi dùng DB mới. `.env.example` chỉ là mẫu tên biến, Spring không tự nạp file này. Không commit mật khẩu, backup hoặc khóa provider; `target/` và `backups/` được Git bỏ qua.
 
 Đã có thu/hoàn **thủ công có đối chiếu chứng từ** và demo cô lập; VNPAY sandbox/webhook/đối soát/hoàn online vẫn chờ tích hợp riêng. Thông báo hiện giao vào hộp thư web, chưa gửi email/SMS.
+
+## SePay Test mode (TV3)
+
+Luồng QR + Webhook HMAC-SHA256 và đối soát API v2: [Hướng dẫn chạy Sandbox](docs/TV3_SEPAY_SANDBOX.md), [hợp đồng API](docs/api/TV3_SEPAY_SANDBOX_CONTRACT.md). Cấu hình mặc định tắt; khóa nằm ngoài Git trong `.env.sepay.local`.

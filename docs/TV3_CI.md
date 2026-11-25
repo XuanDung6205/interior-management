@@ -8,7 +8,7 @@ and Node 24, matching `frontend/package.json`.
 The job performs these checks in order:
 
 1. Run the Python operational helper tests, including recovery/release guards.
-2. Create `furniture_shop_test_tv3_policy_ci` with V001-V009 and require 47
+2. Create `furniture_shop_test_tv3_policy_ci` with V001-V010 and require 47
    InnoDB tables. Run the complete Maven test suite against it.
 3. Run `scripts/ci_verify_tests.py`. Every Java class gated by
    `TV3_TEST_DB_URL` or `LEGACY_TEST_DB_URL` must appear in Surefire results and
@@ -68,7 +68,7 @@ service at job completion.
 
 To reproduce the key gates on a local disposable database, set `DB_PASSWORD`,
 `DB_USERNAME` and `TV3_TEST_DB_URL` in the process environment. The URL must point
-to `furniture_shop_test_tv3_policy_*` with V001-V009 already applied. A complete
+to `furniture_shop_test_tv3_policy_*` with V001-V010 already applied. A complete
 Maven run also needs `LEGACY_TEST_DB_URL` and `DB_URL` pointing to a separate
 initially empty `furniture_shop_test_legacy_*` database, a temporary Base64
 `JWT_SECRET` encoding at least 32 bytes, and
@@ -109,3 +109,8 @@ definitions: [checkout v6.0.2](https://github.com/actions/checkout/releases/tag/
 [upload-artifact v6.0.0](https://github.com/actions/upload-artifact/releases/tag/v6.0.0).
 The service configuration follows [GitHub's service container documentation](https://docs.github.com/en/actions/tutorials/use-containerized-services/use-docker-service-containers)
 and [MariaDB's healthcheck script](https://github.com/MariaDB/mariadb-docker/blob/master/healthcheck.sh).
+
+SePay Test mode is enabled for packaged browser checks using a new masked HMAC key
+per CI run, a fake bank account and no API token. The SePay browser test signs
+local fixture deliveries; CI makes no SePay network calls and uses no user keys.
+Real CLI delivery/API reconciliation are separately documented local evidence.

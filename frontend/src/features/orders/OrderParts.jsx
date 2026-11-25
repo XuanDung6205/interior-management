@@ -3,7 +3,7 @@ import { formatMoney } from '../../lib/format';
 
 export const orderStates = { PENDING_CONFIRMATION: 'Chờ xác nhận', CONFIRMED: 'Đã xác nhận', PROCESSING: 'Đang xử lý', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy' };
 const states = { ...orderStates, PENDING: 'Đang chờ', SUCCEEDED: 'Đã thu tiền', FAILED: 'Thất bại', REFUNDED: 'Đã hoàn tiền', PARTIALLY_REFUNDED: 'Đã hoàn một phần', CREATED: 'Đã tạo', READY: 'Sẵn sàng giao', SHIPPED: 'Đang giao', DELIVERED: 'Đã giao', RETURNED: 'Đã trả hàng', IN_TRANSIT: 'Đang vận chuyển', OUT_FOR_DELIVERY: 'Đang giao tới bạn', PACKING: 'Đang đóng gói', NOT_CREATED: 'Chưa tạo', NOT_REQUIRED: 'Không yêu cầu', PARTIALLY_PAID: 'Đã thu một phần', EXCEPTION: 'Cần kiểm tra', EXPIRED: 'Đã hết hạn' };
-export const paymentMethods = { COD: 'Thanh toán khi nhận hàng', BANK_TRANSFER: 'Chuyển khoản ngân hàng' };
+export const paymentMethods = { COD: 'Thanh toán khi nhận hàng', BANK_TRANSFER: 'Chuyển khoản ngân hàng', SEPAY: 'SePay Sandbox · QR thử nghiệm' };
 export function Status({ value, kind }) {
   const label = kind === 'refund' && value === 'SUCCEEDED' ? 'Đã hoàn tiền' : value ? states[value] || value : 'Chưa có';
   return <span className={`status-pill ${['CANCELLED', 'FAILED', 'EXPIRED', 'NOT_CREATED', 'NOT_REQUIRED', 'EXCEPTION'].includes(value) ? 'inactive' : 'active'}`}><span />{label}</span>;

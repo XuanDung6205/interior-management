@@ -9,7 +9,7 @@ export default function RefundCreate({ id, actorId, summary, client, onUpdated }
   const [pending, setPending] = useState(() => readRefundRequest('create', actorId, id));
   const [draft, setDraft] = useState(() => readRefundRequest('create', actorId, id)?.body || readRefundRequest('createDraft', actorId, id) || { paymentId: '', amount: '', reason: '', returnRequestId: '' });
   const [review, setReview] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState(null); const [notice, setNotice] = useState(''); const lock = useRef(false); const errorRef = useRef(null);
-  const payments = summary.payments.filter(item => item.canRefund && ['COD', 'MANUAL_BANK'].includes(item.provider));
+  const payments = summary.payments.filter(item => item.canRefund && ['COD', 'MANUAL_BANK', 'SEPAY_SANDBOX'].includes(item.provider));
   const paymentId = draft.paymentId || payments[0]?.id || ''; const needsReturn = summary.orderStatus !== 'CANCELLED';
   const valid = summary.canCreate && payments.some(item => String(item.id) === String(paymentId)) && validAmount(draft.amount) && draft.reason.trim().length > 0 && draft.reason.length <= 1000 && (!needsReturn || !!draft.returnRequestId);
   function change(key, value) { const next = { ...draft, [key]: value }; setDraft(next); setNotice(''); try { saveRefundRequest('createDraft', actorId, id, next); } catch (failure) { setError(failure); } }

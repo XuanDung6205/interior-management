@@ -13,7 +13,7 @@ public class RefundPolicy {
     public RefundPolicy(OrderStore store){this.store=store;}
     static BigDecimal money(Object value){return new BigDecimal(value.toString());}
     static String amount(BigDecimal value){return value.setScale(2,RoundingMode.HALF_UP).toPlainString();}
-    static boolean manual(Map<String,Object> payment){return "SUCCEEDED".equals(payment.get("status"))&&PaymentQueryService.manual(payment);}
+    static boolean manual(Map<String,Object> payment){return "SUCCEEDED".equals(payment.get("status"))&&(PaymentQueryService.manual(payment)||SePaySettings.PROVIDER.equals(payment.get("provider")));}
     BigDecimal held(List<Map<String,Object>> refunds,Long payment,Long returned){
         return refunds.stream().filter(r->Set.of("PENDING","SUCCEEDED").contains(r.get("status")))
             .filter(r->payment==null||((Number)r.get("paymentId")).longValue()==payment)

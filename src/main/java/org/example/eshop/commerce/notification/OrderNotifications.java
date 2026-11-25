@@ -14,6 +14,7 @@ public final class OrderNotifications {
         switch(action){
             case "ORDER_STATUS_CHANGED"->{String status=Objects.toString(after.get("status"),"");title="Trạng thái đơn hàng đã cập nhật";body=switch(status){case "CONFIRMED"->"Cửa hàng đã xác nhận đơn hàng.";case "PROCESSING"->"Đơn hàng đang được chuẩn bị và giao nhận.";case "COMPLETED"->"Đơn hàng đã hoàn thành giao nhận, thanh toán và lắp đặt đã chọn.";case "CANCELLED"->"Đơn hàng đã được hủy. Khoản đã thu, nếu có, được theo dõi hoàn tiền riêng.";default->"Vui lòng xem chi tiết đơn hàng để theo dõi trạng thái mới.";};}
             case "ORDER_EXPIRED"->{title="Đơn COD đã hết thời hạn xác nhận";body="Đơn COD chưa xác nhận đã được hủy theo thời hạn. Hàng và lượt ưu đãi đang giữ đã được giải phóng.";}
+            case "SEPAY_PAYMENT_CONFIRMED"->{title="Đã ghi nhận thanh toán SePay Sandbox";body="Giao dịch thử nghiệm đã được xác thực và ghi nhận cho đơn hàng.";}
             case "PAYMENT_CONFIRMED"->{title="Đã xác minh khoản thu";body="Cửa hàng đã đối chiếu chứng từ và ghi nhận khoản thu của đơn hàng.";}
             case "REFUND_REQUESTED"->{title="Đã tiếp nhận yêu cầu hoàn tiền";body="Yêu cầu hoàn đang chờ xử lý; đây chưa phải xác nhận tiền đã được trả lại.";}
             case "REFUND_CONFIRMED"->{title="Đã xác minh hoàn tiền";body="Cửa hàng đã đối chiếu chứng từ trả lại tiền. Xem lịch sử hoàn tiền trong đơn hàng.";}

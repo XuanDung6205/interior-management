@@ -37,6 +37,7 @@ build/
 
 # Private logical database snapshots and recovery data.
 backups/
+.superpowers/
 *.sql.gz
 __pycache__/
 *.py[cod]
