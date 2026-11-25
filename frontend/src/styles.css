@@ -952,3 +952,34 @@ input[type='radio'] { accent-color: var(--teal); width: 18px; height: 18px; min-
 .sepay-qr-layout dl { flex: 1 1 220px; min-width: 0; }
 .sepay-qr-layout dd, .sepay-event-review p { overflow-wrap: anywhere; }
 .sepay-event-review { margin-top: 1.5rem; }
+
+/* TV5: Content, Reviews, Dashboard và Chat tư vấn */
+.tv5-tabs { display: flex; gap: 10px; margin-bottom: 18px; }
+.tv5-form-pad { padding: 24px 27px; }
+.tv5-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.tv5-table-wrap { overflow-x: auto; }
+.tv5-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tv5-table th, .tv5-table td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.tv5-table th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.tv5-article-detail { padding: 32px; max-width: 860px; margin: 0 auto; }
+.tv5-article-summary { font-size: 15px; margin: 14px 0 22px; }
+.tv5-article-cover .product-image { height: 340px; margin-bottom: 24px; }
+.tv5-article-body p { margin: 0 0 16px; line-height: 1.8; }
+.tv5-article-footer { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); }
+.tv5-inline-item { display: flex; align-items: center; gap: 14px; }
+.tv5-thumb .product-image { width: 64px; height: 64px; }
+.tv5-review-card { padding: 16px 0; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.tv5-review-card:last-child { border-bottom: 0; }
+.tv5-chat-root { position: fixed; right: 20px; bottom: 20px; z-index: 60; }
+.tv5-chat-toggle { border-radius: 999px; box-shadow: 0 8px 24px rgba(23, 78, 71, 0.25); }
+.tv5-chat-box { width: min(440px, calc(100vw - 32px)); height: min(580px, calc(100vh - 96px)); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 16px 36px rgba(48, 47, 41, 0.18); }
+.tv5-chat-messages { flex: 1; min-height: 0; padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.tv5-chat-bubble { padding: 12px 14px; border-radius: 10px; font-size: 13.5px; line-height: 1.6; }
+.tv5-chat-bubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tv5-chat-bubble.user { background: var(--teal); color: #fff; align-self: flex-end; max-width: 84%; }
+.tv5-chat-bubble.assistant { background: var(--canvas); border: 1px solid var(--line); align-self: flex-start; max-width: 92%; }
+.tv5-chat-sources { margin: 10px 0 0; padding-left: 18px; font-size: 12.5px; }
+.tv5-chat-sources a { color: var(--teal); text-decoration: underline; }
+.tv5-chat-form { display: flex; gap: 8px; padding: 14px; border-top: 1px solid var(--line); background: var(--paper); }
+.tv5-chat-form input { flex: 1; }
+@media print { .tv5-chat-root { display: none !important; } }

@@ -184,7 +184,7 @@ test('demo paid order is cancelled, its unsent refund is replaced and exact refu
       if (path === '/admin/refunds') { await adminPage.getByLabel('Tìm yêu cầu hoàn', { exact: true }).fill(order.orderNumber); await adminPage.getByRole('button', { name: 'Tìm kiếm', exact: true }).click(); await expect(adminPage.getByRole('link', { name: `Đối chiếu hoàn ${refundId}`, exact: true })).toBeVisible(); }
       for (const width of [1440, 1024, 768, 390, 375]) {
         await adminPage.setViewportSize({ width, height: 1000 });
-        await expect(adminPage.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('link')).toHaveCount(13);
+        await expect(adminPage.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('link')).toHaveCount(19);
         expect(await adminPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `No overflow at ${path} width ${width}`).toBe(true);
         if ([1440, 390].includes(width)) await adminPage.screenshot({ path: `test-results/tv3-refund-${path === '/admin/refunds' ? 'queue' : path.endsWith('/refunds') ? 'order' : 'detail'}-${width}.png`, fullPage: true });
       }
