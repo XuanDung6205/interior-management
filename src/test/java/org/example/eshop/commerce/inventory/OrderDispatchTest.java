@@ -44,7 +44,8 @@ class OrderDispatchTest {
 
     @TestConfiguration
     @EnableTransactionManagement
-    @Import({OrderDispatchService.class, ShipmentLifecycleService.class, OrderCompletionPolicy.class, OrderLifecycleService.class,
+    @Import({OrderDispatchService.class, ShipmentLifecycleService.class, ShipmentScheduleService.class,
+        OrderCompletionPolicy.class, OrderLifecycleService.class,
         OrderStore.class, OrderAdminAccess.class, OrderLifecyclePolicy.class, AdminOrderQueryService.class,
         OrderQueryService.class, OrderCancellationService.class, JdbcOrderAuditAdapter.class})
     static class Config {
@@ -71,6 +72,46 @@ class OrderDispatchTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired OrderDispatchService service;
     @Autowired ShipmentLifecycleService lifecycle;
+    @Autowired ShipmentScheduleService schedules;
+    @Autowired OrderQueryService orderQueries;
+
+    @Test void schedulesDeliveryAndSelectedInstallationWithSafeReplay() {
+        jdbc.update("UPDATE orders SET assembly_requested=1 WHERE id=?", ORDER);
+        jdbc.update("UPDATE order_items SET assembly_required=1 WHERE id=?", ITEM);
+        long shipment = service.dispatch(ORDER, request(), "dispatch-schedule-001").shipmentId();
+        var delivery = new ShipmentScheduleRequest("DELIVERY", "2026-11-15T09:00:00Z", "2026-11-15T12:00:00Z", null);
+        var first = schedules.schedule(shipment, delivery, "schedule-delivery-001");
+        assertThat(first.scheduledFrom()).isEqualTo("2026-11-15T09:00Z");
+        assertThat(first.scheduledTo()).isEqualTo("2026-11-15T12:00Z");
+        assertThat(schedules.schedule(shipment, delivery, "schedule-delivery-001").replayed()).isTrue();
+        assertThatThrownBy(() -> schedules.schedule(shipment,
+                new ShipmentScheduleRequest("DELIVERY", "2026-11-16T09:00:00Z", "2026-11-16T12:00:00Z", null),
+                "schedule-delivery-001"))
+                .isInstanceOfSatisfying(CommerceException.class, error -> assertThat(error.getCode()).isEqualTo("IDEMPOTENCY_CONFLICT"));
+        assertThatThrownBy(() -> schedules.schedule(shipment,
+                new ShipmentScheduleRequest("DELIVERY", "2026-11-14T09:00:00Z", "2026-11-14T12:00:00Z", null),
+                "schedule-delivery-002"))
+                .isInstanceOfSatisfying(CommerceException.class, error -> assertThat(error.getCode()).isEqualTo("INVALID_SHIPMENT_SCHEDULE"));
+
+        var installation = new ShipmentScheduleRequest("INSTALLATION", null, null, "2026-11-16T09:00:00Z");
+        assertThat(schedules.schedule(shipment, installation, "schedule-install-001").installationStatus()).isEqualTo("SCHEDULED");
+        assertThat(schedules.schedule(shipment, installation, "schedule-install-001").replayed()).isTrue();
+        var customerShipments = (java.util.List<?>) orderQueries.detailFor(ORDER, OWNER).get("shipments");
+        assertThat(customerShipments).hasSize(1);
+        var customerShipment = (java.util.Map<?, ?>) customerShipments.get(0);
+        assertThat(customerShipment.get("scheduledFrom")).isEqualTo("2026-11-15T09:00:00Z");
+        assertThat(customerShipment.get("installationScheduledAt")).isEqualTo("2026-11-16T09:00:00Z");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_logs WHERE action='SHIPMENT_SCHEDULE' AND entity_id=?",
+                Integer.class, Long.toString(shipment))).isEqualTo(2);
+    }
+
+    @Test void refusesInstallationWithoutSelectedService() {
+        long shipment = service.dispatch(ORDER, request(), "dispatch-schedule-002").shipmentId();
+        assertThatThrownBy(() -> schedules.schedule(shipment,
+                new ShipmentScheduleRequest("INSTALLATION", null, null, "2026-11-16T09:00:00Z"),
+                "schedule-install-002"))
+                .isInstanceOfSatisfying(CommerceException.class, error -> assertThat(error.getCode()).isEqualTo("INSTALLATION_NOT_READY"));
+    }
 
     @Test void dispatchFromPendingUsesAuditedForwardLifecycleEdges() {
         jdbc.update("UPDATE orders SET status='PENDING_CONFIRMATION' WHERE id=?",ORDER);

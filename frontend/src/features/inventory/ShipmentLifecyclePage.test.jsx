@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { SessionContext } from '../../lib/session';
@@ -39,4 +39,36 @@ it('retries a returned shipment with the same body and key after losing the resp
   expect(calls).toHaveLength(2);
   expect(calls[0]).toEqual(calls[1]);
   await waitFor(() => expect(sessionStorage.getItem('tv4.shipment.pending.7')).toBeNull());
+});
+
+it('saves a delivery window and retries the same schedule after an uncertain response', async () => {
+  vi.stubGlobal('crypto', { randomUUID: () => 'schedule-request-001' });
+  const calls = [];
+  const api = { request: async (path, options = {}) => {
+    if (path.startsWith('/admin/inventory/shipments?')) return { items: [{ id: 12, orderId: 8,
+      orderNumber: 'ORD-008', warehouseId: 3, warehouseCode: 'MAIN', carrier: 'Nội bộ',
+      trackingNumber: 'VAN-001', status: 'IN_TRANSIT', shippedAt: '2026-11-14T10:00:00Z' }],
+    page: 0, size: 20, totalPages: 1 };
+    if (path === '/admin/inventory/shipments/12/schedule' && options.method === 'POST') {
+      calls.push(options);
+      if (calls.length === 1) throw new Error('Mất kết nối khi đặt lịch');
+      return { id: 12, trackingNumber: 'VAN-001', status: 'IN_TRANSIT', replayed: true };
+    }
+    throw new Error(`Unexpected request ${path}`);
+  } };
+  render(<SessionContext.Provider value={{ api, session: { user: { id: 7, roles: ['STAFF'] } } }}><ShipmentLifecyclePage /></SessionContext.Provider>);
+  const user = userEvent.setup();
+  await screen.findByText(/ORD-008/);
+  await user.click(screen.getByRole('button', { name: 'Đặt lịch' }));
+  fireEvent.change(screen.getByLabelText('Bắt đầu giao'), { target: { value: '2026-11-25T09:00' } });
+  fireEvent.change(screen.getByLabelText('Kết thúc giao'), { target: { value: '2026-11-25T12:00' } });
+  await user.click(screen.getByRole('button', { name: 'Lưu lịch' }));
+  await screen.findByText('Mất kết nối khi đặt lịch');
+  expect(sessionStorage.getItem('tv4.shipment.schedule.pending.7')).toContain('schedule-request-001');
+  await user.click(screen.getByRole('button', { name: 'Kiểm tra lịch và gửi lại' }));
+  await screen.findByText(/Cập nhật đã được ghi nhận trước đó/);
+  expect(calls).toHaveLength(2);
+  expect(calls[0]).toEqual(calls[1]);
+  expect(calls[0].body.kind).toBe('DELIVERY');
+  expect(new Date(calls[0].body.scheduledTo).getTime() - new Date(calls[0].body.scheduledFrom).getTime()).toBe(3 * 3600 * 1000);
 });

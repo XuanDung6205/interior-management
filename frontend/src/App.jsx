@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { createApiClient } from './lib/apiClient';
 import { SessionContext } from './lib/session';
 import { ErrorNotice, Icon, Loading } from './components/ui';
 import CartPage from './features/cart/CartPage';
+import HomePage from './features/home/HomePage';
 import LoginPage from './features/auth/LoginPage';
 import CouponAdminPage from './features/promotions/CouponAdminPage';
 import InventoryReceiptPage from './features/inventory/InventoryReceiptPage';
@@ -48,7 +49,10 @@ export default function App() {
     api.request('/session').then(value => { if (active) setSession(value); }).catch(value => { if (active) setError(value); });
     return () => { active = false; };
   }, [api, revision]);
-  useEffect(() => { document.title = `${/^\/(?:admin\/)?orders\/\d+\/print$/.test(location.pathname) ? 'Phiếu đơn hàng' : location.pathname === '/notifications' ? 'Thông báo' : location.pathname === '/admin/operations' ? 'Vận hành hệ thống' : /^\/admin\/orders\/\d+\/aftercare$/.test(location.pathname) ? 'Hậu mãi đơn hàng' : /^\/orders\/\d+\/returns$/.test(location.pathname) ? 'Trả hàng' : (location.pathname.startsWith('/admin/refunds') || /^\/admin\/orders\/\d+\/refunds$/.test(location.pathname)) ? 'Quản lý hoàn tiền' : location.pathname.startsWith('/admin/payments') ? 'Quản lý thanh toán' : location.pathname.startsWith('/admin/orders') ? 'Quản lý đơn hàng' : location.pathname.startsWith('/admin/inventory/shipments') ? 'Theo dõi vận đơn' : location.pathname.startsWith('/admin/inventory/dispatch') ? 'Xuất kho giao hàng' : location.pathname.startsWith('/admin/inventory/operations') ? 'Điều chỉnh và chuyển kho' : location.pathname.startsWith('/admin/inventory/receipts') ? 'Nhập kho' : location.pathname.startsWith('/admin/coupons') ? 'Quản lý ưu đãi' : location.pathname === '/login' ? 'Đăng nhập' : location.pathname === '/checkout' ? 'Đặt hàng' : /^\/orders\/\d+\/payments$/.test(location.pathname) ? 'Thanh toán đơn' : location.pathname.startsWith('/orders') ? 'Đơn hàng' : 'Giỏ hàng'} · Nếp Nhà`; }, [location.pathname]);
+  useEffect(() => {
+    if (location.hash && session) document.getElementById(location.hash.slice(1))?.scrollIntoView?.();
+  }, [location.pathname, location.hash, session]);
+  useEffect(() => { document.title = `${location.pathname === '/' ? 'Trang chủ' : /^\/(?:admin\/)?orders\/\d+\/print$/.test(location.pathname) ? 'Phiếu đơn hàng' : location.pathname === '/notifications' ? 'Thông báo' : location.pathname === '/admin/operations' ? 'Vận hành hệ thống' : /^\/admin\/orders\/\d+\/aftercare$/.test(location.pathname) ? 'Hậu mãi đơn hàng' : /^\/orders\/\d+\/returns$/.test(location.pathname) ? 'Trả hàng' : (location.pathname.startsWith('/admin/refunds') || /^\/admin\/orders\/\d+\/refunds$/.test(location.pathname)) ? 'Quản lý hoàn tiền' : location.pathname.startsWith('/admin/payments') ? 'Quản lý thanh toán' : location.pathname.startsWith('/admin/orders') ? 'Quản lý đơn hàng' : location.pathname.startsWith('/admin/inventory/shipments') ? 'Theo dõi vận đơn' : location.pathname.startsWith('/admin/inventory/dispatch') ? 'Xuất kho giao hàng' : location.pathname.startsWith('/admin/inventory/operations') ? 'Điều chỉnh và chuyển kho' : location.pathname.startsWith('/admin/inventory/receipts') ? 'Nhập kho' : location.pathname.startsWith('/admin/coupons') ? 'Quản lý ưu đãi' : location.pathname === '/login' ? 'Đăng nhập' : location.pathname === '/checkout' ? 'Đặt hàng' : /^\/orders\/\d+\/payments$/.test(location.pathname) ? 'Thanh toán đơn' : location.pathname.startsWith('/orders') ? 'Đơn hàng' : 'Giỏ hàng'} · Nếp Nhà`; }, [location.pathname]);
   const isStaff = session?.user?.roles?.some(role => role === 'STAFF' || role === 'ADMIN');
   async function logout() {
     setBusy(true); setError(null);
@@ -60,11 +64,11 @@ export default function App() {
     <a className="skip-link" href="#main">Đến nội dung chính</a>
     <div className="announcement">Một chút tinh tế. Một tổ ấm riêng bạn.</div>
     <header className="site-header"><div className="header-inner">
-      <Link to="/cart" className="brand" aria-label="Nếp Nhà — Trang giỏ hàng"><span className="brand-mark"><Icon name="leaf" size={27} /></span><span>Nếp Nhà<small>NỘI THẤT & KHÔNG GIAN SỐNG</small></span></Link>
-      <nav className={isStaff ? 'main-nav staff-nav' : 'main-nav'} aria-label="Điều hướng chính"><NavLink to="/cart"><Icon name="bag" />Giỏ hàng</NavLink>{session?.authenticated && <NavLink to="/orders"><Icon name="orders" />Đơn hàng</NavLink>}{session?.authenticated && <NavLink to="/notifications"><Icon name="orders" />Thông báo<UnreadBadge key={session.user.id} /></NavLink>}{isStaff && <><NavLink to="/admin/operations"><Icon name="shield" />Vận hành</NavLink><NavLink to="/admin/orders"><Icon name="shield" />Quản lý đơn hàng</NavLink><NavLink to="/admin/payments"><Icon name="ticket" />Khoản thu</NavLink><NavLink to="/admin/refunds"><Icon name="ticket" />Hoàn tiền</NavLink><NavLink to="/admin/coupons"><Icon name="ticket" />Quản lý ưu đãi</NavLink><NavLink to="/admin/inventory/receipts"><Icon name="box" />Nhập kho</NavLink><NavLink to="/admin/inventory/operations"><Icon name="box" />Điều chuyển</NavLink><NavLink to="/admin/inventory/dispatch"><Icon name="orders" />Xuất kho</NavLink><NavLink to="/admin/inventory/shipments"><Icon name="orders" />Vận đơn</NavLink></>}</nav>
+      <Link to="/" className="brand" aria-label="Nếp Nhà — Trang chủ"><span className="brand-mark"><Icon name="leaf" size={27} /></span><span>Nếp Nhà<small>NỘI THẤT & KHÔNG GIAN SỐNG</small></span></Link>
+      <nav className={isStaff ? 'main-nav staff-nav' : 'main-nav'} aria-label="Điều hướng chính"><NavLink to="/" end>Trang chủ</NavLink><NavLink to="/cart"><Icon name="bag" />Giỏ hàng</NavLink>{session?.authenticated && <NavLink to="/orders"><Icon name="orders" />Đơn hàng</NavLink>}{session?.authenticated && <NavLink to="/notifications"><Icon name="orders" />Thông báo<UnreadBadge key={session.user.id} /></NavLink>}{isStaff && <><NavLink to="/admin/operations"><Icon name="shield" />Vận hành</NavLink><NavLink to="/admin/orders"><Icon name="shield" />Quản lý đơn hàng</NavLink><NavLink to="/admin/payments"><Icon name="ticket" />Khoản thu</NavLink><NavLink to="/admin/refunds"><Icon name="ticket" />Hoàn tiền</NavLink><NavLink to="/admin/coupons"><Icon name="ticket" />Quản lý ưu đãi</NavLink><NavLink to="/admin/inventory/receipts"><Icon name="box" />Nhập kho</NavLink><NavLink to="/admin/inventory/operations"><Icon name="box" />Điều chuyển</NavLink><NavLink to="/admin/inventory/dispatch"><Icon name="orders" />Xuất kho</NavLink><NavLink to="/admin/inventory/shipments"><Icon name="orders" />Vận đơn</NavLink></>}</nav>
       <div className="account-nav">{session?.authenticated ? <><span className="account-name"><Icon name="user" />{session.user.fullName || session.user.username}</span><button className="text-button" disabled={busy} onClick={logout}>{busy ? 'Đang thoát…' : 'Đăng xuất'}</button></> : <NavLink to="/login" className="login-link"><Icon name="user" />Đăng nhập</NavLink>}</div>
     </div></header>
-    <main id="main" className="page-shell" tabIndex="-1">
+    <main id="main" className={location.pathname === '/' ? 'page-shell home-shell' : 'page-shell'} tabIndex="-1">
       <ErrorNotice error={error} onRetry={() => setRevision(value => value + 1)} />
       {!session ? !error && <Loading text="Đang kết nối cửa hàng…" /> : <Routes>
         <Route path="/cart" element={<CartPage key={`${session.user?.id ?? 'guest'}-${revision}`} />} />
@@ -91,10 +95,10 @@ export default function App() {
         <Route path="/admin/inventory/operations" element={<StaffPage isStaff={isStaff}><StockOperationsPage key={session.user?.id ?? 'guest'} /></StaffPage>} />
         <Route path="/admin/inventory/dispatch" element={<StaffPage isStaff={isStaff}><OrderDispatchPage key={session.user?.id ?? 'guest'} /></StaffPage>} />
         <Route path="/admin/inventory/shipments" element={<StaffPage isStaff={isStaff}><ShipmentLifecyclePage key={session.user?.id ?? 'guest'} /></StaffPage>} />
-        <Route path="/" element={<Navigate to="/cart" replace />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="*" element={<section className="access-state panel"><h1>Chưa tìm thấy trang này</h1><Link to="/cart" className="button">Về giỏ hàng</Link></section>} />
       </Routes>}
     </main>
-    <footer className="site-footer"><Link to="/cart" className="footer-brand">Nếp Nhà.</Link><span>Chọn điều giản dị, sống thật an yên.</span><span>Nội thất cho tổ ấm của bạn</span></footer>
+    <footer className="site-footer"><Link to="/" className="footer-brand">Nếp Nhà.</Link><span>Chọn điều giản dị, sống thật an yên.</span><span>Nội thất cho tổ ấm của bạn</span></footer>
   </SessionContext.Provider>;
 }

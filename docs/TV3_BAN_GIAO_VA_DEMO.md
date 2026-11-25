@@ -42,6 +42,10 @@ Remove-Item Env:TV3_DEMO_PASSWORD
 
 Seed riêng tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU nội thất và tồn MAIN; **Sofa Modena** có `assembly_required=true` để tái lập demo lắp đặt, **Bàn trà Oslo** giữ false để bảo toàn ca đã chọn dịch vụ nhưng sản phẩm không bắt buộc lắp. DB demo cũ chỉ cần cập nhật cờ catalog có chủ đích bởi owner; không seed/reset số dư hay lịch sử để bổ sung cờ này. Mật khẩu do người chạy cấp qua environment và được BCrypt; không có mật khẩu đăng nhập mặc định. Không chia sẻ secret thật qua tài liệu/Git. Dataset lớn cho đo tải chỉ nằm ở DB `furniture_shop_test_perf_ops_20261119`; không import nó vào DB demo lâu dài.
 
+Trang chủ React tại `/` dùng ảnh gốc Nếp Nhà trong `frontend/public/images` và lấy tên, giá, ảnh sản phẩm nổi bật từ catalog API. Sau khi seed ba SKU demo, chạy `python scripts/seed_home_images.py` với `DB_PASSWORD` trong environment để thêm đường dẫn ảnh `/images/...` vào `product_images` của `furniture_shop_tv3_dev`. Script chỉ nhận DB demo này, có thể chạy lại mà không tạo ảnh trùng; file ảnh nằm trên web server, MariaDB chỉ lưu đường dẫn. Các ảnh demo này được tạo mới cho project, không lấy từ Exclusivia.
+
+Carousel xoay 3D trên Home lấy các banner đang hoạt động từ `GET /api/commerce/home/gallery` (`placement='HOME_GALLERY'`, đúng lịch hiển thị, tối đa 12 ảnh). Đưa chuột vào carousel để bắt đầu xoay, rời chuột để dừng; trên màn hình cảm ứng có thể vuốt, bàn phím dùng phím mũi tên. Chạy `python scripts/seed_home_gallery.py` với `DB_PASSWORD` trong environment để thêm sáu ảnh không gian riêng vào bảng `banners` của `furniture_shop_tv3_dev`; có thể chạy lại mà không tạo dòng trùng. Ảnh được tạo mới để minh họa phong cách Nếp Nhà, không phải ảnh chụp nhà khách hàng hay ảnh/sản phẩm của Exclusivia. Khi chưa có banner hợp lệ, trang Home ẩn carousel.
+
 Các biến môi trường cần biết:
 
 - `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`: datasource; DB_URL phải chọn rõ demo/test trong môi trường thử nghiệm.

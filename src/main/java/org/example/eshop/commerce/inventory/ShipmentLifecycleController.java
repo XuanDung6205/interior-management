@@ -14,7 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin/inventory/shipments")
 public class ShipmentLifecycleController {
     private final ShipmentLifecycleService service;
-    public ShipmentLifecycleController(ShipmentLifecycleService service) { this.service = service; }
+    private final ShipmentScheduleService schedules;
+    public ShipmentLifecycleController(ShipmentLifecycleService service, ShipmentScheduleService schedules) {
+        this.service = service;
+        this.schedules = schedules;
+    }
 
     @GetMapping
     public ShipmentLifecycleService.ShipmentPage list(@RequestParam(defaultValue = "0") int page,
@@ -28,5 +32,12 @@ public class ShipmentLifecycleController {
             @Valid @RequestBody ShipmentStatusRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String key) {
         return service.changeStatus(shipmentId, request, key);
+    }
+
+    @PostMapping("/{shipmentId}/schedule")
+    public ShipmentLifecycleService.ShipmentView schedule(@PathVariable long shipmentId,
+            @RequestBody ShipmentScheduleRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String key) {
+        return schedules.schedule(shipmentId, request, key);
     }
 }

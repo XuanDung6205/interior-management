@@ -59,7 +59,9 @@ public class OrderQueryService {
         order.put("shipments",store.rows("""
             SELECT id,status,tracking_number AS trackingNumber,carrier,
               shipped_at AS shippedAt,delivered_at AS deliveredAt,
+              scheduled_from AS scheduledFrom,scheduled_to AS scheduledTo,
               installation_required AS installationRequired,installation_status AS installationStatus,
+              installation_scheduled_at AS installationScheduledAt,
               installation_completed_at AS installationCompletedAt
             FROM shipments WHERE order_id=? ORDER BY id
             """,id));
