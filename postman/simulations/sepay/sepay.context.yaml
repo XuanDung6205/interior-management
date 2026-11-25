@@ -1,0 +1,23 @@
+purpose:
+  stands_in_for: SePay API v2 Sandbox transaction detail HTTP boundary
+  unblocks: Reproducible bounded HTTP client verification without account credentials
+assumptions:
+  - id: documented-transaction-representation
+    status: supported
+    claim: The sampled Sandbox transaction detail uses the same success envelope and snake_case fields as API v2.
+    reason: Authored from primary provider documentation; stand-in is not proof of a real provider response.
+    verification: Real sandbox GET transaction detail and staff reconciliation succeeded on 2026-11-25. Java HTTP client also passed the fixture and 429/malformed JSON cases using the authored handler directly. Postman simulation CLI could not start its local dataset daemon because of a local TLS handshake error; no successful Postman simulation run is claimed.
+    source: https://developer.sepay.vn/vi/sepay-api/v2/giao-dich/chi-tiet
+    updated_at: '2026-11-25'
+  - id: mock-provenance
+    status: unknown
+    claim: This mock represents the transaction-detail path only.
+    reason: Postman CLI is signed out; official-owner mock discovery was unavailable. Generated locally from primary docs and narrowed to explicit fixture cases.
+    verification: No published or deployed mock was used. No production service is contacted by this simulation.
+    source: postman/specs/sepay-sandbox.yaml
+    updated_at: '2026-11-25'
+fingerprints:
+  - id: local-stand-in
+    date: '2026-11-25'
+    commit: null
+    cli: '1.73.0'

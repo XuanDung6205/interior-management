@@ -1,0 +1,7 @@
+simulation: sepay-sandbox-boundary
+routing: path
+mocks:
+  - name: sepay-sandbox
+    routeKey: sepay
+    origin: [userapi-sandbox.sepay.vn]
+    path: postman/mocks/sepay-sandbox/config.yaml

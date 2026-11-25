@@ -48,7 +48,7 @@ public class CheckoutQuoteService {
         if(r.cartId()==null||r.cartId()<=0)errors.put("cartId","Giỏ hàng không hợp lệ.");
         if((r.addressId()==null)==(r.shippingAddress()==null))errors.put("shippingAddress","Chọn một địa chỉ đã lưu hoặc nhập địa chỉ nhận hàng.");
         if(r.addressId()!=null&&r.addressId()<=0)errors.put("addressId","Địa chỉ không hợp lệ.");
-        if(!Set.of("COD","BANK_TRANSFER").contains(Objects.toString(r.paymentMethod(),"")))errors.put("paymentMethod","Chọn COD hoặc chuyển khoản.");
+        if(!Set.of("COD","BANK_TRANSFER","SEPAY").contains(Objects.toString(r.paymentMethod(),"")))errors.put("paymentMethod","Chọn COD hoặc chuyển khoản.");
         if(r.customerNote()!=null&&r.customerNote().length()>2000)errors.put("customerNote","Ghi chú tối đa 2000 ký tự.");
         if(r.couponCode()!=null&&!r.couponCode().isBlank()&&!r.couponCode().trim().matches("[a-zA-Z0-9_-]{1,50}"))errors.put("couponCode","Mã giảm giá không hợp lệ.");
         if(!errors.isEmpty())throw CommerceException.invalid(errors);

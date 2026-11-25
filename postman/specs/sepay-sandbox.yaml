@@ -1,0 +1,37 @@
+openapi: 3.0.3
+info:
+  title: SePay Sandbox transaction boundary fixture
+  version: 1.0.0
+  description: Locally authored from the official API v2 transaction detail example; not an official SePay mock.
+servers:
+  - url: https://userapi-sandbox.sepay.vn/v2
+paths:
+  /transactions/{transaction_id}:
+    get:
+      parameters:
+        - in: path
+          name: transaction_id
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Official API v2 envelope and field names
+          content:
+            application/json:
+              example:
+                status: success
+                data:
+                  id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                  transaction_date: '2026-01-22 16:45:30'
+                  account_number: '0000000001'
+                  va: null
+                  transfer_type: in
+                  amount_in: 2050000
+                  amount_out: 0
+                  transaction_content: SEVQR DH00000001
+                  reference_number: FT-TEST-1
+                  code: DH00000001
+                  bank_brand_name: VietinBank
+        '404': {description: Transaction absent or outside authenticated company}
+        '429': {description: API rate limited}
+        '500': {description: Upstream failure}

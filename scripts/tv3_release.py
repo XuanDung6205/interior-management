@@ -91,7 +91,7 @@ def build(offline=False):
         (staging / (JAR_NAME + '.sha256')).write_text(checksum + '  ' + JAR_NAME + '\n', encoding='ascii')
         metadata = {'formatVersion': 1, 'artifact': JAR_NAME, 'sha256': checksum,
                     'builtAtUtc': datetime.now(timezone.utc).isoformat(), 'javaMinimum': 17,
-                    'mainClass': START_CLASS, 'schemaMigrations': 'V001-V009',
+                    'mainClass': START_CLASS, 'schemaMigrations': 'V001-V010',
                     'frontendAssets': assets, 'testsExecutedByBuild': False}
         (staging / 'release.json').write_text(json.dumps(metadata, indent=2) + '\n', encoding='utf-8')
         # Metadata is published last; run validates the pair before executing it.

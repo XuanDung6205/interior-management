@@ -120,3 +120,7 @@ V001 là bootstrap ban đầu, chưa cấu hình Flyway/Liquibase trong project.
 - [DECIMAL](https://mariadb.com/docs/server/reference/data-types/numeric-data-types/decimal)
 - [FOR UPDATE](https://mariadb.com/docs/server/reference/sql-statements/data-manipulation/selecting-data/for-update)
 - [Vector overview](https://mariadb.com/docs/server/reference/sql-structure/vectors/vector-overview)
+
+### V010 — SePay
+
+`V010__sepay_payment_snapshots.sql` thêm 5 cột snapshot nullable và unique index cho mã DH trong `payments`, giữ nguyên 47 bảng và các khoản COD/chuyển khoản cũ. Không lưu token/secret. Script TV3 create/migrate đã áp dụng V001-V010 cho DB demo/test. Sao lưu DB đang dùng trước khi áp dụng migration.

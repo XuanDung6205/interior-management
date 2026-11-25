@@ -41,7 +41,7 @@ public class CommerceSecurityConfiguration {
         var provider=new DaoAuthenticationProvider(commerceUserDetailsService);
         provider.setPasswordEncoder(commercePasswordEncoder);
         http.authenticationProvider(provider)
-            .csrf(csrf -> csrf.csrfTokenRepository(new HttpSessionCsrfTokenRepository()).csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
+            .csrf(csrf -> csrf.ignoringRequestMatchers(request -> "POST".equals(request.getMethod()) && (request.getContextPath()+"/api/payments/sepay/webhook").equals(request.getRequestURI())).csrfTokenRepository(new HttpSessionCsrfTokenRepository()).csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/admin/coupons","/api/admin/coupons/**","/api/admin/orders","/api/admin/orders/**","/api/admin/inventory","/api/admin/inventory/**","/api/admin/payments","/api/admin/payments/**","/api/admin/refunds","/api/admin/refunds/**","/api/admin/aftercare/**","/api/admin/operations","/api/admin/operations/**").hasAnyRole("ADMIN","STAFF")
                 .requestMatchers("/api/cart/merge","/api/checkout","/api/checkout/**","/api/orders","/api/orders/**","/api/notifications","/api/notifications/**").authenticated()

@@ -42,6 +42,12 @@
         </dependencies>
     </dependencyManagement>
     <dependencies>
+        <!-- Offline QR generation: no payee/order details sent to an image service. -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.4</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>

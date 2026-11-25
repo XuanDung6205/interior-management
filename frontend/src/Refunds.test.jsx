@@ -145,3 +145,10 @@ it.each([['FAILED', 'Thất bại'], ['PENDING', 'Đang chờ']])('distinguishes
   const collected = within(screen.getByRole('heading', { name: '#31 · Chuyển khoản ngân hàng' }).parentElement);
   expect(collected.getByText('Đã thu')).toBeInTheDocument(); expect(collected.getByText('Đã thu tiền')).toBeInTheDocument();
 });
+
+it('allows evidence-based manual creation and resolution for a SePay Sandbox collection',async()=>{
+ const sepay={...summary,items:[{...refund,provider:'SEPAY_SANDBOX'}],payments:summary.payments.map(p=>({...p,provider:'SEPAY_SANDBOX'}))};
+ const first=mount('/admin/orders/101/refunds',{'GET /api/admin/orders/101/refunds':sepay});
+ await first.user.type(await screen.findByLabelText('Số tiền đề nghị hoàn'),'25.50');await first.user.type(screen.getByLabelText('Lý do đề nghị hoàn'),'Trả khoản thu Sandbox');expect(screen.getByRole('button',{name:'Kiểm tra yêu cầu hoàn'})).toBeEnabled();first.unmount();
+ const second=mount('/admin/refunds/81',{'GET /api/admin/refunds/81':sepay});await proof(second.user);expect(screen.getByRole('button',{name:'Xác nhận đã hoàn tiền'})).toBeEnabled();
+});

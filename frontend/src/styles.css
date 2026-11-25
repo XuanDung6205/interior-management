@@ -945,3 +945,10 @@ input[type='radio'] { accent-color: var(--teal); width: 18px; height: 18px; min-
   .order-print-table tr { break-inside: avoid; page-break-inside: avoid; }
   .order-print-sheet .status-pill { color: #000; background: none; border: 1px solid #888; }
 }
+
+/* SePay follows the existing payment panels and mobile layout. */
+.sepay-qr-layout { display: flex; flex-wrap: wrap; align-items: start; gap: 1.5rem; }
+.sepay-qr-layout img { width: min(100%, 240px); height: auto; object-fit: contain; background: white; }
+.sepay-qr-layout dl { flex: 1 1 220px; min-width: 0; }
+.sepay-qr-layout dd, .sepay-event-review p { overflow-wrap: anywhere; }
+.sepay-event-review { margin-top: 1.5rem; }

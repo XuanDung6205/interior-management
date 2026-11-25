@@ -9,7 +9,7 @@ export default function RefundResolve({ id, actorId, selected, client, onUpdated
   const [pending, setPending] = useState(() => readRefundRequest('resolve', actorId, id));
   const [draft, setDraft] = useState(() => { const saved = readRefundRequest('resolve', actorId, id); const old = readRefundRequest('resolveDraft', actorId, id); return { reference: saved?.body.reference || old?.reference || '', note: saved?.body.note || old?.note || '', reason: saved?.body.reason || old?.reason || '' }; });
   const [review, setReview] = useState(null); const [ack, setAck] = useState(false); const [cancelAck, setCancelAck] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState(null); const [notice, setNotice] = useState(''); const lock = useRef(false); const errorRef = useRef(null);
-  const manual = ['COD', 'MANUAL_BANK'].includes(selected.provider); const frozen = busy || !!review || !!pending;
+  const manual = ['COD', 'MANUAL_BANK', 'SEPAY_SANDBOX'].includes(selected.provider); const frozen = busy || !!review || !!pending;
   const validProof = /^[A-Za-z0-9._:/-]{6,150}$/.test(draft.reference.trim()) && draft.note.length <= 1000;
   function change(key, value) { const next = { ...draft, [key]: value }; setDraft(next); setAck(false); setCancelAck(false); try { saveRefundRequest('resolveDraft', actorId, id, next); } catch (failure) { setError(failure); } }
   async function resolve() {

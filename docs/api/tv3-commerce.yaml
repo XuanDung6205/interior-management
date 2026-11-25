@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: TV3 Furniture Commerce API
-  version: 1.6.0
+  version: 1.7.0
   description: 'TV3 session/CSRF, cart/coupons, checkout, customer/staff orders, manually verified COD/bank collections and refunds, guarded 24-hour COD confirmation expiry, durable local web notifications, protected operations and actual delivery/installation/return aftercare. Online gateway/banking and external SMTP remain sandbox dependencies; no external message is claimed sent.'
 servers:
 - url: http://localhost:8080
@@ -19,6 +19,7 @@ tags:
 - name: Notifications
 - name: Commerce operations
 - name: Aftercare
+- name: SePay Sandbox
 paths:
   /api/csrf:
     get:
@@ -2421,6 +2422,256 @@ paths:
           $ref: '#/components/responses/OwnedResourceMissing'
         '409':
           $ref: '#/components/responses/AftercareConflict'
+  /api/payments/sepay/config:
+    get:
+      operationId: getSePaySandboxConfiguration
+      tags:
+      - SePay Sandbox
+      security: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SePayConfiguration'
+  /api/payments/sepay/webhook:
+    post:
+      operationId: receiveSePaySandboxWebhook
+      tags:
+      - SePay Sandbox
+      security: []
+      description: POST only CSRF exemption; verify HMAC-SHA256 over exact timestamp.raw_body bytes with
+        five-minute tolerance. Authenticated mismatches are durably recorded with success=true and FAILED/IGNORED;
+        this does not assert collection. Numeric webhook event IDs differ from API UUIDs.
+      parameters:
+      - in: header
+        name: X-SePay-Signature
+        required: true
+        schema:
+          type: string
+      - in: header
+        name: X-SePay-Timestamp
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Documented SePay webhook JSON; maximum raw body 65536 bytes. Required id, gateway,
+                accountNumber, code/content, transferType, transferAmount, referenceCode, transactionDate.
+            example:
+              id: 12345
+              gateway: VietinBank
+              transactionDate: '2026-11-25 10:00:00'
+              accountNumber: '0000000001'
+              subAccount: null
+              code: DH12345678
+              content: SEVQR DH12345678
+              transferType: in
+              transferAmount: 100000
+              referenceCode: FT-SANDBOX-12345
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SePayProcessingResult'
+        '400': &sepayPath001
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401': &sepayPath002
+          description: Signature or session required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403': &sepayPath003
+          description: Staff role or CSRF denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404': &sepayPath004
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409': &sepayPath005
+          description: Configuration, API unavailable, or transaction conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/admin/payments/{id}/sepay/reconcile:
+    parameters:
+    - $ref: '#/components/parameters/CommerceResourceId'
+    post:
+      operationId: reconcileSePaySandboxTransaction
+      tags:
+      - SePay Sandbox
+      security:
+      - cookieSession: []
+      description: Staff only, CSRF required. Server fetches UUID from fixed sandbox API outside financial
+        transaction and applies the same matching/dedup processor. No customer-supplied amount. No automatic
+        refund transfer.
+      parameters:
+      - $ref: '#/components/parameters/CommerceCsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - transactionId
+              properties:
+                transactionId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Updated staff payment summary with reconciliation result
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/StaffManualPaymentSummary'
+                - type: object
+                  properties:
+                    reconciliation:
+                      $ref: '#/components/schemas/SePayProcessingResult'
+        '400': *sepayPath001
+        '401': *sepayPath002
+        '403': *sepayPath003
+        '404': *sepayPath004
+        '409': *sepayPath005
+  /api/admin/payments/sepay/events:
+    get:
+      operationId: listSePaySandboxEvents
+      tags:
+      - SePay Sandbox
+      security:
+      - cookieSession: []
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - FAILED
+          - IGNORED
+          - PROCESSED
+          default: FAILED
+      - in: query
+        name: page
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 10000
+          default: 0
+      responses:
+        '200':
+          description: 25 sanitized events, including unknown payment codes; no raw payer data or secrets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    maxItems: 25
+                    items:
+                      type: object
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                    enum:
+                    - 25
+        '400': *sepayPath001
+        '401': *sepayPath002
+        '403': *sepayPath003
+        '404': *sepayPath004
+        '409': *sepayPath005
+  /api/orders/{order}/payments/{id}/sepay/qr:
+    parameters:
+    - in: path
+      name: order
+      required: true
+      schema:
+        type: integer
+        format: int64
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        format: int64
+    get:
+      operationId: getOwnedSePayQrPng
+      tags:
+      - SePay Sandbox
+      security:
+      - cookieSession: []
+      description: Offline-generated VietQR PNG with no-store. Owner or staff authorization; pending payable
+        sandbox payments only. No request to a third-party image host.
+      responses:
+        '200':
+          description: Locally generated 320x320 QR PNG
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Session required
+        '403':
+          description: Staff role required
+        '404':
+          description: Not owned or missing
+        '409':
+          description: Payment no longer payable or sandbox disabled
+  /api/admin/payments/{id}/sepay/qr:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        format: int64
+    get:
+      operationId: getStaffSePayQrPng
+      tags:
+      - SePay Sandbox
+      security:
+      - cookieSession: []
+      description: Offline-generated VietQR PNG with no-store. Owner or staff authorization; pending payable
+        sandbox payments only. No request to a third-party image host.
+      responses:
+        '200':
+          description: Locally generated 320x320 QR PNG
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Session required
+        '403':
+          description: Staff role required
+        '404':
+          description: Not owned or missing
+        '409':
+          description: Payment no longer payable or sandbox disabled
 components:
   securitySchemes:
     cookieSession:
@@ -3012,6 +3263,7 @@ components:
           enum:
           - COD
           - BANK_TRANSFER
+          - SEPAY
         assemblyRequested: &id028
           type: boolean
         customerNote:
@@ -3431,6 +3683,8 @@ components:
       - currency
       - isExpired
       properties:
+        sepay:
+          $ref: '#/components/schemas/SePayPaymentInstructions'
         id:
           type: integer
           format: int64
@@ -3533,6 +3787,8 @@ components:
     ManualPaymentSummary:
       type: object
       properties:
+        sepay:
+          $ref: '#/components/schemas/SePayConfiguration'
         orderId:
           type: integer
           format: int64
@@ -3641,6 +3897,7 @@ components:
           enum:
           - COD
           - BANK_TRANSFER
+          - SEPAY
     ConfirmManualPayment:
       type: object
       required:
@@ -4867,3 +5124,63 @@ components:
           enum:
           - true
           description: Staff explicitly attests installation was physically completed.
+
+    SePayConfiguration:
+      type: object
+      required:
+      - enabled
+      - environment
+      - canReconcile
+      properties:
+        enabled:
+          type: boolean
+        environment:
+          type: string
+          enum:
+          - SANDBOX
+        canReconcile:
+          type: boolean
+    SePayPaymentInstructions:
+      type: object
+      description: Persisted payee/code snapshots. qrUrl only appears for a currently payable pending payment
+        with SePay enabled. No token or HMAC secret.
+      properties:
+        environment:
+          type: string
+        code:
+          type: string
+        bank:
+          type: string
+        accountNumber:
+          type: string
+        accountHolder:
+          type: string
+        transferContent:
+          type: string
+        qrUrl:
+          type: string
+        canReconcile:
+          type: boolean
+    SePayProcessingResult:
+      type: object
+      required:
+      - success
+      - eventId
+      - processingStatus
+      - duplicate
+      properties:
+        success:
+          type: boolean
+          enum:
+          - true
+        eventId:
+          type: integer
+          format: int64
+        processingStatus:
+          type: string
+          enum:
+          - PROCESSED
+          - FAILED
+          - IGNORED
+        duplicate:
+          type: boolean
