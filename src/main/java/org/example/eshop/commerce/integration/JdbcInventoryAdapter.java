@@ -1,6 +1,7 @@
 package org.example.eshop.commerce.integration;
 
 import org.example.eshop.commerce.common.CommerceException;
+import org.example.eshop.commerce.cache.Tv5Cache;
 import org.example.eshop.commerce.port.InventoryPort;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -31,7 +32,8 @@ import java.util.TreeMap;
 @Transactional(readOnly=true)
 public class JdbcInventoryAdapter implements InventoryPort {
     private final NamedParameterJdbcTemplate jdbc;
-    public JdbcInventoryAdapter(NamedParameterJdbcTemplate jdbc) { this.jdbc=jdbc; }
+    private final Tv5Cache cache;
+    public JdbcInventoryAdapter(NamedParameterJdbcTemplate jdbc,Tv5Cache cache) { this.jdbc=jdbc;this.cache=cache; }
 
     @Override public Map<Long,Integer> availableQuantities(Set<Long> ids) {
         if(ids.isEmpty()) return Map.of();
@@ -99,6 +101,7 @@ public class JdbcInventoryAdapter implements InventoryPort {
                 if(remaining!=0) throw unavailable();
             }
         }
+        cache.evictAfterCommit(Tv5Cache.DASHBOARD);
     }
 
     @Override
@@ -141,6 +144,7 @@ public class JdbcInventoryAdapter implements InventoryPort {
                 """,Map.of("remaining",hold.remaining(),"id",hold.id(),"released",hold.released(),"quantity",hold.quantity()));
             if(changed!=1) throw dispatched();
         }
+        cache.evictAfterCommit(Tv5Cache.DASHBOARD);
     }
 
     private List<Warehouse> lockWarehouses() {

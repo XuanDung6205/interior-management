@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: TV3 Furniture Commerce API
-  version: 1.8.0
+  version: 1.9.0
   description: 'TV3 session/CSRF, cart/coupons, orders, manual COD/bank payments and refunds, SePay Test mode HMAC/API reconciliation and recoverable Sandbox refunds, safe COD/SePay expiry, notifications, operations and aftercare. Production banking and external SMTP are not implemented.'
 servers:
 - url: http://localhost:8080
@@ -2180,6 +2180,161 @@ paths:
                 code: NOTIFICATION_NOT_DEAD
                 message: Event is not in DEAD state.
                 fieldErrors: {}
+  /api/admin/operations/vector:
+    get:
+      operationId: getCatalogVectorOperations
+      tags:
+      - Commerce operations
+      summary: Read protected catalog vector configuration and durable queue status
+      description: STAFF/ADMIN only. Configuration presence is not proof that the provider key works or indexing
+        completed. Returns catalog-owned vector count, state counts and at most 20 recent DEAD events; leased is
+        a subset of pending/retry work. No keys, embeddings, provider response bodies or raw errors are exposed.
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogVectorSnapshot'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+        '409':
+          description: VECTOR_SCHEMA_UNAVAILABLE when enabled and the required vector schema is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/admin/operations/vector/reindex:
+    post:
+      operationId: enqueueCatalogVectorPage
+      tags:
+      - Commerce operations
+      summary: Persist one bounded page of catalog reindex work
+      description: STAFF/ADMIN with CSRF. Selects product IDs after the supplied cursor and persists changed/missing
+        catalog work with the authenticated actor. No provider IO; allowed before a key is configured. Use nextAfterId
+        while hasMore is true. Matching current fingerprints or existing work may be skipped.
+      security:
+      - cookieSession: []
+      parameters:
+      - $ref: '#/components/parameters/CommerceCsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogVectorReindexRequest'
+            example:
+              afterId: 0
+              limit: 25
+      responses:
+        '200':
+          description: Work persisted; this does not establish that products were indexed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogVectorReindexResult'
+        '400':
+          $ref: '#/components/responses/InvalidCommerceOperation'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+        '409':
+          description: VECTOR_SCHEMA_UNAVAILABLE; install the registered schema before enqueueing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /api/admin/operations/vector/run:
+    post:
+      operationId: runCatalogVectorBatch
+      tags:
+      - Commerce operations
+      summary: Run one bounded catalog indexing batch outside financial locks
+      description: STAFF/ADMIN with CSRF. Requires enabled and configured vector runtime. Bounded discovery and
+        short claim/persist transactions surround provider IO; lease tokens and catalog fingerprints fence stale
+        results. Inspect result counters and refreshed status; failed work retains bounded retry/dead state.
+        Only public catalog content is persisted in the index. No order, payment or stock mutations occur.
+      security:
+      - cookieSession: []
+      parameters:
+      - $ref: '#/components/parameters/CommerceCsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogVectorRunRequest'
+            example: {}
+      responses:
+        '200':
+          description: Batch inspected; failed or skipped work is not a successful indexing result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogVectorRunResult'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+        '409':
+          description: VECTOR_DISABLED, VECTOR_NOT_CONFIGURED or VECTOR_SCHEMA_UNAVAILABLE. No provider body is exposed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VECTOR_NOT_CONFIGURED
+                message: Configure the private Gemini key before indexing.
+                fieldErrors: {}
+  /api/admin/operations/vector/events/{id}/retry:
+    parameters:
+    - $ref: '#/components/parameters/CommerceResourceId'
+    post:
+      operationId: retryDeadCatalogVectorEvent
+      tags:
+      - Commerce operations
+      summary: Requeue an inspected DEAD catalog vector event
+      description: STAFF/ADMIN with CSRF and a nonblank reason. Uses the actual event ID from the status response.
+        Only DEAD may become RETRY; resets attempts and lease state, updates the requested catalog fingerprint,
+        and records the actor, reason and time. Persists work without provider IO and returns fresh status.
+      security:
+      - cookieSession: []
+      parameters:
+      - $ref: '#/components/parameters/CommerceCsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogVectorRetryRequest'
+            example:
+              reason: Inspected provider configuration; retry the failed catalog work.
+      responses:
+        '200':
+          description: Requeued with refreshed vector status; no provider request has run yet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogVectorSnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidCommerceOperation'
+        '401':
+          $ref: '#/components/responses/SessionRequired'
+        '403':
+          $ref: '#/components/responses/StaffOrCsrfDenied'
+        '404':
+          $ref: '#/components/responses/OwnedResourceMissing'
+        '409':
+          description: VECTOR_NOT_DEAD; refresh status before retrying an event whose state changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /api/orders/{id}/returns:
     parameters:
     - $ref: '#/components/parameters/CommerceResourceId'
@@ -5805,3 +5960,171 @@ components:
         success:
           type: boolean
           enum: [true]
+    CatalogVectorSnapshot:
+      type: object
+      additionalProperties: false
+      description: Protected configuration and persisted vector work status. configured means key presence only;
+        indexedProducts excludes generic vectors without catalog ownership.
+      required:
+      - enabled
+      - configured
+      - model
+      - dimensions
+      - batchSize
+      - intervalSeconds
+      - indexedProducts
+      - outbox
+      - deadEvents
+      properties:
+        enabled:
+          type: boolean
+        configured:
+          type: boolean
+        model:
+          type: string
+          enum: [gemini-embedding-001]
+        dimensions:
+          type: integer
+          enum: [768]
+        batchSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+        intervalSeconds:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 86400
+        indexedProducts:
+          type: integer
+          format: int64
+          minimum: 0
+        outbox:
+          $ref: '#/components/schemas/CatalogVectorOutboxCounts'
+        deadEvents:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/DeadCatalogVectorEvent'
+    CatalogVectorOutboxCounts:
+      type: object
+      additionalProperties: false
+      required: [pending, retry, sent, dead, leased]
+      properties:
+        pending:
+          type: integer
+          format: int64
+          minimum: 0
+        retry:
+          type: integer
+          format: int64
+          minimum: 0
+        sent:
+          type: integer
+          format: int64
+          minimum: 0
+        dead:
+          type: integer
+          format: int64
+          minimum: 0
+        leased:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Subset of PENDING/RETRY rows whose lease is currently active.
+    DeadCatalogVectorEvent:
+      type: object
+      additionalProperties: false
+      required: [id, productId, attempts, lastError, updatedAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        productId:
+          type: integer
+          format: int64
+          minimum: 1
+        attempts:
+          type: integer
+          minimum: 0
+        lastError:
+          type: string
+          pattern: '^VECTOR_[A-Z_]+$'
+          description: Controlled code; never raw provider or SQL error text.
+        updatedAt:
+          type: string
+          format: date-time
+          description: UTC update instant.
+    CatalogVectorReindexRequest:
+      type: object
+      additionalProperties: false
+      required: [limit]
+      properties:
+        afterId:
+          type: integer
+          format: int64
+          minimum: 0
+          default: 0
+          nullable: true
+          description: Exclusive product cursor; omitted or null starts at zero.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+    CatalogVectorReindexResult:
+      type: object
+      additionalProperties: false
+      required: [queued, skipped, nextAfterId, hasMore]
+      properties:
+        queued:
+          type: integer
+          minimum: 0
+        skipped:
+          type: integer
+          minimum: 0
+        nextAfterId:
+          type: integer
+          format: int64
+          minimum: 0
+        hasMore:
+          type: boolean
+    CatalogVectorRunRequest:
+      type: object
+      additionalProperties: false
+      description: Empty JSON object; batch size comes from protected runtime configuration.
+    CatalogVectorRunResult:
+      type: object
+      additionalProperties: false
+      required: [scanned, indexed, deleted, retried, failed, skipped]
+      properties:
+        scanned:
+          type: integer
+          minimum: 0
+          maximum: 100
+        indexed:
+          type: integer
+          minimum: 0
+        deleted:
+          type: integer
+          minimum: 0
+        retried:
+          type: integer
+          minimum: 0
+          description: Subset of failed work scheduled for retry.
+        failed:
+          type: integer
+          minimum: 0
+        skipped:
+          type: integer
+          minimum: 0
+    CatalogVectorRetryRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Trimmed nonblank staff reason recorded with the authenticated actor and retry time.

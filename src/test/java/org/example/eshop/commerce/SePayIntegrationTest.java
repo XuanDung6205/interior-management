@@ -30,6 +30,10 @@ class SePayIntegrationTest {
     @Autowired ObjectMapper mapper;
     @Autowired WebApplicationContext context;
     @Autowired org.example.eshop.commerce.payment.SePayAutomationService automation;
+    @Autowired org.example.eshop.commerce.analytics.DashboardService dashboard;
+    @Autowired org.example.eshop.commerce.port.OrderAuditPort audit;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactions;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean org.example.eshop.commerce.cache.Tv5Cache dashboardCache;
     MockMvc mvc;
     @org.springframework.test.context.bean.override.mockito.MockitoSpyBean org.example.eshop.commerce.order.OrderStore storeSpy;
     @org.springframework.test.context.bean.override.mockito.MockitoBean org.example.eshop.commerce.payment.SePayApiClient provider;
@@ -63,6 +67,91 @@ class SePayIntegrationTest {
     String event(long id,String code,int amount,String account,String bank){return "{\"id\":"+id+",\"gateway\":\""+bank+"\",\"transactionDate\":\"2026-11-25 10:00:00\",\"accountNumber\":\""+account+"\",\"subAccount\":null,\"code\":\""+code+"\",\"content\":\"SEVQR "+code+" thanh toan\",\"transferType\":\"in\",\"transferAmount\":"+amount+",\"referenceCode\":\"FT-TEST-"+id+"\"}";}
     String sign(String body,String ts)throws Exception{var mac=javax.crypto.Mac.getInstance("HmacSHA256");mac.init(new javax.crypto.spec.SecretKeySpec("test-only-hmac-key-at-least-32-characters".getBytes(StandardCharsets.UTF_8),"HmacSHA256"));return "sha256="+HexFormat.of().formatHex(mac.doFinal((ts+"."+body).getBytes(StandardCharsets.UTF_8)));}
     JsonNode webhook(String body,int expected)throws Exception{String ts=Long.toString(java.time.Instant.now().getEpochSecond());return json(mvc.perform(post("/api/payments/sepay/webhook").contentType("application/json").header("X-SePay-Timestamp",ts).header("X-SePay-Signature",sign(body,ts)).content(body)).andExpect(status().is(expected)).andReturn());}
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"COD","SEPAY"})
+    void committedCollectionsAndPartialRefundsImmediatelyRefreshDashboard(String method) throws Exception {
+        dashboardCache.clearAll();
+        assertEquals(0, dashboard.summary(30).totalOrders());
+        long id=order(customer,method),p=payment(id);
+        assertEquals(1, dashboard.summary(30).totalOrders());
+        assertRevenue("0.00","0.00","0.00");
+        if("COD".equals(method)) {
+            confirm(p,admin,"DASH-COD-"+p,"",200);
+            confirm(p,admin,"DASH-COD-"+p,"",200);
+        } else {
+            String body=event(99001,code(p),2050000,"0000000001","VietinBank");
+            webhook(body,200);
+            webhook(body,200);
+        }
+        assertRevenue("2050000.00","0.00","2050000.00");
+        cancel(id);
+        assertRevenue("2050000.00","0.00","2050000.00");
+        long automatic=db.queryForObject("SELECT id FROM refunds WHERE order_id=?",Long.class,id);
+        JsonNode held=refundSummary(id);
+        assertEquals("2050000.00",held.path("pendingRefundAmount").asText());
+        assertEquals("0.00",held.path("availableRefundAmount").asText());
+        mvc.perform(post("/api/admin/refunds/"+automatic+"/cancel").with(user(admin)).with(csrf()).contentType("application/json")
+                .content("{\"reason\":\"Hoàn một phần theo thỏa thuận\",\"acknowledged\":true}")).andExpect(status().isOk());
+        JsonNode created=json(mvc.perform(post("/api/admin/orders/"+id+"/refunds").with(user(admin)).with(csrf())
+                .header("Idempotency-Key","dashboard-partial-refund").contentType("application/json")
+                .content(mapper.writeValueAsString(Map.of("paymentId",p,"amount","500000","reason","Hoàn một phần"))))
+                .andExpect(status().isCreated()).andReturn());
+        long partial=created.path("selectedRefundId").asLong();
+        assertTrue(partial>0);
+        assertEquals("500000.00",refundSummary(id).path("pendingRefundAmount").asText());
+        assertEquals("1550000.00",refundSummary(id).path("availableRefundAmount").asText());
+        assertRevenue("2050000.00","0.00","2050000.00");
+        String confirmation=mapper.writeValueAsString(Map.of("reference","DASH-REF-"+partial,"note","","acknowledged",true));
+        for(int i=0;i<2;i++)mvc.perform(post("/api/admin/refunds/"+partial+"/confirm").with(user(admin)).with(csrf())
+                .contentType("application/json").content(confirmation)).andExpect(status().isOk());
+        assertRevenue("2050000.00","500000.00","1550000.00");
+        assertEquals(1,db.queryForObject("SELECT COUNT(*) FROM payments WHERE status='SUCCEEDED'",Integer.class));
+        assertEquals(1,db.queryForObject("SELECT COUNT(*) FROM refunds WHERE status='SUCCEEDED'",Integer.class));
+    }
+
+    @Test
+    void auditInvalidatesDashboardOnlyAfterTheDatabaseCommit() throws Exception {
+        dashboardCache.clearAll();
+        long id=order(customer,"COD"),p=payment(id);
+        assertRevenue("0.00","0.00","0.00");
+        long misses=dashboardCache.stats().misses();
+        var tx=new org.springframework.transaction.support.TransactionTemplate(transactions);
+        tx.executeWithoutResult(status->{
+            db.update("UPDATE payments SET status='SUCCEEDED',paid_at=UTC_TIMESTAMP(6) WHERE id=?",p);
+            audit.appendSystem(id,"PAYMENT_CONFIRMED",Map.of(),Map.of("paymentId",p));
+            assertRevenue("0.00","0.00","0.00");
+            status.setRollbackOnly();
+        });
+        assertRevenue("0.00","0.00","0.00");
+        assertEquals(misses,dashboardCache.stats().misses());
+        assertEquals("PENDING",db.queryForObject("SELECT status FROM payments WHERE id=?",String.class,p));
+        confirm(p,admin,"DASH-COMMIT-"+p,"",200);
+        assertRevenue("2050000.00","0.00","2050000.00");
+        assertEquals(misses+1,dashboardCache.stats().misses());
+    }
+
+    @Test
+    void cacheEvictionFailureCannotMakeACommittedCollectionLookUnsuccessful() throws Exception {
+        dashboardCache.clearAll();
+        long id=order(customer,"COD"),p=payment(id);
+        org.mockito.Mockito.doThrow(new IllegalStateException("test cache unavailable"))
+                .when(dashboardCache).clearNamespace(org.example.eshop.commerce.cache.Tv5Cache.DASHBOARD);
+        confirm(p,admin,"DASH-CACHE-FAIL-"+p,"",200);
+        assertEquals("SUCCEEDED",db.queryForObject("SELECT status FROM payments WHERE id=?",String.class,p));
+        assertEquals(1,db.queryForObject("SELECT COUNT(*) FROM audit_logs WHERE action='PAYMENT_CONFIRMED'",Integer.class));
+    }
+
+    void assertRevenue(String gross,String refunds,String net) {
+        var revenue=dashboard.summary(30).revenue();
+        assertEquals(gross,revenue.grossCollected());
+        assertEquals(refunds,revenue.totalRefunded());
+        assertEquals(net,revenue.netRevenue());
+    }
+
+    JsonNode refundSummary(long id) throws Exception {
+        return json(mvc.perform(get("/api/admin/orders/"+id+"/refunds").with(user(admin))).andExpect(status().isOk()).andReturn());
+    }
     @Test void checkoutSnapshotsUniqueCodeAndQrWithoutSecrets()throws Exception{
         long a=order(customer,"SEPAY"),b=order(other,"SEPAY"),p=payment(a);var s=summary(a,customer,200);assertTrue(code(p).matches("DH[0-9]{8}"));assertNotEquals(code(p),code(payment(b)));var qr=s.get("items").get(0).get("sepay");assertTrue(qr.get("qrUrl").asText().startsWith("/api/orders/"));assertEquals("SEVQR "+code(p),qr.get("transferContent").asText());assertEquals("SEPAY_SANDBOX",s.get("items").get(0).get("provider").asText());assertFalse(s.toString().contains("test-only-hmac"));assertEquals("PAYMENT_NOT_CONFIRMABLE",confirm(p,admin,"NO-MANUAL-SEPAY","",409).get("code").asText());summary(a,other,404);
     }

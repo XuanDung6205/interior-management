@@ -27,7 +27,8 @@ V001–V007 giữ nguyên. Áp dụng tuần tự:
 3. `V008__commerce_operations.sql`: deadline/retry COD và hai bảng `commerce_notification_outbox`, `commerce_notifications`; tổng **47 bảng**. Index phục vụ expiry/inbox/outbox; đọc báo cáo hiệu năng để biết index truy vấn danh sách thực tế đã được đánh giá.
 4. `V009__commerce_read_indexes.sql`: ba index đọc `orders(placed_at,id)`, `payments(created_at,id)`, `payments(status,created_at,id)` có bằng chứng EXPLAIN, không thêm bảng; V009 giữ **47 bảng**. Không sửa lại V008 đã áp dụng. HTTP p95 sau trial tăng 40,150 → 43,508 ms; đây không phải bằng chứng tăng tốc HTTP.
 
-5. V010 thêm snapshot người nhận/mã thanh toán SePay; V011 thêm metadata đối soát, lease/retry và ghi chú duyệt sự kiện; V012 thêm ý định/thực thi hoàn SePay. Chỉ cộng cột/index, không lưu API token/HMAC và không thêm bảng. Runtime hiện dùng **V001–V012,47bảng**. Các lần SePay cũ có `expires_at=NULL` không bị backfill.
+5. V010 thêm snapshot người nhận/mã thanh toán SePay; V011 thêm metadata đối soát, lease/retry và ghi chú duyệt sự kiện; V012 thêm ý định/thực thi hoàn SePay. Chỉ cộng cột/index, không lưu API token/HMAC và không thêm bảng. Các lần SePay cũ có `expires_at=NULL` không bị backfill.
+6. V013 thêm `vector_store` với native `VECTOR(768)`/cosine và `commerce_vector_reindex_outbox`; V014 thêm metadata catalog cùng lease/retry, không thêm bảng. Runtime hiện dùng **V001–V014, đúng49bảng**. Thứ tự và tên bảng nằm trong registry chung `scripts/tv3_schema.py`; V001/V013 giữ nguyên.
 
 DB mới cho demo riêng:
 
@@ -40,7 +41,7 @@ python scripts/tv3_database.py seed --database furniture_shop_tv3_dev
 Remove-Item Env:TV3_DEMO_PASSWORD
 ```
 
-`create` từ chối ghi đè DB có sẵn. Với DB demo đã tồn tại, dùng `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev`, không chạy lại V001. Helper áp dụng toàn bộ migration đang được phiên bản repo hỗ trợ; xác nhận đã gồm V012 trước khi khởi động bản này. DB chính chỉ áp dụng SQL cộng thêm sau backup/kiểm tra đúng DB; helper fixture/load không được trỏ vào DB chính. Không có Flyway tự động baseline hay Hibernate tự sửa schema trong commerce.
+`create` từ chối ghi đè DB có sẵn. Với DB demo đã tồn tại, [backup và xác minh](TV3_BACKUP_RESTORE.md) trước, rồi dùng `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev`, không chạy lại V001. Helper áp dụng toàn bộ migration V002–V014 theo registry và kiểm tra đúng49bảng InnoDB. Có thể chạy riêng `python scripts/tv3_database.py verify --database furniture_shop_tv3_dev`. DB chính chỉ áp dụng SQL cộng thêm sau backup/kiểm tra đúng DB; helper fixture/load không được trỏ vào DB chính. Không có Flyway tự động baseline hay Hibernate tự sửa schema trong commerce.
 
 Seed riêng tạo `tv3.admin` (ADMIN), `tv3.customer` (CUSTOMER), ba SKU nội thất và tồn MAIN; **Sofa Modena** có `assembly_required=true` để tái lập demo lắp đặt, **Bàn trà Oslo** giữ false để bảo toàn ca đã chọn dịch vụ nhưng sản phẩm không bắt buộc lắp. DB demo cũ chỉ cần cập nhật cờ catalog có chủ đích bởi owner; không seed/reset số dư hay lịch sử để bổ sung cờ này. Mật khẩu do người chạy cấp qua environment và được BCrypt; không có mật khẩu đăng nhập mặc định. Không chia sẻ secret thật qua tài liệu/Git. Dataset lớn cho đo tải chỉ nằm ở DB `furniture_shop_test_perf_ops_20261119`; không import nó vào DB demo lâu dài.
 
@@ -57,6 +58,7 @@ Các biến môi trường cần biết:
 - `ORDER_EXPIRY_ENABLED`, `ORDER_NOTIFICATIONS_ENABLED`: bật/tắt riêng từng worker, mặc định true; `COMMERCE_JOB_DELAY_MS` mặc định 10000. Khi cờ chung false thì scheduler không chạy cả hai; nút staff explicit vẫn thực thi đầy đủ chính sách.
 - `CHECKOUT_SHIPPING_FEE=50000.00`, `CHECKOUT_FREE_SHIPPING_THRESHOLD=10000000.00`, `CHECKOUT_ASSEMBLY_UNIT_FEE=100000.00`: chính sách demo phía server, không phải báo giá hãng vận chuyển; giá đã gồm thuế.
 - `TV3_TEST_DB_URL`: DB integration test dùng riêng. `TV3_DEMO_PASSWORD`: smoke/Chrome chạy demo, không phải biến cấu hình tài khoản app. Tên biến performance đọc trong [harness README](../tests/performance/tv3/README.md).
+- `VECTOR_ENABLED=false`: mặc định không gọi provider. Khi bật cần `GEMINI_API_KEY`; model cố định `gemini-embedding-001`,768chiều. `VECTOR_BATCH_SIZE=5`, `VECTOR_INTERVAL_SECONDS=60`, `VECTOR_MAX_ATTEMPTS=8`. Cờ chung `COMMERCE_JOBS_ENABLED=false` tắt worker tự động. Index bền vững chỉ chứa catalog công khai; truy vấn ngữ nghĩa gửi câu hỏi hiện tại đến Gemini để lấy query embedding tạm thời, không lưu embedding câu hỏi và không tự kèm hồ sơ/địa chỉ/đơn/tiền. `/admin/operations` hiển thị trạng thái cấu hình, hàng đợi, chạy batch có giới hạn và retry DEAD; lỗi/offline vẫn giữ SQL fallback. Xem [setup vector](TV3_VECTOR_SETUP.md) và [API contract](api/TV3_VECTOR_RUNTIME_CONTRACT.md): helper, live packaged indexing/recommendations/chat, Chrome12/12 và OpsUI+GeminiChat desktop/mobile đều đã xác minh.
 
 Spring không tự nạp `.env`; đặt environment trong đúng terminal/IDE. Không đặt secret trong `VITE_*`, query string, lệnh có mật khẩu literal hoặc file commit.
 
@@ -142,11 +144,21 @@ Thiết lập worker mặc định: `SEPAY_AUTOMATION_ENABLED=true`, `SEPAY_PAYM
 
 ## Nghiệm thu bổ sung ngày25/11/2026
 
-Bản commerce/SePay hiện tại đã chạy Java 252 ca (251 đạt, 1 ca AI live tùy chọn bỏ qua), đủ 18 lớp integration MariaDB; React 186/186 trong 17 file; công cụ vận hành 42/42. Gói React+Spring Boot JAR cuối build thành công. Đây là bằng chứng cục bộ, chưa phải GitHub Actions.
+Tại mốc25/11, bản commerce/SePay đã chạy Java 252 ca (251 đạt, 1 ca AI live tùy chọn bỏ qua), đủ 18 lớp integration MariaDB; React 186/186 trong 17 file; công cụ vận hành 42/42. Gói React+Spring Boot JAR khi đó build thành công. Đây là bằng chứng cục bộ, chưa phải GitHub Actions.
 
 Luồng SePay Sandbox thật đã khôi phục một lệnh hoàn bằng đúng intent/khóa đã lưu, nhận SUCCEEDED và cập nhật refund nội bộ SUCCEEDED. Tra cứu provider độc lập xác minh đúng mã hoàn, UUID giao dịch, số tiền/VND; không có tiền thật. `original_reference` null được xử lý bằng UUID khớp chính xác, còn tham chiếu có giá trị sai bị từ chối. Timeout/UNKNOWN giữ ngân sách và khóa gửi ban đầu, không mở lại đường thủ công.
 
 Chrome trên JAR cuối, sau hai sửa lỗi khôi phục UI, đã đạt 10/10 (exit 0, khoảng 1,1 phút). Xem [hướng dẫn SePay](TV3_SEPAY_SANDBOX.md). Kết quả19/11 bên dưới là lịch sử, không dùng thay số liệu25/11; không công khai token, khóa gửi hoàn hoặc định danh giao dịch cụ thể.
+
+## Nghiệm thu tích hợp TV3–TV5 ngày26/11/2026
+
+Java290ca:289đạt và1ca AI legacy live tùy chọn bỏ qua; đủ20lớp integration MariaDB đã chạy. React194/194, công cụ vận hành60/60. JAR React+Spring Boot đã build với metadata schemaV001–V014/49bảng. OpenAPI1.9.0 gồm71operations, chỉ thêm4đường vector vào contract hiện có. Đây là kiểm chứng cục bộ, không phải một hosted GitHub Actions run.
+
+Trên JAR mới với DB demo49bảng riêng, Gemini đã index3sản phẩm công khai, recommendations dùng semantic retrieval và chat trả lời bằng model thật. Giá/tồn của mọi nguồn trả về được đối chiếu đúng catalog hiện hành; không đưa khóa, định danh sản phẩm hoặc raw body vào tài liệu. Key check riêng đã nhận HTTP200 và đúng768giá trị. Các bằng chứng này khác với HTTP fixture hoặc vector giả dùng để kiểm tra backup.
+
+Recovery thực giữ nguyên cả hai thế hệ schema: fixture nativevector49bảng khớp schema/count/rowdigest sau restore; một backup tin cậy version1 cũ khôi phục đúng47bảng/4dòng vào DB test mới, không tự migrate. Xem [backup/restore](TV3_BACKUP_RESTORE.md).
+
+Bộ Chrome12/12 đã đạt trên JAR đóng gói trong khoảng1,3phút, gồm10ca cũ và2ca COD/SePay thu–hoàn một phần–dashboard–review. Kiểm tra live vector OpsUI+GeminiChat riêng trên desktop/mobile cũng đạt, không pageerror hoặc overflow; model chat `gemini-3.5-flash-lite` trả về3nguồn sản phẩm với giá/tồn hiện hành đã đối chiếu. Kết quả Chrome10/10 ngày25/11 phía trên là bằng chứng lịch sử riêng.
 
 ## 6. Đo hiệu năng và bằng chứng bàn giao ngày19/11 (lịch sử)
 

@@ -5,20 +5,15 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import sys
 from unittest.mock import patch
+from schema_fixture import HISTORICAL_TABLES, LATEST_TABLES, fixture_sql
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts/tv3_backup.py"
+sys.path.insert(0, str(SCRIPT.parent))
 spec = importlib.util.spec_from_file_location("tv3_backup", SCRIPT)
 backup = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(backup)
-
-
-def fixture_sql():
-    return "\n".join(
-        f"CREATE TABLE `table_{i}` (`id` int NOT NULL, `value` varchar(100), PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n"
-        f"INSERT INTO `table_{i}` (`id`, `value`) VALUES (1,'hello; -- not SQL \\' quote');"
-        for i in range(47)
-    )
 
 
 class FakeDatabase:
@@ -31,7 +26,7 @@ class FakeDatabase:
         self.fail_import = False
 
     def inspect(self, name):
-        return {f"table_{i}" for i in range(47)}
+        return set(LATEST_TABLES if "CREATE TABLE `vector_store`" in self.databases[name] else HISTORICAL_TABLES)
 
     def dump(self, name, destination):
         destination.write_bytes(self.databases[name].encode())
@@ -117,8 +112,8 @@ class RecoveryTests(unittest.TestCase):
                    lambda m: m.update(version=True), lambda m: m.update(content_type="text/plain"),
                    lambda m: m.update(source="other"), lambda m: m.update(extra="field"),
                    lambda m: m["tables"].update({"x`;DROP DATABASE x;--": next(iter(m["tables"].values()))}),
-                   lambda m: m["tables"]["table_0"].update(rows=True),
-                   lambda m: m["tables"]["table_0"].update(data_sha256="0" * 64)]
+                   lambda m: m["tables"]["users"].update(rows=True),
+                   lambda m: m["tables"]["users"].update(data_sha256="0" * 64)]
         for change in changes:
             (self.directory / "manifest.json").write_bytes(original)
             self.rewrite_manifest(change)
@@ -130,7 +125,7 @@ class RecoveryTests(unittest.TestCase):
         attacks = ["USE\nfurniture_shop;", "CREATE /*evil*/ DATABASE furniture_shop;",
                    "/*!50000 USE furniture_shop */;", "/*M!100100 USE furniture_shop */;",
                    "INSERT INTO `furniture_shop`.`users` (`id`) VALUES (1);",
-                   "INSERT INTO `table_0` (`id`) VALUES ((SELECT id FROM users));",
+                   "INSERT INTO `users` (`id`) VALUES ((SELECT id FROM users));",
                    "\\! echo exploit\n", "CREATE TABLE `evil` (`x` int) ENGINE=CONNECT;"]
         self.snapshot()
         original = (self.directory / "dump.sql").read_text()
@@ -170,8 +165,8 @@ class RecoveryTests(unittest.TestCase):
 
     def test_backup_rejects_unsupported_or_missing_snapshot_tables(self):
         for sql in [fixture_sql().replace("ENGINE=InnoDB", "ENGINE=MyISAM", 1),
-                    fixture_sql().replace("`table_0`", "`different_table`", 2),
-                    fixture_sql().replace("CREATE TABLE `table_0`", "CREATE TABLE `source`.`table_0`", 1),
+                    fixture_sql().replace("`users`", "`different_table`", 2),
+                    fixture_sql().replace("CREATE TABLE `users`", "CREATE TABLE `source`.`users`", 1),
                     fixture_sql() + "\n/*!40101 SET character_set_client = utf8mb4; USE furniture_shop */;"]:
             with self.subTest(sql=sql[:80]), tempfile.TemporaryDirectory() as temp:
                 db = FakeDatabase(sql)
@@ -183,7 +178,7 @@ class RecoveryTests(unittest.TestCase):
     def test_sources_with_views_noninnodb_or_triggers_are_refused(self):
         with patch.dict("os.environ", {"DB_PASSWORD": "unit-secret"}):
             db = backup.MariaDB("mariadb", "mariadb-dump")
-        ordinary = "\n".join(f"table_{i}\tBASE TABLE\tInnoDB" for i in range(47))
+        ordinary = "\n".join(f"{name}\tBASE TABLE\tInnoDB" for name in sorted(HISTORICAL_TABLES))
         for result, unsupported in [(ordinary.replace("BASE TABLE", "VIEW", 1), "0"),
                                     (ordinary.replace("InnoDB", "MyISAM", 1), "0"),
                                     (ordinary, "1")]:
@@ -225,6 +220,59 @@ class RecoveryTests(unittest.TestCase):
         self.assertIn("`id` <= 100", restored)
         self.assertIn("`id` <> 50", restored)
         self.assertIn("`id` != 51", restored)
+
+    def test_latest_native_vector_snapshot_roundtrips_all_49_tables_and_binary_rows(self):
+        self.db = FakeDatabase(fixture_sql(latest=True))
+        self.snapshot()
+        manifest = backup.restore_backup(self.db, self.directory, "furniture_shop_test_restore_vector")
+        self.assertEqual(LATEST_TABLES, set(manifest["tables"]))
+        self.assertEqual(1, manifest["tables"]["vector_store"]["rows"])
+        self.assertIn("0x0000803F00000000", self.db.databases["furniture_shop_test_restore_vector"])
+        self.assertEqual("commerce-49", manifest["schema_inventory"])
+
+    def test_historical_v1_manifest_remains_restorable_without_schema_revision(self):
+        self.snapshot()
+        self.rewrite_manifest(lambda m: (m.update(version=1), m.pop("schema_inventory", None)))
+        manifest = backup.restore_backup(self.db, self.directory, "furniture_shop_test_restore_historical")
+        self.assertEqual(HISTORICAL_TABLES, set(manifest["tables"]))
+
+    def test_manifest_version_cannot_relabel_latest_tables_as_historical(self):
+        self.db = FakeDatabase(fixture_sql(latest=True))
+        self.snapshot()
+        self.rewrite_manifest(lambda m: (m.update(version=1), m.pop("schema_inventory", None)))
+        with self.assertRaisesRegex(backup.BackupError, "inventory"):
+            backup.restore_backup(self.db, self.directory, "furniture_shop_test_restore_false_history")
+        self.assertEqual([], self.db.created)
+
+    def test_same_count_arbitrary_dump_and_manifest_table_names_are_rejected_offline(self):
+        self.snapshot()
+        sql = fixture_sql().replace("`users`", "`unknown_table`")
+        tables, _ = backup.analyze_dump(fixture_sql().encode())
+        tables["unknown_table"] = tables.pop("users")
+        (self.directory / "dump.sql").write_text(sql, encoding="utf-8")
+        self.rewrite_manifest(lambda m: m.update(tables=tables, sha256=hashlib.sha256(sql.encode()).hexdigest()))
+        with self.assertRaises(backup.BackupError):
+            backup.restore_backup(self.db, self.directory, "furniture_shop_test_restore_unknown")
+        self.assertEqual([], self.db.created)
+
+    def test_same_count_unknown_dump_table_is_not_accepted_as_commerce_schema(self):
+        with self.assertRaisesRegex(backup.BackupError, "inventory"):
+            backup.analyze_dump(fixture_sql().replace("`users`", "`unknown_table`").encode())
+
+    def test_inventory_inspection_rejects_same_count_substitution(self):
+        ordinary = "\n".join(f"{name}\tBASE TABLE\tInnoDB" for name in sorted(HISTORICAL_TABLES))
+        with patch.dict("os.environ", {"DB_PASSWORD": "unit-secret"}):
+            db = backup.MariaDB("mariadb", "mariadb-dump")
+        with patch.object(db, "query", side_effect=[ordinary.replace("users\t", "unknown_table\t"), "0"]):
+            with self.assertRaises(backup.BackupError):
+                db.inspect("furniture_shop_tv3_dev")
+
+    def test_vector_literal_functions_and_external_index_options_remain_rejected(self):
+        sql = fixture_sql(latest=True)
+        for attack in [sql.replace("0x0000803F00000000", "VEC_FromText('[1,0]')"),
+                       sql.replace("`DISTANCE`=cosine", "`DISTANCE`=cosine DATA DIRECTORY='/tmp/evil'")]:
+            with self.subTest(attack=attack[-100:]), self.assertRaises(backup.BackupError):
+                backup.analyze_dump(attack.encode())
 
 
 if __name__ == "__main__":

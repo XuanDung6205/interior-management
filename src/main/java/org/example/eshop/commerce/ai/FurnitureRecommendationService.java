@@ -4,9 +4,12 @@ import org.example.eshop.commerce.cache.Tv5Cache;
 import org.example.eshop.commerce.common.CommerceException;
 import org.example.eshop.commerce.content.ContentValidation;
 import org.example.eshop.commerce.port.CurrentActorPort;
+import org.example.eshop.commerce.vector.CatalogVectorSearch;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -49,12 +52,14 @@ public class FurnitureRecommendationService {
                     ORDER BY pi.sort_order ASC, pi.id ASC LIMIT 1) AS image_url,
                    (SELECT pv.id FROM product_variants pv
                     JOIN inventory_balances ib ON ib.variant_id = pv.id
+                    JOIN warehouses w ON w.id = ib.warehouse_id AND w.is_active = 1
                     WHERE pv.product_id = p.id AND pv.status = 'ACTIVE' AND ib.available_quantity > 0
                     ORDER BY pv.price ASC, pv.id ASC LIMIT 1) AS default_variant_id,
                    (SELECT MIN(pv.price) FROM product_variants pv
                     WHERE pv.product_id = p.id AND pv.status = 'ACTIVE') AS min_price,
                    COALESCE((SELECT SUM(ib.available_quantity)
                              FROM inventory_balances ib
+                             JOIN warehouses w ON w.id = ib.warehouse_id AND w.is_active = 1
                              JOIN product_variants pv ON pv.id = ib.variant_id
                              WHERE pv.product_id = p.id AND pv.status = 'ACTIVE'), 0) AS total_available
             FROM products p
@@ -62,6 +67,7 @@ public class FurnitureRecommendationService {
             WHERE p.status = 'ACTIVE'
               AND EXISTS (SELECT 1 FROM product_variants pv
                           JOIN inventory_balances ib ON ib.variant_id = pv.id
+                          JOIN warehouses w ON w.id = ib.warehouse_id AND w.is_active = 1
                           WHERE pv.product_id = p.id AND pv.status = 'ACTIVE' AND ib.available_quantity > 0)
             """;
 
@@ -71,6 +77,10 @@ public class FurnitureRecommendationService {
     private final CurrentActorPort actors;
     private final Clock clock;
     private final Tv5Cache cache;
+    private CatalogVectorSearch vectorSearch;
+
+    @Autowired
+    public void setCatalogVectorSearch(CatalogVectorSearch vectorSearch) { this.vectorSearch = vectorSearch; }
 
     public FurnitureRecommendationService(JdbcTemplate jdbc, CurrentActorPort actors, Clock clock, Tv5Cache cache) {
         this.jdbc = jdbc;
@@ -86,9 +96,25 @@ public class FurnitureRecommendationService {
     public record RecommendationResponse(List<RecommendationItem> items) {}
 
     // Điều phối 3 tầng gợi ý (key cache tách riêng user/session để không rò rỉ sở thích giữa các khách)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public RecommendationResponse recommend(Long productId, String sessionId, int limit) {
         if (limit < 1 || limit > MAX_LIMIT) {
             throw CommerceException.badRequest("INVALID_LIMIT", "Số lượng gợi ý phải từ 1 đến " + MAX_LIMIT + ".");
+        }
+        // Provider IO runs without a read transaction. Hydrate these IDs from current catalog/stock,
+        // bypassing the recommendation cache so indexed documents never supply stale prices.
+        if (vectorSearch != null && productId != null && productId > 0) {
+            var descriptions = jdbc.queryForList("SELECT LEFT(CONCAT_WS(' ',name,short_description),1000) FROM products WHERE id=? AND status='ACTIVE'", String.class, productId);
+            if (!descriptions.isEmpty()) {
+                var ids = vectorSearch.searchProducts(descriptions.get(0), limit + 1);
+                var semantic = new LinkedHashMap<Long, RecommendationItem>();
+                for (long id : ids) {
+                    if (id == productId || semantic.size() >= limit) continue;
+                    var live = jdbc.query(PRODUCT_SELECT + " AND p.id=?", (rs, n) -> mapItem(rs, "Sản phẩm tương đồng trong danh mục"), id);
+                    for (var item : live) semantic.putIfAbsent(item.productId(), item);
+                }
+                if (!semantic.isEmpty()) return new RecommendationResponse(List.copyOf(semantic.values()));
+            }
         }
         Long userId = actors.currentActor().userId();
         String safeSession = ContentValidation.trimToNull(sessionId);

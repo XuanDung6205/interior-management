@@ -28,7 +28,9 @@ Ba file này không chứa dữ liệu MariaDB hoặc mật khẩu. Khi chuyển
 
 ## Chuẩn bị DB
 
-Runtime yêu cầu schema V001–V012 với47bảng. Với dữ liệu demo mới, dùng script tạo/seed như [hướng dẫn bàn giao](TV3_BAN_GIAO_VA_DEMO.md); với dữ liệu đã backup, dùng [backup/restore](TV3_BACKUP_RESTORE.md) để khôi phục vào DB test mới. Không trỏ test/seed/restore vào DB chính.
+Runtime yêu cầu toàn bộ migration trong `scripts/tv3_schema.py`: **V001–V014, đúng 49 bảng InnoDB**. `release.json` ghi `schemaMigrations` và `schemaTables`; runner từ chối metadata schema cũ hoặc thiếu. Với dữ liệu demo mới, dùng script tạo/seed như [hướng dẫn bàn giao](TV3_BAN_GIAO_VA_DEMO.md); với dữ liệu đã backup, dùng [backup/restore](TV3_BACKUP_RESTORE.md) để khôi phục vào DB test mới. Snapshot lịch sử47bảng phải được migrate trên DB test trước khi chạy bản mới. Runner chỉ xác minh gói và cấu hình; không tự migrate hoặc seed. Không trỏ test/seed/restore vào DB chính.
+
+Sau backup, kiểm tra DB demo bằng `python scripts/tv3_database.py migrate --database furniture_shop_tv3_dev` và `python scripts/tv3_database.py verify --database furniture_shop_tv3_dev`. Helper yêu cầu kiểu thật `VECTOR(768)` và toàn bộ cột metadata/lease V014; dimension cũ không tương thích sẽ dừng migrate trước DDL và giữ nguyên dữ liệu. Vector mặc định tắt (`VECTOR_ENABLED=false`); khi bật cần `GEMINI_API_KEY` trong environment. Model cố định `gemini-embedding-001`,768chiều. Key không nằm trong JAR hoặc frontend; trạng thái chưa cấu hình/offline vẫn dùng catalog SQL. [Setup vector](TV3_VECTOR_SETUP.md) ghi helper private config và dữ liệu câu hỏi gửi tạm thời; trên JAR mới đã xác minh Gemini index3sản phẩm, recommendations dùng semantic retrieval và chat trả lời bằng model thật với giá/tồn nguồn khớp catalog. Chrome12/12 đã đạt; kiểm tra OpsUI+GeminiChat live riêng trên desktop/mobile cũng đạt, không pageerror hoặc overflow.
 
 ```powershell
 $env:DB_PASSWORD = Read-Host 'Mật khẩu MariaDB cho terminal này'

@@ -10,12 +10,13 @@ import re
 import shutil
 import subprocess
 import sys
+from tv3_schema import LATEST_TABLES, MIGRATION_RANGE, migration_paths, verify_vector_columns
 
 ROOT=Path(__file__).resolve().parents[1]
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action",choices=["create","seed","migrate"])
+    parser.add_argument("action",choices=["create","seed","migrate","verify"])
     parser.add_argument("--database",required=True)
     parser.add_argument("--client",default=r"C:\Program Files\MariaDB 12.2\bin\mariadb.exe")
     args=parser.parse_args()
@@ -24,46 +25,40 @@ def main():
     if not os.environ.get("DB_PASSWORD"):
         parser.error("Supply DB_PASSWORD in the process environment.")
     env=dict(os.environ,MYSQL_PWD=os.environ["DB_PASSWORD"])
-    client=[args.client,"--protocol=tcp","--host="+env.get("DB_HOST","127.0.0.1"),"--port="+env.get("DB_PORT","3306"),"--user="+env.get("DB_USERNAME","root"),"--default-character-set=utf8mb4","--batch","--skip-column-names"]
+    env.pop("DB_PASSWORD",None)
+    client=[args.client,"--no-defaults","--protocol=tcp","--host="+env.get("DB_HOST","127.0.0.1"),"--port="+env.get("DB_PORT","3306"),"--user="+env.get("DB_USERNAME","root"),"--default-character-set=utf8mb4","--batch","--skip-column-names"]
     def sql(statement,database=None):
         command=client+(["--database="+database] if database else [])
         result=subprocess.run(command,input=statement,text=True,encoding="utf-8",capture_output=True,env=env)
         if result.returncode:
             # Avoid printing statements/hashed credentials included by CLI error output.
-            codes=re.findall(r"ERROR \d+[^\n]*",result.stderr)
+            codes=re.findall(r"ERROR \d+(?: \([A-Z0-9]{5}\))?",result.stderr)
             raise RuntimeError("; ".join(codes) or "MariaDB command failed; check connectivity and schema.")
         return result.stdout.strip()
-    if args.action=="migrate":
-        sql((ROOT/"docs/database/V002__orders_request_fingerprint.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V003__shipments_idempotency.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V004__shipment_audit_index.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V005__orders_assembly_requested.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V006__payments_confirmation_note.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V007__refunds_verification_notes.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V008__commerce_operations.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V009__commerce_read_indexes.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V010__sepay_payment_snapshots.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V011__sepay_automation_review.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V012__sepay_refund_execution.sql").read_text(encoding="utf-8"),args.database)
-        print("Applied additive V002-V012 migrations to isolated DB "+args.database+".")
-        return
-    if args.action=="create":
-        bootstrap=(ROOT/"docs/database/V001__create_furniture_shop.sql").read_text(encoding="utf-8")
-        assert bootstrap.count("CREATE DATABASE furniture_shop ")==1 and bootstrap.count("USE furniture_shop;")==1
-        bootstrap=bootstrap.replace("CREATE DATABASE furniture_shop ",f"CREATE DATABASE {args.database} ").replace("USE furniture_shop;",f"USE {args.database};")
-        sql(bootstrap)
-        sql((ROOT/"docs/database/V002__orders_request_fingerprint.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V003__shipments_idempotency.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V004__shipment_audit_index.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V005__orders_assembly_requested.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V006__payments_confirmation_note.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V007__refunds_verification_notes.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V008__commerce_operations.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V009__commerce_read_indexes.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V010__sepay_payment_snapshots.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V011__sepay_automation_review.sql").read_text(encoding="utf-8"),args.database)
-        sql((ROOT/"docs/database/V012__sepay_refund_execution.sql").read_text(encoding="utf-8"),args.database)
-        print("Created "+args.database+" with 45 core tables plus 2 notification tables and V002-V012 migrations. Existing DBs were not overwritten.")
+    if args.action in {"create","migrate","verify"}:
+        if args.action != "verify":
+            migrations=migration_paths()
+            if args.action=="migrate":
+                embedding_type=sql("SELECT COLUMN_TYPE FROM information_schema.COLUMNS "
+                                   f"WHERE TABLE_SCHEMA='{args.database}' AND TABLE_NAME='vector_store' AND COLUMN_NAME='embedding';")
+                if embedding_type and embedding_type.lower()!="vector(768)":
+                    raise RuntimeError("Existing vector_store.embedding is incompatible with VECTOR(768); migration stopped before changes and existing vector data was retained.")
+            if args.action=="create":
+                bootstrap=migrations[0].read_text(encoding="utf-8")
+                assert bootstrap.count("CREATE DATABASE furniture_shop ")==1 and bootstrap.count("USE furniture_shop;")==1
+                bootstrap=bootstrap.replace("CREATE DATABASE furniture_shop ",f"CREATE DATABASE {args.database} ").replace("USE furniture_shop;",f"USE {args.database};")
+                sql(bootstrap)
+            for migration in migrations[1:]:
+                sql(migration.read_text(encoding="utf-8"),args.database)
+        inventory=sql("SELECT TABLE_NAME,TABLE_TYPE,COALESCE(ENGINE,'') FROM information_schema.TABLES "
+                      f"WHERE TABLE_SCHEMA='{args.database}' ORDER BY TABLE_NAME;")
+        entries=[line.split("\t") for line in inventory.splitlines()]
+        if any(len(row)!=3 or row[1:]!=["BASE TABLE","InnoDB"] for row in entries) or {row[0] for row in entries}!=LATEST_TABLES:
+            raise RuntimeError("Expected the exact 49-table InnoDB commerce inventory after "+MIGRATION_RANGE+".")
+        columns=sql("SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE FROM information_schema.COLUMNS "
+                    f"WHERE TABLE_SCHEMA='{args.database}' AND TABLE_NAME IN ('vector_store','commerce_vector_reindex_outbox');")
+        verify_vector_columns(columns)
+        print("Verified "+args.database+": exact 49 InnoDB tables, VECTOR(768) and V014 runtime columns, schema "+MIGRATION_RANGE+".")
         return
     if len(os.environ.get("TV3_DEMO_PASSWORD",""))<10:
         parser.error("Supply TV3_DEMO_PASSWORD with at least 10 characters; it is not printed.")

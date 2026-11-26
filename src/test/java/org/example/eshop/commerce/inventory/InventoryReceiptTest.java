@@ -1,6 +1,7 @@
 package org.example.eshop.commerce.inventory;
 
 import org.example.eshop.commerce.common.CommerceException;
+import org.example.eshop.commerce.cache.Tv5Cache;
 import org.example.eshop.commerce.integration.JdbcInventoryAdapter;
 import org.example.eshop.commerce.port.CommerceActor;
 import org.example.eshop.commerce.port.CurrentActorPort;
@@ -43,7 +44,7 @@ class InventoryReceiptTest {
 
     @TestConfiguration
     @EnableTransactionManagement
-    @Import({InventoryReceiptService.class, JdbcInventoryAdapter.class})
+    @Import({InventoryReceiptService.class, JdbcInventoryAdapter.class, Tv5Cache.class})
     static class Config {
         @Bean DataSource dataSource() {
             return new DriverManagerDataSource(System.getenv("TV3_TEST_DB_URL"),
