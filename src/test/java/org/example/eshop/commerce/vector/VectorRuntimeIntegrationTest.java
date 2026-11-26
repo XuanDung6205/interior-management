@@ -104,7 +104,25 @@ class VectorRuntimeIntegrationTest {
 
     @BeforeEach void seed() {
         assertTrue(jdbc.queryForObject("SELECT DATABASE()",String.class).startsWith("furniture_shop_test_"));
-        cleanup(); NOW.set(Instant.parse("2026-11-26T08:00:00Z")); PROVIDER_FAIL=false; REQUESTS.set(0); DURING_REQUEST=body -> {};
+        cleanup();
+        // Discovery and SQL fallback query the whole catalog. Other integration classes
+        // leave fixtures behind, so start from an empty guarded test catalog regardless
+        // of Surefire's platform-dependent class order. Delete vectors explicitly before
+        // parent products to avoid native VECTOR key reuse after a cascading deletion.
+        for (String table : List.of(
+                "commerce_vector_reindex_outbox", "vector_store",
+                "chat_messages", "chat_conversations", "review_images", "reviews", "wishlist_items",
+                "tracking_events", "articles", "banners", "warranty_requests",
+                "commerce_notifications", "commerce_notification_outbox", "audit_logs",
+                "refunds", "return_items", "return_requests", "payment_events", "payments",
+                "shipment_items", "shipments", "inventory_movements", "inventory_reservations",
+                "coupon_redemptions", "order_status_history", "order_addresses", "order_items", "orders",
+                "cart_items", "carts", "coupons", "user_addresses", "inventory_balances",
+                "collection_products", "product_rooms", "product_specifications", "product_images",
+                "variant_materials", "product_variants", "products", "categories", "user_roles", "users")) {
+            jdbc.update("DELETE FROM " + table);
+        }
+        NOW.set(Instant.parse("2026-11-26T08:00:00Z")); PROVIDER_FAIL=false; REQUESTS.set(0); DURING_REQUEST=body -> {};
         jdbc.update("INSERT INTO categories(id,name,slug) VALUES(48001,'Vector furniture','vector-furniture')");
         jdbc.update("""
                 INSERT INTO products(id,category_id,name,slug,short_description,status) VALUES
