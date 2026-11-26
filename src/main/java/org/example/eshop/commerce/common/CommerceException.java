@@ -15,6 +15,8 @@ public class CommerceException extends RuntimeException {
     public static CommerceException notFound(String message) { return new CommerceException(HttpStatus.NOT_FOUND,"NOT_FOUND",message,Map.of()); }
     public static CommerceException notFound(String code,String message) { return new CommerceException(HttpStatus.NOT_FOUND,code,message,Map.of()); }
     public static CommerceException conflict(String code,String message) { return new CommerceException(HttpStatus.CONFLICT,code,message,Map.of()); }
+    public static CommerceException conflict(String code,String message,Map<String,String> fields) { return new CommerceException(HttpStatus.CONFLICT,code,message,fields); }
     public static CommerceException forbidden(String message) { return new CommerceException(HttpStatus.FORBIDDEN,"FORBIDDEN",message,Map.of()); }
     public static CommerceException invalid(Map<String,String> fields) { return new CommerceException(HttpStatus.BAD_REQUEST,"VALIDATION_ERROR","Please correct the invalid fields.",fields); }
+    public static CommerceException invalid(String message,Map<String,String> fields) { return new CommerceException(HttpStatus.BAD_REQUEST,"VALIDATION_ERROR",message,fields); }
 }

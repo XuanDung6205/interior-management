@@ -76,6 +76,7 @@ export function createApiClient(fetcher = (...args) => fetch(...args)) {
     request,
     download,
     login: (username, password) => authenticate('/session/login', { username, password }),
+    register: details => request('/session/register', { method: 'POST', body: details }),
     logout: () => authenticate('/session/logout'),
     mergeCart: () => request('/cart/merge', { method: 'POST' }),
   };

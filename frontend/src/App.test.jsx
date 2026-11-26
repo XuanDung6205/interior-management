@@ -208,6 +208,49 @@ it('logs in, explicitly merges the guest cart, then shows the merged server stat
   expect(screen.getByRole('link', { name: 'Quản lý ưu đãi' })).toBeInTheDocument();
 });
 
+it('registers a customer, returns to login, and preserves the guest cart until sign-in', async () => {
+  const customer = { authenticated: true, user: { id: 91, username: 'mai.an', fullName: 'Mai An', roles: ['CUSTOMER'] } };
+  const { user, calls } = mount('/login', {
+    'POST /api/session/register': { status: 201, body: { id: 91, username: 'mai.an', email: 'mai@example.com', fullName: 'Mai An' } },
+    'POST /api/session/login': customer,
+    'POST /api/cart/merge': cart,
+  });
+  await user.click(await screen.findByRole('link', { name: 'Đăng ký ngay' }));
+  expect(screen.getByRole('heading', { name: 'Đăng ký' })).toBeInTheDocument();
+  await user.type(screen.getByLabelText('Họ và tên'), 'Mai An');
+  await user.type(screen.getByLabelText('Tên đăng nhập'), 'mai.an');
+  await user.type(screen.getByLabelText('Email'), 'mai@example.com');
+  await user.type(screen.getByLabelText('Mật khẩu', { exact: true }), 'secret-pass-123');
+  await user.type(screen.getByLabelText('Nhập lại mật khẩu'), 'secret-pass-123');
+  await user.click(screen.getByRole('button', { name: 'Tạo tài khoản' }));
+  expect(await screen.findByText('Tài khoản đã được tạo. Đăng nhập để tiếp tục.')).toBeInTheDocument();
+  expect(screen.getByLabelText('Tên đăng nhập')).toHaveValue('mai.an');
+  expect(calls.filter(call => call.url === '/api/cart/merge')).toHaveLength(0);
+  const registration = calls.find(call => call.url === '/api/session/register');
+  expect(JSON.parse(registration.body)).toMatchObject({ username: 'mai.an', email: 'mai@example.com', password: 'secret-pass-123' });
+  expect(registration.headers['X-CSRF-TOKEN']).toBe('csrf');
+  await user.type(screen.getByLabelText('Mật khẩu', { exact: true }), 'secret-pass-123');
+  await user.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+  await screen.findByRole('heading', { name: /Giỏ hàng của bạn/ });
+  expect(calls.filter(call => call.url === '/api/cart/merge')).toHaveLength(1);
+});
+
+it('shows duplicate email on the registration form without losing entered details', async () => {
+  const { user, calls } = mount('/register', {
+    'POST /api/session/register': { status: 409, body: { code: 'ACCOUNT_EXISTS', message: 'Tên đăng nhập hoặc email đã được sử dụng.', fieldErrors: { email: 'Email đã được sử dụng.' } } },
+  });
+  await user.type(await screen.findByLabelText('Họ và tên'), 'Mai An');
+  await user.type(screen.getByLabelText('Tên đăng nhập'), 'mai.an');
+  await user.type(screen.getByLabelText('Email'), 'mai@example.com');
+  await user.type(screen.getByLabelText('Mật khẩu', { exact: true }), 'secret-pass-123');
+  await user.type(screen.getByLabelText('Nhập lại mật khẩu'), 'secret-pass-123');
+  await user.click(screen.getByRole('button', { name: 'Tạo tài khoản' }));
+  expect(await screen.findByText('Email đã được sử dụng.')).toBeInTheDocument();
+  expect(screen.getByLabelText('Email')).toHaveValue('mai@example.com');
+  expect(screen.getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true');
+  expect(calls.filter(call => call.url === '/api/session/register')).toHaveLength(1);
+});
+
 it('shows a recoverable merge failure after successful login without losing the authenticated session', async () => {
   const { user } = mount('/login', { 'POST /api/session/login': staff, 'POST /api/cart/merge': { status: 409, body: { code: 'QUANTITY_OVERFLOW', message: 'Số lượng sau khi gộp quá lớn.', fieldErrors: {} } } });
   await screen.findByLabelText('Tên đăng nhập');
