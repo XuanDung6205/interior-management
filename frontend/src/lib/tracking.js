@@ -1,18 +1,22 @@
 const SESSION_KEY = 'nepnha.trackingSessionId';
+let cachedSessionId = null;
 
-// Tạo hoặc lấy lại UUID phiên tracking trong sessionStorage của trình duyệt
+// Tạo hoặc lấy lại UUID phiên tracking (dùng localStorage để tránh chen vào sessionStorage của luồng đặt hàng)
 export function getTrackingSessionId() {
+  if (cachedSessionId) return cachedSessionId;
   try {
-    let id = sessionStorage.getItem(SESSION_KEY);
+    let id = localStorage.getItem(SESSION_KEY);
     if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
       id = typeof crypto !== 'undefined' && crypto.randomUUID
         ? crypto.randomUUID()
         : '00000000-0000-4000-8000-000000000000';
-      sessionStorage.setItem(SESSION_KEY, id);
+      localStorage.setItem(SESSION_KEY, id);
     }
+    cachedSessionId = id;
     return id;
   } catch {
-    return '00000000-0000-4000-8000-000000000000';
+    cachedSessionId = '00000000-0000-4000-8000-000000000000';
+    return cachedSessionId;
   }
 }
 

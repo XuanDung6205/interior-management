@@ -24,6 +24,12 @@ function mount(path, handlers = {}, session = guest) {
     else if (url === '/api/catalog/products/demo-ghe-an-06-01') body = { id: 51, slug: 'demo-ghe-an-06-01', name: 'Ghế ăn Mộc An', shortDescription: 'Ghế ăn gọn nhẹ', description: 'Ghế ăn gọn nhẹ cho bữa cơm gia đình.', careInstructions: 'Lau bằng khăn mềm.', categoryName: 'Ghế ăn', categorySlug: 'demo-ghe-an', brandName: 'Nếp Nhà Studio', warrantyMonths: 12, assemblyRequired: false, images: [{ url: '/images/gallery-dining-room.jpg', altText: 'Ảnh minh họa Ghế ăn Mộc An' }], specifications: [{ name: 'Chiều rộng', value: '480', unit: 'mm' }], variants: [{ id: 51, sku: 'NN-DEMO-06-01', name: 'Mộc An', widthMm: 480, depthMm: 520, heightMm: 790, price: '1890000.00', compareAtPrice: null, leadTimeDays: 3, availableQuantity: 12, materials: ['Gỗ sồi'] }] };
     else if (url.startsWith('/api/commerce/catalog/variants')) body = page([chair]);
     else if (url === '/api/commerce/home/gallery') body = { items: [] };
+    else if (url.startsWith('/api/commerce/content/banners')) body = [];
+    else if (url.startsWith('/api/commerce/content/articles')) body = page([]);
+    else if (url.startsWith('/api/commerce/products/') && url.includes('/reviews')) body = { productId: 51, averageRating: 0, totalReviews: 0, items: [], page: 0, size: 10, totalPages: 0 };
+    else if (url.startsWith('/api/commerce/recommendations')) body = { items: [] };
+    else if (url === '/api/wishlist' && method === 'GET') body = [];
+    else if (url === '/api/tracking/events' && method === 'POST') { status = 202; body = null; }
     else if (url.startsWith('/api/admin/coupons?')) body = page([coupon]);
     else throw new Error(`Unexpected HTTP ${method} ${url}`);
     return new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });

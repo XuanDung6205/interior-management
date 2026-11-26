@@ -1,6 +1,6 @@
 """Kịch bản đo tải cục bộ cho các endpoint TV5 (chỉ dùng thư viện chuẩn Python).
 
-Đo độ trễ p50/p95, số lỗi và thông lượng cho các API nội dung, gợi ý và dashboard.
+Đo độ trễ p50/p95, số lỗi và thông lượng cho các API nội dung, gợi ý, dashboard và đo riêng AI chat latency.
 Chỉ cho phép chạy vào địa chỉ loopback (localhost / 127.0.0.1).
 """
 import argparse
@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 import http.cookiejar
 import json
 import math
+import platform
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlsplit
@@ -39,14 +40,18 @@ def percentile(sorted_values, pct):
     return round(sorted_values[index], 2)
 
 
-def make_opener(base_url, username, password):
+def fetch_csrf(opener, base_url, timeout):
+    req = Request(base_url + '/api/csrf', headers={'Accept': 'application/json'})
+    with opener.open(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode('utf-8'))
+
+
+def make_opener(base_url, username, password, timeout=10.0):
     jar = http.cookiejar.CookieJar()
     opener = build_opener(HTTPCookieProcessor(jar))
     if username and password:
         # Lấy CSRF token trước khi đăng nhập bằng cookie session
-        csrf_req = Request(base_url + '/api/csrf', headers={'Accept': 'application/json'})
-        with opener.open(csrf_req, timeout=10) as resp:
-            csrf = json.loads(resp.read().decode('utf-8'))
+        csrf = fetch_csrf(opener, base_url, timeout)
         form = urlencode({'username': username, 'password': password}).encode('utf-8')
         login_req = Request(
             base_url + '/api/session/login',
@@ -58,7 +63,7 @@ def make_opener(base_url, username, password):
                 csrf['headerName']: csrf['token'],
             },
         )
-        with opener.open(login_req, timeout=10) as resp:
+        with opener.open(login_req, timeout=timeout) as resp:
             if resp.status != 200:
                 raise RuntimeError('Đăng nhập thất bại trước khi đo tải.')
     return opener
@@ -83,7 +88,7 @@ def run_worker(base_url, path, requests_per_user, opener, timeout):
 
 
 def benchmark_route(base_url, path, vus, iterations, username, password, timeout):
-    openers = [make_opener(base_url, username, password) for _ in range(vus)]
+    openers = [make_opener(base_url, username, password, timeout) for _ in range(vus)]
     all_latencies = []
     total_errors = 0
     started = time.perf_counter()
@@ -108,6 +113,54 @@ def benchmark_route(base_url, path, vus, iterations, username, password, timeout
     }
 
 
+def benchmark_ai_chat(base_url, count, timeout):
+    # Đo riêng độ trễ AI chat (giữ số lượt <= 10 để ko đụng rate limit 12 req/phút của server)
+    opener = make_opener(base_url, '', '', timeout)
+    csrf = fetch_csrf(opener, base_url, timeout)
+    prompts = [
+        'Tư vấn bàn trà gỗ dưới 5 triệu',
+        'Tìm sofa phòng khách dưới 15 triệu',
+        'Có ghế ăn gỗ sồi nào còn hàng không',
+    ]
+    latencies = []
+    errors = 0
+    models = []
+    for idx in range(count):
+        payload = json.dumps({'conversationId': None, 'message': prompts[idx % len(prompts)]}).encode('utf-8')
+        req = Request(
+            base_url + '/api/commerce/chat',
+            data=payload,
+            method='POST',
+            headers={
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                csrf['headerName']: csrf['token'],
+            },
+        )
+        start = time.perf_counter()
+        try:
+            with opener.open(req, timeout=max(timeout, 30.0)) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                if resp.status == 200:
+                    latencies.append((time.perf_counter() - start) * 1000.0)
+                    models.append(data.get('model', 'UNKNOWN'))
+                else:
+                    errors += 1
+        except (HTTPError, URLError, TimeoutError):
+            errors += 1
+    latencies.sort()
+    return {
+        'name': 'ai_chat',
+        'path': '/api/commerce/chat',
+        'totalRequests': count,
+        'errors': errors,
+        'modelsObserved': sorted(set(models)),
+        'p50Ms': percentile(latencies, 50),
+        'p95Ms': percentile(latencies, 95),
+        'maxMs': round(latencies[-1], 2) if latencies else 0.0,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description='Đo hiệu năng cục bộ các API TV5.')
     parser.add_argument('--base-url', default='http://127.0.0.1:8080')
@@ -116,6 +169,8 @@ def main():
     parser.add_argument('--label', default='cold', help='Nhãn lượt đo (vd: cold hoặc warm)')
     parser.add_argument('--staff-user', default='', help='Tài khoản staff để đo thêm API dashboard')
     parser.add_argument('--staff-password', default='', help='Mật khẩu staff (chỉ truyền khi chạy cục bộ)')
+    parser.add_argument('--include-ai', action='store_true', help='Đo thêm độ trễ riêng của AI chat')
+    parser.add_argument('--ai-requests', type=int, default=5, help='Số câu hỏi AI cần đo (tối đa 10/phút)')
     parser.add_argument('--timeout', type=float, default=10.0)
     args = parser.parse_args()
 
@@ -132,8 +187,12 @@ def main():
             row['name'] = name
             results.append(row)
 
+    if args.include_ai:
+        results.append(benchmark_ai_chat(base_url, max(1, min(10, args.ai_requests)), args.timeout))
+
     report = {
         'label': args.label,
+        'machine': platform.platform(),
         'measuredAtUtc': datetime.now(timezone.utc).isoformat(),
         'vus': args.vus,
         'iterationsPerVu': args.iterations,
