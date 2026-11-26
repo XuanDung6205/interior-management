@@ -4,9 +4,9 @@ import { Icon } from './ui';
 import { UnreadBadge } from '../features/notifications/NotificationsPage';
 
 const rooms = [
-  { key: 'living', label: 'Phòng khách', links: [['Sofa', 'Sofa'], ['Bàn trà', 'Bàn trà'], ['Ghế thư giãn', 'Ghế']] },
-  { key: 'dining', label: 'Phòng ăn', links: [['Bàn ăn', 'Bàn ăn'], ['Ghế ăn', 'Ghế']] },
-  { key: 'bedroom', label: 'Phòng ngủ', links: [['Giường', 'Giường'], ['Tủ', 'Tủ']] },
+  { key: 'living', slug: 'phong-khach', label: 'Phòng khách', links: [['Sofa', 'demo-sofa'], ['Bàn trà', 'demo-ban-tra'], ['Ghế thư giãn', 'demo-ghe-thu-gian']] },
+  { key: 'dining', slug: 'phong-an', label: 'Phòng ăn', links: [['Bàn ăn', 'demo-ban-an'], ['Ghế ăn', 'demo-ghe-an']] },
+  { key: 'bedroom', slug: 'phong-ngu', label: 'Phòng ngủ', links: [['Giường', 'demo-giuong'], ['Tủ', 'demo-tu-ke']] },
 ];
 const adminLinks = [
   ['/admin/dashboard', 'Thống kê'],
@@ -22,7 +22,8 @@ const adminLinks = [
   ['/admin/inventory/dispatch', 'Xuất kho'],
   ['/admin/inventory/shipments', 'Vận đơn'],
 ];
-const catalogHref = query => `/cart?query=${encodeURIComponent(query)}#catalog`;
+const catalogHref = query => query ? `/sale?query=${encodeURIComponent(query)}` : '/sale';
+const roomHref = (room, category) => `/sale?${new URLSearchParams({ room, ...(category ? { category } : {}) })}`;
 
 export default function StoreHeader({ session, isStaff, busy, onLogout }) {
   const location = useLocation();
@@ -51,7 +52,7 @@ export default function StoreHeader({ session, isStaff, busy, onLogout }) {
     event.preventDefault();
     const query = search.trim();
     closeMenus();
-    navigate(query ? catalogHref(query) : '/cart#catalog');
+    navigate(catalogHref(query));
   }
 
   return <header className="site-header store-header" ref={headerRef}>
@@ -63,7 +64,7 @@ export default function StoreHeader({ session, isStaff, busy, onLogout }) {
         <NavLink to="/sale">Sale &amp; sản phẩm</NavLink>
         {rooms.map(room => <div className="store-nav-group" key={room.key}>
           <button type="button" aria-expanded={openPanel === room.key} aria-controls={`store-menu-${room.key}`} onClick={() => togglePanel(room.key)}>{room.label}<Icon name="chevron" size={15} /></button>
-          {openPanel === room.key && <div className="store-nav-popover" id={`store-menu-${room.key}`}><span className="store-popover-label">KHÁM PHÁ {room.label.toUpperCase()}</span>{room.links.map(([label, query]) => <Link key={label} to={catalogHref(query)}>{label}<Icon name="arrow" size={16} /></Link>)}</div>}
+          {openPanel === room.key && <div className="store-nav-popover" id={`store-menu-${room.key}`}><span className="store-popover-label">KHÁM PHÁ {room.label.toUpperCase()}</span><Link to={roomHref(room.slug)}>Tất cả {room.label.toLowerCase()}<Icon name="arrow" size={16} /></Link>{room.links.map(([label, category]) => <Link key={label} to={roomHref(room.slug, category)}>{label}<Icon name="arrow" size={16} /></Link>)}</div>}
         </div>)}
         <Link to="/#home-inspiration">Cảm hứng</Link>
         <NavLink to="/articles">Bài viết</NavLink>

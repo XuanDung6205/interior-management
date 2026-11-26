@@ -9,7 +9,8 @@
 .store-nav-group>button svg { transition: transform .2s ease; }
 .store-nav-group>button[aria-expanded='true'] svg { transform: rotate(180deg); }
 .store-nav-popover, .store-account-panel { position: absolute; top: calc(100% + 1px); min-width: 225px; padding: 18px; background: var(--paper); border: 1px solid var(--line); box-shadow: 0 16px 38px rgba(31, 33, 27, .12); }
-.store-nav-popover { left: -18px; display: grid; gap: 3px; }
+.store-nav-popover { left: -18px; display: grid; gap: 3px; animation: store-menu-enter .16s ease-out both; }
+@keyframes store-menu-enter { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 .store-popover-label { display: block; color: var(--wood); font-size: 9px; font-weight: 700; letter-spacing: .15em; margin-bottom: 8px; }
 .store-nav-popover a { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 38px; padding: 7px 2px; font-size: 12px; border-bottom: 1px solid #efede6; }
 .store-nav-popover a:last-child { border-bottom: 0; }
@@ -52,3 +53,4 @@
   .store-search-panel button { font-size: 12px; }
   .store-account-panel { right: 12px; width: min(260px, calc(100vw - 24px)); }
 }
+@media (prefers-reduced-motion: reduce) { .store-nav-popover { animation: none; } .store-nav-group>button svg { transition: none; } }

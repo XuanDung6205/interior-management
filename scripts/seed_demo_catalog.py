@@ -86,6 +86,8 @@ def sql_rows():
                 "ON DUPLICATE KEY UPDATE price=VALUES(price),compare_at_price=VALUES(compare_at_price),status='ACTIVE';"
             )
             statements.append(f"INSERT IGNORE INTO product_rooms(product_id,room_id) SELECT {product},id FROM rooms WHERE slug={quote('demo-' + room)};")
+            if family_index == 8:
+                statements.append(f"INSERT IGNORE INTO product_rooms(product_id,room_id) SELECT {product},id FROM rooms WHERE slug='demo-phong-ngu';")
             statements.append(f"INSERT IGNORE INTO variant_materials(variant_id,material_id) SELECT {variant},id FROM materials WHERE slug={quote('demo-' + material)};")
             statements.append(
                 f"UPDATE product_images SET url={quote(image_url)},alt_text={quote(alt_text)} "

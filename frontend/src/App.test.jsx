@@ -15,11 +15,11 @@ function mount(path, handlers = {}, session = guest) {
     const handler = handlers[`${method} ${url}`];
     let body;
     let status = 200;
-    if (handler) { const result = typeof handler === 'function' ? handler(options) : handler; body = result.body ?? result; status = result.status ?? 200; }
+    if (handler) { const result = typeof handler === 'function' ? await handler(options) : handler; body = result.body ?? result; status = result.status ?? 200; }
     else if (url === '/api/session') body = session;
     else if (url === '/api/csrf') body = { token: 'csrf', headerName: 'X-CSRF-TOKEN' };
     else if (url === '/api/cart') body = cart;
-    else if (url === '/api/catalog/categories') body = [{ id: 1, name: 'Ghế ăn', slug: 'demo-ghe-an' }];
+    else if (url.startsWith('/api/catalog/categories?')) body = [{ id: 1, name: 'Ghế ăn', slug: 'demo-ghe-an' }];
     else if (url.startsWith('/api/catalog/products?')) body = page([{ id: 51, slug: 'demo-ghe-an-06-01', name: 'Ghế ăn Mộc An', shortDescription: 'Ghế ăn gọn nhẹ', categoryName: 'Ghế ăn', categorySlug: 'demo-ghe-an', variantId: 51, sku: 'NN-DEMO-06-01', price: '1890000.00', compareAtPrice: null, imageUrl: '/images/gallery-dining-room.jpg', availableQuantity: 12 }]);
     else if (url === '/api/catalog/products/demo-ghe-an-06-01') body = { id: 51, slug: 'demo-ghe-an-06-01', name: 'Ghế ăn Mộc An', shortDescription: 'Ghế ăn gọn nhẹ', description: 'Ghế ăn gọn nhẹ cho bữa cơm gia đình.', careInstructions: 'Lau bằng khăn mềm.', categoryName: 'Ghế ăn', categorySlug: 'demo-ghe-an', brandName: 'Nếp Nhà Studio', warrantyMonths: 12, assemblyRequired: false, images: [{ url: '/images/gallery-dining-room.jpg', altText: 'Ảnh minh họa Ghế ăn Mộc An' }], specifications: [{ name: 'Chiều rộng', value: '480', unit: 'mm' }], variants: [{ id: 51, sku: 'NN-DEMO-06-01', name: 'Mộc An', widthMm: 480, depthMm: 520, heightMm: 790, price: '1890000.00', compareAtPrice: null, leadTimeDays: 3, availableQuantity: 12, materials: ['Gỗ sồi'] }] };
     else if (url.startsWith('/api/commerce/catalog/variants')) body = page([chair]);
@@ -33,11 +33,18 @@ function mount(path, handlers = {}, session = guest) {
 }
 
 it('shows live catalog names, prices and image URLs on the home page', async () => {
-  const original = { ...chair, imageUrl: '/images/ghe-aalto.jpg' };
-  const { calls, user } = mount('/', { 'GET /api/commerce/catalog/variants?query=&page=0&size=6': page([original]) });
-  expect(await screen.findByRole('heading', { name: 'Ghế gỗ sồi' })).toBeInTheDocument();
-  expect(screen.getByText('1.250.000 ₫')).toBeInTheDocument();
-  expect(screen.getByRole('img', { name: 'Ghế gỗ sồi — Gỗ tự nhiên' })).toHaveAttribute('src', '/images/ghe-aalto.jpg');
+  const featured = [
+    { id: 11, slug: 'demo-sofa-01-04', name: 'Sofa vải Trầm Thu', categoryName: 'Sofa', sku: 'NN-DEMO-01-04', price: '13600000.00', imageUrl: '/images/catalog/NN-DEMO-01-04.jpg' },
+    { id: 12, slug: 'demo-ban-tra-03-05', name: 'Bàn trà gỗ Bình Minh', categoryName: 'Bàn trà', sku: 'NN-DEMO-03-05', price: '4390000.00', imageUrl: '/images/catalog/NN-DEMO-03-05.jpg' },
+    { id: 13, slug: 'demo-ghe-thu-gian-04-04', name: 'Ghế bành Trầm Thu', categoryName: 'Ghế thư giãn', sku: 'NN-DEMO-04-04', price: '4990000.00', imageUrl: '/images/catalog/NN-DEMO-04-04.jpg' },
+  ];
+  const { calls, user } = mount('/', { 'GET /api/catalog/products?size=100': page(featured) });
+  expect(await screen.findByRole('heading', { name: 'Sofa vải Trầm Thu' })).toBeInTheDocument();
+  expect(screen.getByText('13.600.000 ₫')).toBeInTheDocument();
+  const photos = within(document.querySelector('.home-product-grid')).getAllByRole('img');
+  expect(photos.map(photo => photo.getAttribute('src'))).toEqual(featured.map(item => item.imageUrl));
+  expect(photos.map(photo => photo.getAttribute('src'))).not.toContain('/images/sofa-modena.jpg');
+  expect(screen.getByRole('link', { name: /Sofa vải Trầm Thu/ })).toHaveAttribute('href', '/products/demo-sofa-01-04');
   expect(calls.some(call => call.url === '/api/cart')).toBe(false);
   await user.click(screen.getByRole('link', { name: 'Xem tất cả' }));
   expect(await screen.findByRole('heading', { name: 'Sale & tất cả sản phẩm.' })).toBeInTheDocument();
@@ -56,6 +63,19 @@ it('filters Sale and opens a product detail with add-to-cart', async () => {
   await user.click(screen.getByRole('button', { name: 'Thêm vào giỏ' }));
   await waitFor(() => expect(calls.some(call => call.url === '/api/cart/items' && JSON.parse(call.body).variantId === 51)).toBe(true));
   expect(screen.getByText(/Đã thêm 1 Ghế ăn Mộc An/, { selector: '.detail-notice' })).toBeInTheDocument();
+});
+
+it('keeps the product grid in place while a category filter is loading', async () => {
+  let finishFilter;
+  const delayed = new Promise(resolve => { finishFilter = resolve; });
+  const filteredUrl = '/api/catalog/products?query=&category=demo-ghe-an&room=&sort=newest&page=0&size=12';
+  const { user } = mount('/sale', { [`GET ${filteredUrl}`]: () => delayed });
+  expect(await screen.findByRole('heading', { name: 'Ghế ăn Mộc An' })).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Ghế ăn' }));
+  expect(screen.getByRole('heading', { name: 'Ghế ăn Mộc An' })).toBeInTheDocument();
+  expect(screen.getByText('Đang cập nhật sản phẩm…')).toBeInTheDocument();
+  finishFilter(page([{ id: 52, slug: 'demo-ghe-an-06-02', name: 'Ghế ăn Sương Mai', shortDescription: 'Ghế ăn sáng màu', categoryName: 'Ghế ăn', categorySlug: 'demo-ghe-an', variantId: 52, sku: 'NN-DEMO-06-02', price: '2790000.00', imageUrl: '/images/catalog/NN-DEMO-06-02.jpg', availableQuantity: 12 }]));
+  expect(await screen.findByRole('heading', { name: 'Ghế ăn Sương Mai' })).toBeInTheDocument();
 });
 
 it('loads Home gallery images from the content API with accessible descriptions', async () => {
@@ -86,34 +106,43 @@ it('searches the catalog from the header and keeps the query in the catalog fiel
   await user.type(screen.getByLabelText('Tìm món đồ cho nhà bạn'), 'Sofa');
   await user.click(screen.getByRole('button', { name: 'Tìm kiếm', exact: true }));
   expect(await screen.findByLabelText('Tìm sản phẩm')).toHaveValue('Sofa');
-  await waitFor(() => expect(calls.some(call => call.url.includes('/commerce/catalog/variants?query=Sofa'))).toBe(true));
+  expect(screen.getByRole('heading', { name: 'Sale & tất cả sản phẩm.' })).toBeInTheDocument();
+  await waitFor(() => expect(calls.some(call => call.url.includes('/api/catalog/products?') && new URLSearchParams(call.url.split('?')[1]).get('query') === 'Sofa')).toBe(true));
+  expect(calls.some(call => call.url === '/api/cart')).toBe(false);
 });
 
-it.each(['header', 'room menu'])('restores a repeated %s search after a catalog-local search', async source => {
+it('leaves cart for product search from the header', async () => {
   const { user, calls } = mount('/cart?query=Sofa#catalog');
   const field = await screen.findByLabelText('Tìm sản phẩm');
   await user.clear(field); await user.type(field, 'Bàn');
   await user.click(screen.getByRole('button', { name: 'Tìm kiếm', exact: true }));
   const lastQuery = () => new URLSearchParams(calls.filter(call => call.url.startsWith('/api/commerce/catalog/variants?')).at(-1).url.split('?')[1]).get('query');
   await waitFor(() => expect(lastQuery()).toBe('Bàn'));
-  if (source === 'header') {
-    await user.click(screen.getByRole('button', { name: 'Tìm kiếm sản phẩm' }));
-    await user.type(screen.getByLabelText('Tìm món đồ cho nhà bạn'), 'Sofa');
-    await user.click(within(screen.getByRole('search')).getByRole('button', { name: 'Tìm kiếm', exact: true }));
-  } else {
-    await user.click(screen.getByRole('button', { name: 'Phòng khách' }));
-    await user.click(screen.getByRole('link', { name: 'Sofa', exact: true }));
-  }
-  await waitFor(() => expect(field).toHaveValue('Sofa'));
-  await waitFor(() => expect(lastQuery()).toBe('Sofa'));
+  await user.click(screen.getByRole('button', { name: 'Tìm kiếm sản phẩm' }));
+  await user.type(screen.getByLabelText('Tìm món đồ cho nhà bạn'), 'Sofa');
+  await user.click(within(screen.getByRole('search')).getByRole('button', { name: 'Tìm kiếm', exact: true }));
+  expect(await screen.findByRole('heading', { name: 'Sale & tất cả sản phẩm.' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Tìm sản phẩm')).toHaveValue('Sofa');
+  expect(screen.queryByRole('heading', { name: 'Giỏ hàng của bạn.' })).not.toBeInTheDocument();
 });
 
-it('opens a room menu and filters the catalog through its product link', async () => {
+it('opens a room menu and filters the product listing through its category link', async () => {
   const { user, calls } = mount('/');
   await user.click(screen.getByRole('button', { name: 'Phòng khách' }));
   await user.click(screen.getByRole('link', { name: 'Bàn trà' }));
-  expect(await screen.findByLabelText('Tìm sản phẩm')).toHaveValue('Bàn trà');
-  await waitFor(() => expect(calls.some(call => call.url.includes('/commerce/catalog/variants?') && new URLSearchParams(call.url.split('?')[1]).get('query') === 'Bàn trà')).toBe(true));
+  expect(await screen.findByRole('heading', { name: 'Phòng khách.' })).toBeInTheDocument();
+  await waitFor(() => expect(calls.some(call => call.url.includes('/api/catalog/products?') && new URLSearchParams(call.url.split('?')[1]).get('category') === 'demo-ban-tra' && new URLSearchParams(call.url.split('?')[1]).get('room') === 'phong-khach')).toBe(true));
+  expect(calls.some(call => call.url === '/api/cart')).toBe(false);
+});
+
+it.each([['Phòng khách', 'phong-khach'], ['Phòng ăn', 'phong-an'], ['Phòng ngủ', 'phong-ngu']])('opens %s products without showing the cart', async (label, room) => {
+  const { user, calls } = mount('/');
+  await user.click(screen.getByRole('button', { name: label }));
+  await user.click(screen.getByRole('link', { name: `Tất cả ${label.toLowerCase()}` }));
+  expect(await screen.findByRole('heading', { name: `${label}.` })).toBeInTheDocument();
+  await waitFor(() => expect(calls.some(call => call.url.includes('/api/catalog/products?') && new URLSearchParams(call.url.split('?')[1]).get('room') === room)).toBe(true));
+  expect(screen.queryByRole('heading', { name: 'Giỏ hàng của bạn.' })).not.toBeInTheDocument();
+  expect(calls.some(call => call.url === '/api/cart')).toBe(false);
 });
 
 it('rotates the Home gallery ring when the mouse enters and supports keyboard navigation', async () => {

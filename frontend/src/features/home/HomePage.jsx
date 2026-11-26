@@ -7,25 +7,36 @@ import HomeGallery from './HomeGallery';
 import './home.css';
 
 const inspirations = [
-  { title: 'Góc sum vầy', detail: 'Sofa êm ái cho những cuộc chuyện trò', image: '/images/sofa-modena.jpg', alt: 'Sofa màu kem trong không gian phòng khách sáng' },
-  { title: 'Khoảng thảnh thơi', detail: 'Bàn trà mộc mạc, vừa đủ tinh tế', image: '/images/ban-tra-oslo.jpg', alt: 'Bàn trà gỗ sồi trong không gian tối giản' },
-  { title: 'Một chỗ riêng', detail: 'Ghế thư giãn cho phút nghỉ ngơi', image: '/images/ghe-aalto.jpg', alt: 'Ghế thư giãn màu beige bên cửa sổ' },
+  { title: 'Góc sum vầy', detail: 'Sofa êm ái cho những cuộc chuyện trò', image: '/images/sofa-modena.jpg', alt: 'Sofa màu kem trong không gian phòng khách sáng', href: '/sale?category=demo-sofa' },
+  { title: 'Khoảng thảnh thơi', detail: 'Bàn trà mộc mạc, vừa đủ tinh tế', image: '/images/ban-tra-oslo.jpg', alt: 'Bàn trà gỗ sồi trong không gian tối giản', href: '/sale?category=demo-ban-tra' },
+  { title: 'Một chỗ riêng', detail: 'Ghế thư giãn cho phút nghỉ ngơi', image: '/images/ghe-aalto.jpg', alt: 'Ghế thư giãn màu beige bên cửa sổ', href: '/sale?category=demo-ghe-thu-gian' },
 ];
+const featuredSkus = ['NN-DEMO-01-04', 'NN-DEMO-03-05', 'NN-DEMO-04-04'];
+const inspirationImages = new Set(inspirations.map(item => item.image));
+const homeCatalogCache = new WeakMap();
 
 export default function HomePage() {
   const { api } = useCommerce();
-  const [catalog, setCatalog] = useState(null);
+  const [catalog, setCatalog] = useState(() => homeCatalogCache.get(api) || null);
   const [error, setError] = useState(null);
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
     setError(null);
-    api.request('/commerce/catalog/variants?query=&page=0&size=6', { signal: controller.signal })
-      .then(setCatalog)
-      .catch(value => { if (value.name !== 'AbortError') setError(value); });
+    api.request('/catalog/products?size=100', { signal: controller.signal })
+      .then(value => { if (!controller.signal.aborted) { homeCatalogCache.set(api, value); setCatalog(value); } })
+      .catch(value => { if (value.name !== 'AbortError' && !homeCatalogCache.has(api)) setError(value); });
     return () => controller.abort();
   }, [api, revision]);
+  const products = catalog?.items || [];
+  const preferred = featuredSkus.map(sku => products.find(item => item.sku === sku)).filter(Boolean);
+  const usedImages = new Set(inspirationImages);
+  const featured = [...preferred, ...products].filter(item => {
+    if (!item.imageUrl || usedImages.has(item.imageUrl)) return false;
+    usedImages.add(item.imageUrl);
+    return true;
+  }).slice(0, 3);
 
   return <div className="home-page">
     <section className="home-hero" aria-labelledby="home-title">
@@ -46,7 +57,7 @@ export default function HomePage() {
     </section>
 
     <section className="home-inspiration home-container" aria-label="Ý tưởng cho không gian sống">
-      {inspirations.map((item, index) => <Link to="/cart#catalog" className="home-inspiration-card" key={item.title}>
+      {inspirations.map((item, index) => <Link to={item.href} className="home-inspiration-card" key={item.title}>
         <div className="home-inspiration-image"><img src={item.image} alt={item.alt} loading="lazy" /></div>
         <span className="home-inspiration-number">0{index + 1}</span>
         <h3>{item.title}</h3><p>{item.detail}</p>
@@ -58,14 +69,14 @@ export default function HomePage() {
       <div className="home-section-heading"><div><span className="home-kicker">LỰA CHỌN TỪ NẾP NHÀ</span><h2 id="home-featured-title">Món đồ cho ngày thường <em>đẹp hơn.</em></h2></div><Link to="/sale" className="home-underlined-link">Xem tất cả <Icon name="arrow" size={17} /></Link></div>
       <ErrorNotice error={error} onRetry={() => setRevision(value => value + 1)} />
       {!catalog && !error && <Loading text="Đang tải sản phẩm…" />}
-      {catalog && (catalog.items.length ? <div className="home-product-grid">{catalog.items.slice(0, 3).map(item => <Link to="/cart#catalog" className="home-product-card" key={item.id}>
-        <ProductImage src={item.imageUrl} name={`${item.productName} — ${item.variantName}`} />
-        <div className="home-product-details"><span className="home-product-type">{item.variantName}</span><h3>{item.productName}</h3><strong>{formatMoney(item.price)}</strong><span className="home-product-arrow" aria-hidden="true"><Icon name="arrow" size={19} /></span></div>
+      {catalog && (featured.length ? <div className="home-product-grid">{featured.map(item => <Link to={`/products/${item.slug}`} className="home-product-card" key={item.id}>
+        <ProductImage src={item.imageUrl} name={`Ảnh minh họa ${item.name}`} />
+        <div className="home-product-details"><span className="home-product-type">{item.categoryName}</span><h3>{item.name}</h3><strong>{formatMoney(item.price)}</strong><span className="home-product-arrow" aria-hidden="true"><Icon name="arrow" size={19} /></span></div>
       </Link>)}</div> : <p className="home-empty">Chưa có sản phẩm để hiển thị. Hãy thêm sản phẩm vào catalog để bắt đầu.</p>)}
     </div></section>
 
     <HomeGallery />
 
-    <section className="home-closing"><div className="home-container home-closing-inner"><span className="home-kicker">NẾP NHÀ · MỘT CHÚT BÌNH YÊN</span><h2>Chọn món đồ mình yêu.<br /><em>Gọi đó là nhà.</em></h2><p>Cùng tạo một không gian vừa vặn với nhịp sống của bạn.</p><Link to="/cart#catalog" className="home-underlined-link">Bắt đầu khám phá <Icon name="arrow" size={18} /></Link></div></section>
+    <section className="home-closing"><div className="home-container home-closing-inner"><span className="home-kicker">NẾP NHÀ · MỘT CHÚT BÌNH YÊN</span><h2>Chọn món đồ mình yêu.<br /><em>Gọi đó là nhà.</em></h2><p>Cùng tạo một không gian vừa vặn với nhịp sống của bạn.</p><Link to="/sale" className="home-underlined-link">Bắt đầu khám phá <Icon name="arrow" size={18} /></Link></div></section>
   </div>;
 }

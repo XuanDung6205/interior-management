@@ -52,21 +52,28 @@ public class PublicCatalogController {
     private static String money(BigDecimal amount) { return amount == null ? null : amount.setScale(2).toPlainString(); }
 
     @GetMapping("/categories")
-    public List<Category> categories() {
-        return jdbc.query("SELECT c.id,c.name,c.slug FROM categories c WHERE c.is_active=1 AND EXISTS(SELECT 1 FROM products p JOIN product_variants v ON v.product_id=p.id AND v.status='ACTIVE' WHERE p.category_id=c.id AND p.status='ACTIVE') ORDER BY c.sort_order,c.name", Map.of(),
+    public List<Category> categories(@RequestParam(defaultValue = "") String room) {
+        room = room == null ? "" : room.trim();
+        if (!room.isEmpty() && !Set.of("phong-khach", "phong-an", "phong-ngu").contains(room))
+            throw CommerceException.badRequest("INVALID_ROOM", "Unsupported room.");
+        return jdbc.query("SELECT c.id,c.name,c.slug FROM categories c WHERE c.is_active=1 AND EXISTS(SELECT 1 FROM products p JOIN product_variants v ON v.product_id=p.id AND v.status='ACTIVE' WHERE p.category_id=c.id AND p.status='ACTIVE' AND (:room='' OR EXISTS(SELECT 1 FROM product_rooms pr JOIN rooms r ON r.id=pr.room_id WHERE pr.product_id=p.id AND r.is_active=1 AND (r.slug=:room OR r.slug=CONCAT('demo-',:room))))) ORDER BY c.sort_order,c.name", Map.of("room", room),
                 (rs, row) -> new Category(rs.getLong("id"), rs.getString("name"), rs.getString("slug")));
     }
 
     @GetMapping("/products")
     public CatalogPage products(@RequestParam(defaultValue = "") String query,
                                 @RequestParam(defaultValue = "") String category,
+                                @RequestParam(defaultValue = "") String room,
                                 @RequestParam(defaultValue = "newest") String sort,
                                 @RequestParam(defaultValue = "0") int page,
                                 @RequestParam(defaultValue = "12") int size) {
         if (page < 0 || size < 1 || size > 100) throw CommerceException.badRequest("INVALID_PAGE", "Invalid catalog page.");
         query = query == null ? "" : query.trim();
         category = category == null ? "" : category.trim();
+        room = room == null ? "" : room.trim();
         if (query.length() > 200 || category.length() > 180) throw CommerceException.badRequest("INVALID_FILTER", "Catalog filter is too long.");
+        if (!room.isEmpty() && !Set.of("phong-khach", "phong-an", "phong-ngu").contains(room))
+            throw CommerceException.badRequest("INVALID_ROOM", "Unsupported room.");
         String order = switch (sort) {
             case "newest" -> "p.id DESC";
             case "price_asc" -> "v.price ASC,p.id DESC";
@@ -75,10 +82,11 @@ public class PublicCatalogController {
             default -> throw CommerceException.badRequest("INVALID_SORT", "Unsupported catalog sort.");
         };
         String where = " WHERE p.status='ACTIVE' AND c.is_active=1 AND (:category='' OR c.slug=:category)" +
+                " AND (:room='' OR EXISTS(SELECT 1 FROM product_rooms pr JOIN rooms r ON r.id=pr.room_id WHERE pr.product_id=p.id AND r.is_active=1 AND (r.slug=:room OR r.slug=CONCAT('demo-',:room))))" +
                 " AND (:query='' OR p.name LIKE :pattern ESCAPE '=' OR v.sku LIKE :pattern ESCAPE '=' OR p.short_description LIKE :pattern ESCAPE '=')";
         String pattern = "%" + query.replace("=", "==").replace("%", "=%").replace("_", "=_") + "%";
         var args = new MapSqlParameterSource().addValue("query", query).addValue("pattern", pattern)
-                .addValue("category", category).addValue("size", size).addValue("offset", (long) page * size);
+                .addValue("category", category).addValue("room", room).addValue("size", size).addValue("offset", (long) page * size);
         Long total = jdbc.queryForObject("SELECT COUNT(*)" + CARD_FROM + where, args, Long.class);
         var rows = jdbc.query(CARD_SELECT + CARD_FROM + where + " ORDER BY " + order + " LIMIT :size OFFSET :offset", args,
                 (rs, row) -> new ProductCard(rs.getLong("id"), rs.getString("slug"), rs.getString("name"),
