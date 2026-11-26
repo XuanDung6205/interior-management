@@ -3,6 +3,7 @@ package org.example.eshop.commerce.integration;
 import org.example.eshop.commerce.port.CheckoutAddressPort;
 import org.example.eshop.commerce.port.CheckoutCatalogPort;
 import org.example.eshop.commerce.port.InventoryPort;
+import org.example.eshop.commerce.cache.Tv5Cache;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.support.TransactionTemplate;
 import javax.sql.DataSource;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -63,7 +65,7 @@ class CheckoutAdaptersTest extends CheckoutAdapterFixture {
 abstract class CheckoutAdapterFixture {
     static final long USER=910001,ADDRESS=910001,PRODUCT=910001,VARIANT=910001,WAREHOUSE=910001,ORDER=910001,ITEM=910001;
     @TestConfiguration @EnableTransactionManagement
-    @Import({JdbcInventoryAdapter.class,JdbcCheckoutCatalogAdapter.class,JdbcCheckoutAddressAdapter.class})
+    @Import({JdbcInventoryAdapter.class,JdbcCheckoutCatalogAdapter.class,JdbcCheckoutAddressAdapter.class,Tv5Cache.class})
     static class Config {
         @Bean DataSource dataSource() {
             return new DriverManagerDataSource(System.getenv("TV3_TEST_DB_URL"),System.getenv().getOrDefault("DB_USERNAME","root"),System.getenv("DB_PASSWORD"));
@@ -71,6 +73,7 @@ abstract class CheckoutAdapterFixture {
         @Bean NamedParameterJdbcTemplate namedJdbc(DataSource source) { return new NamedParameterJdbcTemplate(source); }
         @Bean JdbcTemplate jdbc(DataSource source) { return new JdbcTemplate(source); }
         @Bean PlatformTransactionManager transactionManager(DataSource source) { return new DataSourceTransactionManager(source); }
+        @Bean Clock clock() { return Clock.systemUTC(); }
     }
     @Autowired JdbcTemplate jdbc;
     @Autowired PlatformTransactionManager transactions;

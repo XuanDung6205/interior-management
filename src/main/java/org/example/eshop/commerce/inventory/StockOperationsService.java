@@ -1,6 +1,7 @@
 package org.example.eshop.commerce.inventory;
 
 import org.example.eshop.commerce.common.CommerceException;
+import org.example.eshop.commerce.cache.Tv5Cache;
 import org.example.eshop.commerce.port.CurrentActorPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -22,11 +23,13 @@ public class StockOperationsService {
     private final JdbcTemplate jdbc;
     private final CurrentActorPort actors;
     private final Clock clock;
+    private final Tv5Cache cache;
 
-    public StockOperationsService(JdbcTemplate jdbc, CurrentActorPort actors, Clock clock) {
+    public StockOperationsService(JdbcTemplate jdbc, CurrentActorPort actors, Clock clock, Tv5Cache cache) {
         this.jdbc = jdbc;
         this.actors = actors;
         this.clock = clock;
+        this.cache = cache;
     }
 
     public record StockBalanceView(long warehouseId, String warehouseCode, long variantId, String sku,
@@ -102,6 +105,7 @@ public class StockOperationsService {
         updateBalance(balance, request.quantityDelta());
         long movementId = insertMovement(request.warehouseId(), request.variantId(), "ADJUSTMENT",
                 request.quantityDelta(), request.referenceCode(), key, request.reason(), actor);
+        cache.evictAfterCommit(Tv5Cache.DASHBOARD);
         return new AdjustmentView(movementId, request.quantityDelta(),
                 currentBalance(request.warehouseId(), request.variantId()), false);
     }
@@ -148,6 +152,7 @@ public class StockOperationsService {
                 -request.quantity(), request.referenceCode(), outKey, request.reason(), actor);
         long inId = insertMovement(destination.warehouse(), request.variantId(), "TRANSFER_IN",
                 request.quantity(), request.referenceCode(), inKey, request.reason(), actor);
+        cache.evictAfterCommit(Tv5Cache.DASHBOARD);
         return new TransferView(outId, inId, request.quantity(),
                 currentBalance(source.warehouse(), request.variantId()),
                 currentBalance(destination.warehouse(), request.variantId()), false);

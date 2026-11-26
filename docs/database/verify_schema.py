@@ -10,16 +10,10 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+from tv3_schema import BASE_TABLES, HISTORICAL_TABLES, LATEST_TABLES, verify_vector_columns
 
-TABLES = set("""
-users roles user_roles user_addresses categories rooms product_rooms materials
-products product_variants variant_materials product_images product_specifications
-carts cart_items wishlist_items warehouses inventory_balances inventory_reservations
-inventory_movements orders order_items order_addresses order_status_history payments
-payment_events shipments shipment_items coupons coupon_redemptions reviews review_images
-tracking_events brands collections collection_products return_requests return_items refunds
-warranty_requests banners articles audit_logs chat_conversations chat_messages
-""".split())
+TABLES = BASE_TABLES
 
 
 def main():
@@ -29,7 +23,9 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default="3306")
     parser.add_argument("--case", action="append", help="Run only a named rejection case (repeatable)")
-    parser.add_argument("--operations", action="store_true", help="Verify V008+ runtime (45 core plus 2 notification tables)")
+    inventories = parser.add_mutually_exclusive_group()
+    inventories.add_argument("--operations", action="store_true", help="Verify latest runtime (49 exact commerce tables)")
+    inventories.add_argument("--historical", action="store_true", help="Verify historical V008-V012 runtime (47 exact tables)")
     args = parser.parse_args()
     if not re.fullmatch(r"furniture_shop(?:_test_[a-z0-9_]+)?", args.database):
         parser.error("Only furniture_shop or its explicitly named test schemas are allowed")
@@ -53,9 +49,12 @@ def main():
 
     actual = set(sql("SELECT TABLE_NAME FROM information_schema.TABLES "
                      "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE='BASE TABLE';").splitlines())
-    expected=TABLES | {"commerce_notification_outbox","commerce_notifications"} if args.operations else TABLES
+    expected=LATEST_TABLES if args.operations else HISTORICAL_TABLES if args.historical else TABLES
     if actual != expected:
         raise AssertionError(f"Missing: {sorted(expected-actual)}; unexpected: {sorted(actual-expected)}")
+    if args.operations:
+        verify_vector_columns(sql("SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE FROM information_schema.COLUMNS "
+                                  "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('vector_store','commerce_vector_reindex_outbox');"))
     assert sql("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() "
                "AND (ENGINE <> 'InnoDB' OR TABLE_COLLATION NOT LIKE 'utf8mb4%');") == "0"
     assert sql("SELECT GROUP_CONCAT(code ORDER BY code) FROM roles;") == "ADMIN,CUSTOMER,STAFF"

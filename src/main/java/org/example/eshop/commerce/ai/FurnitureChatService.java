@@ -4,6 +4,8 @@ import org.example.eshop.commerce.common.CommerceException;
 import org.example.eshop.commerce.content.ContentValidation;
 import org.example.eshop.commerce.port.CommerceActor;
 import org.example.eshop.commerce.port.CurrentActorPort;
+import org.example.eshop.commerce.vector.CatalogVectorSearch;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,6 +56,10 @@ public class FurnitureChatService {
     private final RestClient httpClient;
     private final String geminiApiKey;
     private final String geminiModel;
+    private CatalogVectorSearch vectorSearch;
+
+    @Autowired
+    public void setCatalogVectorSearch(CatalogVectorSearch vectorSearch) { this.vectorSearch = vectorSearch; }
 
     // Giới hạn tốc độ gọi chat theo từng tài khoản/khách để tránh lạm dụng ngân sách AI
     private final ConcurrentHashMap<String, Deque<Long>> rateWindows = new ConcurrentHashMap<>();
@@ -304,12 +310,14 @@ public class FurnitureChatService {
     private List<ChatSource> retrieveLiveCatalog(String question) {
         BigDecimal maxBudget = extractBudgetVnd(question);
         List<String> tokens = extractSearchTokens(question);
+        List<Long> semanticIds = vectorSearch == null ? List.of() : vectorSearch.searchProducts(question, 5);
 
         StringBuilder sql = new StringBuilder("""
                 SELECT p.id AS product_id, p.name AS product_name, v.sku, v.name AS variant_name,
                        c.name AS category_name, v.price,
                        COALESCE((SELECT SUM(ib.available_quantity)
                                  FROM inventory_balances ib
+                                 JOIN warehouses w ON w.id = ib.warehouse_id AND w.is_active = 1
                                  WHERE ib.variant_id = v.id), 0) AS available_quantity,
                        (SELECT pi.url FROM product_images pi
                         WHERE pi.product_id = p.id AND (pi.variant_id = v.id OR pi.variant_id IS NULL)
@@ -326,7 +334,10 @@ public class FurnitureChatService {
             sql.append(" AND v.price <= ?");
             args.add(maxBudget);
         }
-        if (!tokens.isEmpty()) {
+        if (!semanticIds.isEmpty()) {
+            sql.append(" AND p.id IN (").append(String.join(",", java.util.Collections.nCopies(semanticIds.size(), "?"))).append(")");
+            args.addAll(semanticIds);
+        } else if (!tokens.isEmpty()) {
             sql.append(" AND (");
             for (int i = 0; i < tokens.size(); i++) {
                 if (i > 0) sql.append(" OR ");
@@ -352,12 +363,13 @@ public class FurnitureChatService {
                 rs.getString("image_url")), args.toArray());
 
         // Nếu không khớp từ khóa cụ thể nhưng có ngân sách hoặc câu hỏi chung thì lấy vài mẫu đang có sẵn
-        if (rows.isEmpty() && !tokens.isEmpty()) {
+        if (rows.isEmpty() && (!tokens.isEmpty() || !semanticIds.isEmpty())) {
             String fallbackSql = """
                     SELECT p.id AS product_id, p.name AS product_name, v.sku, v.name AS variant_name,
                            c.name AS category_name, v.price,
                            COALESCE((SELECT SUM(ib.available_quantity)
                                      FROM inventory_balances ib
+                                     JOIN warehouses w ON w.id = ib.warehouse_id AND w.is_active = 1
                                      WHERE ib.variant_id = v.id), 0) AS available_quantity,
                            (SELECT pi.url FROM product_images pi
                             WHERE pi.product_id = p.id
@@ -416,7 +428,7 @@ public class FurnitureChatService {
                 return new AiOutcome(replyText, geminiModel);
             }
         } catch (Exception ex) {
-            log.warn("Không gọi được Gemini cho chat tư vấn: {}", ex.getMessage());
+            log.warn("Gemini chat unavailable; using live catalog fallback.");
         }
 
         // Fallback khi AI tạm lỗi hoặc timeout: vẫn trả thông tin rõ ràng kèm danh sách sản phẩm thật từ DB

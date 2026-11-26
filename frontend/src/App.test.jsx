@@ -49,6 +49,20 @@ it('loads Home gallery images from the content API with accessible descriptions'
   expect(calls.some(call => call.url === '/api/commerce/home/gallery')).toBe(true);
 });
 
+it('preserves TV5 content and customer links in the redesigned header', async () => {
+  const { user } = mount('/cart', {}, staff);
+  expect(await screen.findByRole('link', { name: 'Bài viết', exact: true })).toHaveAttribute('href', '/articles');
+  await user.click(screen.getByRole('button', { name: 'Tài khoản', exact: true }));
+  const account = within(document.getElementById('store-account-panel'));
+  expect(account.getByRole('link', { name: 'Yêu thích', exact: true })).toHaveAttribute('href', '/wishlist');
+  expect(account.getByRole('link', { name: 'Đánh giá', exact: true })).toHaveAttribute('href', '/reviews');
+  await user.click(screen.getByRole('button', { name: 'Quản trị', exact: true }));
+  const admin = within(document.getElementById('store-menu-admin'));
+  expect(admin.getByRole('link', { name: 'Thống kê', exact: true })).toHaveAttribute('href', '/admin/dashboard');
+  expect(admin.getByRole('link', { name: 'Nội dung', exact: true })).toHaveAttribute('href', '/admin/content');
+  expect(admin.getByRole('link', { name: 'Duyệt đánh giá', exact: true })).toHaveAttribute('href', '/admin/reviews');
+});
+
 it('searches the catalog from the header and keeps the query in the catalog field', async () => {
   const { user, calls } = mount('/');
   await user.click(screen.getByRole('button', { name: 'Tìm kiếm sản phẩm' }));
@@ -56,6 +70,25 @@ it('searches the catalog from the header and keeps the query in the catalog fiel
   await user.click(screen.getByRole('button', { name: 'Tìm kiếm', exact: true }));
   expect(await screen.findByLabelText('Tìm sản phẩm')).toHaveValue('Sofa');
   await waitFor(() => expect(calls.some(call => call.url.includes('/commerce/catalog/variants?query=Sofa'))).toBe(true));
+});
+
+it.each(['header', 'room menu'])('restores a repeated %s search after a catalog-local search', async source => {
+  const { user, calls } = mount('/cart?query=Sofa#catalog');
+  const field = await screen.findByLabelText('Tìm sản phẩm');
+  await user.clear(field); await user.type(field, 'Bàn');
+  await user.click(screen.getByRole('button', { name: 'Tìm kiếm', exact: true }));
+  const lastQuery = () => new URLSearchParams(calls.filter(call => call.url.startsWith('/api/commerce/catalog/variants?')).at(-1).url.split('?')[1]).get('query');
+  await waitFor(() => expect(lastQuery()).toBe('Bàn'));
+  if (source === 'header') {
+    await user.click(screen.getByRole('button', { name: 'Tìm kiếm sản phẩm' }));
+    await user.type(screen.getByLabelText('Tìm món đồ cho nhà bạn'), 'Sofa');
+    await user.click(within(screen.getByRole('search')).getByRole('button', { name: 'Tìm kiếm', exact: true }));
+  } else {
+    await user.click(screen.getByRole('button', { name: 'Phòng khách' }));
+    await user.click(screen.getByRole('link', { name: 'Sofa', exact: true }));
+  }
+  await waitFor(() => expect(field).toHaveValue('Sofa'));
+  await waitFor(() => expect(lastQuery()).toBe('Sofa'));
 });
 
 it('opens a room menu and filters the catalog through its product link', async () => {

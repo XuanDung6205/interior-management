@@ -11,6 +11,7 @@ from pathlib import Path
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
 spec = importlib.util.spec_from_file_location('tv3_release', ROOT / 'scripts/tv3_release.py')
 release = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(release)
@@ -26,7 +27,8 @@ def example_release(directory, extra=None):
         for name, value in (extra or {}).items():
             archive.writestr(name, value)
     checksum = release.digest(jar)
-    (jar.parent / 'release.json').write_text(json.dumps({'formatVersion': 1, 'artifact': jar.name, 'sha256': checksum}))
+    (jar.parent / 'release.json').write_text(json.dumps({'formatVersion': 1, 'artifact': jar.name, 'sha256': checksum,
+                                                       'schemaMigrations': 'V001-V014', 'schemaTables': 49}))
     (jar.parent / (jar.name + '.sha256')).write_text(checksum + '  ' + jar.name + '\n')
     return jar
 
@@ -64,6 +66,16 @@ class ReleaseCliTest(unittest.TestCase):
             with jar.open('ab') as stream:
                 stream.write(b'tampering')
             with self.assertRaisesRegex(ValueError, 'checksum'):
+                release.prepare_run(jar, 'furniture_shop_tv3_dev', 8080)
+
+    def test_obsolete_schema_metadata_cannot_run_as_current_release(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'DB_PASSWORD': 'private'}, clear=True):
+            jar = example_release(directory)
+            metadata_path = jar.parent / 'release.json'
+            metadata = json.loads(metadata_path.read_text())
+            metadata.update(schemaMigrations='V001-V012', schemaTables=47)
+            metadata_path.write_text(json.dumps(metadata))
+            with self.assertRaisesRegex(ValueError, 'schema'):
                 release.prepare_run(jar, 'furniture_shop_tv3_dev', 8080)
 
     def test_inherited_spring_java_and_external_configuration_cannot_override_guarded_database(self):
