@@ -1,6 +1,6 @@
 .store-header { position: relative; z-index: 30; background: #fffefa; border-bottom: 1px solid #eeeae3; }
 .store-header-inner { max-width: 1900px; min-height: 86px; margin: auto; padding: 0 clamp(24px, 3.3vw, 64px); display: flex; align-items: center; gap: clamp(24px, 3vw, 52px); }
-.store-brand { flex: 0 0 auto; font-family: Georgia, 'Times New Roman', serif; font-size: 31px; line-height: 1; letter-spacing: -.035em; white-space: nowrap; color: #252824; }
+.store-brand { flex: 0 0 auto; font-family: 'Lora', 'Times New Roman', serif; font-size: 31px; line-height: 1; letter-spacing: -.035em; white-space: nowrap; color: #252824; }
 .store-brand:hover { color: var(--teal); }
 .store-navigation { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: clamp(13px, 1.7vw, 32px); align-self: stretch; }
 .store-navigation>a, .store-nav-group>button { min-height: 44px; display: inline-flex; align-items: center; gap: 7px; padding: 0; border: 0; background: none; color: #252824; font-size: 14px; font-weight: 500; white-space: nowrap; }
