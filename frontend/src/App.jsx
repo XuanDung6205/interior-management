@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { createApiClient } from './lib/apiClient';
 import { SessionContext } from './lib/session';
 import { ErrorNotice, Icon, Loading } from './components/ui';
+import StoreHeader from './components/StoreHeader';
 import CartPage from './features/cart/CartPage';
 import HomePage from './features/home/HomePage';
 import LoginPage from './features/auth/LoginPage';
@@ -22,7 +23,7 @@ import PaymentAdminPage from './features/payments/PaymentAdminPage';
 import PaymentAdminDetailPage from './features/payments/PaymentAdminDetailPage';
 import RefundAdminPage from './features/refunds/RefundAdminPage';
 import RefundOrderPage from './features/refunds/RefundOrderPage';
-import NotificationsPage, { UnreadBadge } from './features/notifications/NotificationsPage';
+import NotificationsPage from './features/notifications/NotificationsPage';
 import OperationsPage from './features/operations/OperationsPage';
 import AftercarePage from './features/aftercare/AftercarePage';
 import ArticlesPage from './features/content/ArticlesPage';
@@ -70,12 +71,7 @@ export default function App() {
   }
   return <SessionContext.Provider value={{ api, session, setSession, isStaff }}>
     <a className="skip-link" href="#main">Đến nội dung chính</a>
-    <div className="announcement">Một chút tinh tế. Một tổ ấm riêng bạn.</div>
-    <header className="site-header"><div className="header-inner">
-      <Link to="/" className="brand" aria-label="Nếp Nhà — Trang chủ"><span className="brand-mark"><Icon name="leaf" size={27} /></span><span>Nếp Nhà<small>NỘI THẤT & KHÔNG GIAN SỐNG</small></span></Link>
-      <nav className={isStaff ? 'main-nav staff-nav' : 'main-nav'} aria-label="Điều hướng chính"><NavLink to="/" end>Trang chủ</NavLink><NavLink to="/articles">Bài viết</NavLink><NavLink to="/cart"><Icon name="bag" />Giỏ hàng</NavLink>{session?.authenticated && <NavLink to="/wishlist">Yêu thích</NavLink>}{session?.authenticated && <NavLink to="/reviews">Đánh giá</NavLink>}{session?.authenticated && <NavLink to="/orders"><Icon name="orders" />Đơn hàng</NavLink>}{session?.authenticated && <NavLink to="/notifications"><Icon name="orders" />Thông báo<UnreadBadge key={session.user.id} /></NavLink>}{isStaff && <><NavLink to="/admin/dashboard"><Icon name="shield" />Thống kê</NavLink><NavLink to="/admin/content"><Icon name="orders" />Nội dung</NavLink><NavLink to="/admin/reviews"><Icon name="orders" />Duyệt đánh giá</NavLink><NavLink to="/admin/operations"><Icon name="shield" />Vận hành</NavLink><NavLink to="/admin/orders"><Icon name="shield" />Quản lý đơn hàng</NavLink><NavLink to="/admin/payments"><Icon name="ticket" />Khoản thu</NavLink><NavLink to="/admin/refunds"><Icon name="ticket" />Hoàn tiền</NavLink><NavLink to="/admin/coupons"><Icon name="ticket" />Quản lý ưu đãi</NavLink><NavLink to="/admin/inventory/receipts"><Icon name="box" />Nhập kho</NavLink><NavLink to="/admin/inventory/operations"><Icon name="box" />Điều chuyển</NavLink><NavLink to="/admin/inventory/dispatch"><Icon name="orders" />Xuất kho</NavLink><NavLink to="/admin/inventory/shipments"><Icon name="orders" />Vận đơn</NavLink></>}</nav>
-      <div className="account-nav">{session?.authenticated ? <><span className="account-name"><Icon name="user" />{session.user.fullName || session.user.username}</span><button className="text-button" disabled={busy} onClick={logout}>{busy ? 'Đang thoát…' : 'Đăng xuất'}</button></> : <NavLink to="/login" className="login-link"><Icon name="user" />Đăng nhập</NavLink>}</div>
-    </div></header>
+    <StoreHeader session={session} isStaff={isStaff} busy={busy} onLogout={logout} />
     <main id="main" className={location.pathname === '/' ? 'page-shell home-shell' : 'page-shell'} tabIndex="-1">
       <ErrorNotice error={error} onRetry={() => setRevision(value => value + 1)} />
       {!session ? !error && <Loading text="Đang kết nối cửa hàng…" /> : <Routes>

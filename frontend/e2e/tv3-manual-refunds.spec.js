@@ -64,6 +64,7 @@ test('demo paid order is cancelled, its unsent refund is replaced and exact refu
     await customerPage.screenshot({ path: 'test-results/tv3-payment-customer-mobile.png', fullPage: true });
 
     await login(adminPage, process.env.TV3_ADMIN_USER || 'tv3.admin');
+    await adminPage.getByRole('button', { name: 'Quản trị', exact: true }).click();
     await adminPage.getByRole('link', { name: 'Khoản thu', exact: true }).click();
     await adminPage.getByLabel('Tìm khoản thanh toán', { exact: true }).fill(order.orderNumber);
     await adminPage.getByRole('button', { name: 'Tìm kiếm', exact: true }).click();
@@ -184,7 +185,12 @@ test('demo paid order is cancelled, its unsent refund is replaced and exact refu
       if (path === '/admin/refunds') { await adminPage.getByLabel('Tìm yêu cầu hoàn', { exact: true }).fill(order.orderNumber); await adminPage.getByRole('button', { name: 'Tìm kiếm', exact: true }).click(); await expect(adminPage.getByRole('link', { name: `Đối chiếu hoàn ${refundId}`, exact: true })).toBeVisible(); }
       for (const width of [1440, 1024, 768, 390, 375]) {
         await adminPage.setViewportSize({ width, height: 1000 });
-        await expect(adminPage.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('link')).toHaveCount(19);
+        const menuButton = adminPage.locator('.store-menu-toggle');
+        if (width <= 1100 && await menuButton.getAttribute('aria-expanded') !== 'true') await menuButton.click();
+        const navigation = adminPage.getByRole('navigation', { name: 'Điều hướng chính' });
+        const adminMenu = navigation.getByRole('button', { name: 'Quản trị' });
+        if (await adminMenu.getAttribute('aria-expanded') !== 'true') await adminMenu.click();
+        await expect(navigation.getByRole('link')).toHaveCount(16);
         expect(await adminPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `No overflow at ${path} width ${width}`).toBe(true);
         if ([1440, 390].includes(width)) await adminPage.screenshot({ path: `test-results/tv3-refund-${path === '/admin/refunds' ? 'queue' : path.endsWith('/refunds') ? 'order' : 'detail'}-${width}.png`, fullPage: true });
       }

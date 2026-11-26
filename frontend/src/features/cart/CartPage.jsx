@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useCommerce } from '../../lib/session';
 import { formatMoney } from '../../lib/format';
 import { ErrorNotice, Icon, Loading, Pager, ProductImage } from '../../components/ui';
@@ -28,6 +28,8 @@ function CartLine({ item, busy, onUpdate, onRemove }) {
 }
 
 export default function CartPage() {
+  const location = useLocation();
+  const requestedQuery = new URLSearchParams(location.search).get('query') ?? '';
   const { api, session } = useCommerce();
   const client = useMemo(() => cartApi(api), [api]);
   const [cart, setCart] = useState(null);
@@ -39,10 +41,11 @@ export default function CartPage() {
   const [catalog, setCatalog] = useState(null);
   const [catalogError, setCatalogError] = useState(null);
   const [catalogLoading, setCatalogLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [query, setQuery] = useState('');
+  const [search, setSearch] = useState(requestedQuery);
+  const [query, setQuery] = useState(requestedQuery);
   const [page, setPage] = useState(0);
   const [revision, setRevision] = useState(0);
+  useEffect(() => { setSearch(requestedQuery); setQuery(requestedQuery); setPage(0); }, [requestedQuery]);
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true); setError(null);

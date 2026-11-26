@@ -47,7 +47,8 @@ it.each(pages)('returns to the intended %s inventory route after login without l
   expect(screen.getByRole('heading', { name: `${heading}.` })).toBeInTheDocument();
   await waitFor(() => expect(document.title).toBe(`${title} · Nếp Nhà`));
   const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
-  expect(nav.querySelectorAll('a')).toHaveLength(19);
+  await user.click(screen.getByRole('button', { name: 'Quản trị' }));
+  expect(nav.querySelectorAll('#store-menu-admin a')).toHaveLength(12);
   expect(screen.getByRole('link', { name: 'Quản lý đơn hàng' })).toHaveAttribute('href', '/admin/orders');
   expect(screen.getByRole('link', { name: 'Quản lý ưu đãi' })).toHaveAttribute('href', '/admin/coupons');
 });
