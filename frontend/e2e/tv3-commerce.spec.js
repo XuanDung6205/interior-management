@@ -43,6 +43,7 @@ test('real session merges guest cart and coupon admin create/preview/edit/toggle
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
     await expect(page).toHaveURL(/\/cart$/);
     await expect(page.getByRole('region', { name: 'Sản phẩm trong giỏ', exact: true }).getByRole('heading', { name: 'Bàn trà Oslo', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Quản trị', exact: true }).click();
     await page.getByRole('link', { name: 'Quản lý ưu đãi', exact: true }).click();
     await page.getByRole('button', { name: 'Tạo mã mới', exact: true }).click();
     await page.getByLabel('Mã ưu đãi', { exact: true }).fill(code);
@@ -72,6 +73,7 @@ test('real session merges guest cart and coupon admin create/preview/edit/toggle
     await page.getByRole('button', { name: `Xóa ${code}`, exact: true }).click();
     await page.getByRole('button', { name: 'Xác nhận xóa', exact: true }).click();
     await expect(page.getByRole('heading', { name: code, exact: true })).toHaveCount(0); couponId = undefined;
+    await page.getByRole('button', { name: 'Tài khoản', exact: true }).click();
     await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Quản lý ưu đãi', exact: true })).toHaveCount(0);
     expect(errors).toEqual([]);

@@ -64,6 +64,7 @@ test('demo paid order is cancelled, its unsent refund is replaced and exact refu
     await customerPage.screenshot({ path: 'test-results/tv3-payment-customer-mobile.png', fullPage: true });
 
     await login(adminPage, process.env.TV3_ADMIN_USER || 'tv3.admin');
+    await adminPage.getByRole('button', { name: 'Quản trị', exact: true }).click();
     await adminPage.getByRole('link', { name: 'Khoản thu', exact: true }).click();
     await adminPage.getByLabel('Tìm khoản thanh toán', { exact: true }).fill(order.orderNumber);
     await adminPage.getByRole('button', { name: 'Tìm kiếm', exact: true }).click();

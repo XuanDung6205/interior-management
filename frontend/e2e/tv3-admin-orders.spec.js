@@ -46,6 +46,7 @@ test('staff searches an own test order, edits private notes, confirms/processes 
     await expect(customerPage.getByRole('heading', { name: order.orderNumber, exact: true })).toBeVisible();
 
     await login(adminPage, process.env.TV3_ADMIN_USER || 'tv3.admin');
+    await adminPage.getByRole('button', { name: 'Quản trị', exact: true }).click();
     await adminPage.getByRole('link', { name: 'Quản lý đơn hàng', exact: true }).click();
     await adminPage.getByLabel('Tìm đơn hàng', { exact: true }).fill(order.orderNumber);
     await adminPage.getByRole('button', { name: 'Tìm kiếm', exact: true }).click();
