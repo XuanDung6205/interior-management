@@ -150,6 +150,7 @@ jobs:
         run: |
           python scripts/tv3_database.py create --database furniture_shop_test_ci_demo --client mariadb
           python scripts/tv3_database.py seed --database furniture_shop_test_ci_demo --client mariadb
+          DB_NAME=furniture_shop_test_ci_demo python scripts/seed_demo_catalog.py
 
       - name: Verify backup and recovery into a new disposable database
         timeout-minutes: 5

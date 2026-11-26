@@ -55,7 +55,7 @@ export default function HomePage() {
     </section>
 
     <section className="home-featured" aria-labelledby="home-featured-title"><div className="home-container">
-      <div className="home-section-heading"><div><span className="home-kicker">LỰA CHỌN TỪ NẾP NHÀ</span><h2 id="home-featured-title">Món đồ cho ngày thường <em>đẹp hơn.</em></h2></div><Link to="/cart#catalog" className="home-underlined-link">Xem tất cả <Icon name="arrow" size={17} /></Link></div>
+      <div className="home-section-heading"><div><span className="home-kicker">LỰA CHỌN TỪ NẾP NHÀ</span><h2 id="home-featured-title">Món đồ cho ngày thường <em>đẹp hơn.</em></h2></div><Link to="/sale" className="home-underlined-link">Xem tất cả <Icon name="arrow" size={17} /></Link></div>
       <ErrorNotice error={error} onRetry={() => setRevision(value => value + 1)} />
       {!catalog && !error && <Loading text="Đang tải sản phẩm…" />}
       {catalog && (catalog.items.length ? <div className="home-product-grid">{catalog.items.slice(0, 3).map(item => <Link to="/cart#catalog" className="home-product-card" key={item.id}>

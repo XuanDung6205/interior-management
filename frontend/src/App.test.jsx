@@ -19,6 +19,9 @@ function mount(path, handlers = {}, session = guest) {
     else if (url === '/api/session') body = session;
     else if (url === '/api/csrf') body = { token: 'csrf', headerName: 'X-CSRF-TOKEN' };
     else if (url === '/api/cart') body = cart;
+    else if (url === '/api/catalog/categories') body = [{ id: 1, name: 'Ghế ăn', slug: 'demo-ghe-an' }];
+    else if (url.startsWith('/api/catalog/products?')) body = page([{ id: 51, slug: 'demo-ghe-an-06-01', name: 'Ghế ăn Mộc An', shortDescription: 'Ghế ăn gọn nhẹ', categoryName: 'Ghế ăn', categorySlug: 'demo-ghe-an', variantId: 51, sku: 'NN-DEMO-06-01', price: '1890000.00', compareAtPrice: null, imageUrl: '/images/gallery-dining-room.jpg', availableQuantity: 12 }]);
+    else if (url === '/api/catalog/products/demo-ghe-an-06-01') body = { id: 51, slug: 'demo-ghe-an-06-01', name: 'Ghế ăn Mộc An', shortDescription: 'Ghế ăn gọn nhẹ', description: 'Ghế ăn gọn nhẹ cho bữa cơm gia đình.', careInstructions: 'Lau bằng khăn mềm.', categoryName: 'Ghế ăn', categorySlug: 'demo-ghe-an', brandName: 'Nếp Nhà Studio', warrantyMonths: 12, assemblyRequired: false, images: [{ url: '/images/gallery-dining-room.jpg', altText: 'Ảnh minh họa Ghế ăn Mộc An' }], specifications: [{ name: 'Chiều rộng', value: '480', unit: 'mm' }], variants: [{ id: 51, sku: 'NN-DEMO-06-01', name: 'Mộc An', widthMm: 480, depthMm: 520, heightMm: 790, price: '1890000.00', compareAtPrice: null, leadTimeDays: 3, availableQuantity: 12, materials: ['Gỗ sồi'] }] };
     else if (url.startsWith('/api/commerce/catalog/variants')) body = page([chair]);
     else if (url === '/api/commerce/home/gallery') body = { items: [] };
     else if (url.startsWith('/api/admin/coupons?')) body = page([coupon]);
@@ -37,8 +40,22 @@ it('shows live catalog names, prices and image URLs on the home page', async () 
   expect(screen.getByRole('img', { name: 'Ghế gỗ sồi — Gỗ tự nhiên' })).toHaveAttribute('src', '/images/ghe-aalto.jpg');
   expect(calls.some(call => call.url === '/api/cart')).toBe(false);
   await user.click(screen.getByRole('link', { name: 'Xem tất cả' }));
-  expect(await screen.findByRole('heading', { name: 'Tìm món đồ dành cho bạn' })).toBeInTheDocument();
-  expect(calls.some(call => call.url === '/api/cart')).toBe(true);
+  expect(await screen.findByRole('heading', { name: 'Sale & tất cả sản phẩm.' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Ghế ăn Mộc An' })).toBeInTheDocument();
+  expect(calls.some(call => call.url === '/api/cart')).toBe(false);
+});
+
+it('filters Sale and opens a product detail with add-to-cart', async () => {
+  const { user, calls } = mount('/sale', { 'POST /api/cart/items': cart });
+  expect(await screen.findByRole('heading', { name: 'Ghế ăn Mộc An' })).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Ghế ăn' }));
+  await waitFor(() => expect(calls.some(call => call.url.includes('/api/catalog/products?') && new URLSearchParams(call.url.split('?')[1]).get('category') === 'demo-ghe-an')).toBe(true));
+  await user.click(screen.getByRole('link', { name: /Ghế ăn Mộc An/ }));
+  expect(await screen.findByText('Ghế ăn gọn nhẹ cho bữa cơm gia đình.')).toBeInTheDocument();
+  expect(screen.getByText('NN-DEMO-06-01')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Thêm vào giỏ' }));
+  await waitFor(() => expect(calls.some(call => call.url === '/api/cart/items' && JSON.parse(call.body).variantId === 51)).toBe(true));
+  expect(screen.getByText(/Đã thêm 1 Ghế ăn Mộc An/, { selector: '.detail-notice' })).toBeInTheDocument();
 });
 
 it('loads Home gallery images from the content API with accessible descriptions', async () => {

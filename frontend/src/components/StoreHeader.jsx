@@ -60,7 +60,7 @@ export default function StoreHeader({ session, isStaff, busy, onLogout }) {
       <Link to="/" className="store-brand" aria-label="Nếp Nhà — Trang chủ" onClick={closeMenus}>Nếp Nhà</Link>
       <nav id="store-navigation" className={`store-navigation${mobileOpen ? ' is-open' : ''}`} aria-label="Điều hướng chính" onClick={event => { if (event.target.closest('a')) closeMenus(); }}>
         <NavLink to="/" end>Trang chủ</NavLink>
-        <Link to="/cart#catalog">Sản phẩm</Link>
+        <NavLink to="/sale">Sale &amp; sản phẩm</NavLink>
         {rooms.map(room => <div className="store-nav-group" key={room.key}>
           <button type="button" aria-expanded={openPanel === room.key} aria-controls={`store-menu-${room.key}`} onClick={() => togglePanel(room.key)}>{room.label}<Icon name="chevron" size={15} /></button>
           {openPanel === room.key && <div className="store-nav-popover" id={`store-menu-${room.key}`}><span className="store-popover-label">KHÁM PHÁ {room.label.toUpperCase()}</span>{room.links.map(([label, query]) => <Link key={label} to={catalogHref(query)}>{label}<Icon name="arrow" size={16} /></Link>)}</div>}
