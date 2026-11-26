@@ -190,7 +190,7 @@ test('demo paid order is cancelled, its unsent refund is replaced and exact refu
         const navigation = adminPage.getByRole('navigation', { name: 'Điều hướng chính' });
         const adminMenu = navigation.getByRole('button', { name: 'Quản trị' });
         if (await adminMenu.getAttribute('aria-expanded') !== 'true') await adminMenu.click();
-        await expect(navigation.getByRole('link')).toHaveCount(12);
+        await expect(navigation.getByRole('link')).toHaveCount(16);
         expect(await adminPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `No overflow at ${path} width ${width}`).toBe(true);
         if ([1440, 390].includes(width)) await adminPage.screenshot({ path: `test-results/tv3-refund-${path === '/admin/refunds' ? 'queue' : path.endsWith('/refunds') ? 'order' : 'detail'}-${width}.png`, fullPage: true });
       }

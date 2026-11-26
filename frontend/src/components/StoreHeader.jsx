@@ -9,6 +9,9 @@ const rooms = [
   { key: 'bedroom', label: 'Phòng ngủ', links: [['Giường', 'Giường'], ['Tủ', 'Tủ']] },
 ];
 const adminLinks = [
+  ['/admin/dashboard', 'Thống kê'],
+  ['/admin/content', 'Nội dung'],
+  ['/admin/reviews', 'Duyệt đánh giá'],
   ['/admin/operations', 'Vận hành'],
   ['/admin/orders', 'Quản lý đơn hàng'],
   ['/admin/payments', 'Khoản thu'],
@@ -63,6 +66,7 @@ export default function StoreHeader({ session, isStaff, busy, onLogout }) {
           {openPanel === room.key && <div className="store-nav-popover" id={`store-menu-${room.key}`}><span className="store-popover-label">KHÁM PHÁ {room.label.toUpperCase()}</span>{room.links.map(([label, query]) => <Link key={label} to={catalogHref(query)}>{label}<Icon name="arrow" size={16} /></Link>)}</div>}
         </div>)}
         <Link to="/#home-inspiration">Cảm hứng</Link>
+        <NavLink to="/articles">Bài viết</NavLink>
         {isStaff && <div className="store-nav-group store-admin-group">
           <button type="button" aria-expanded={openPanel === 'admin'} aria-controls="store-menu-admin" onClick={() => togglePanel('admin')}>Quản trị<Icon name="chevron" size={15} /></button>
           {openPanel === 'admin' && <div className="store-nav-popover store-admin-popover" id="store-menu-admin"><span className="store-popover-label">KHÔNG GIAN QUẢN TRỊ</span>{adminLinks.map(([path, label]) => <NavLink key={path} to={path}>{label}<Icon name="arrow" size={16} /></NavLink>)}</div>}
@@ -75,6 +79,6 @@ export default function StoreHeader({ session, isStaff, busy, onLogout }) {
       </div>
     </div>
     {openPanel === 'search' && <form className="store-search-panel" id="store-search-panel" role="search" onSubmit={submitSearch}><label htmlFor="store-search">Tìm món đồ cho nhà bạn</label><div><Icon name="search" size={21} /><input id="store-search" ref={searchInputRef} type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Thử sofa, bàn ăn, ghế..." maxLength={200} /><button type="submit">Tìm kiếm<Icon name="arrow" size={18} /></button></div></form>}
-    {openPanel === 'account' && session?.authenticated && <div className="store-account-panel" id="store-account-panel"><span className="store-popover-label">TÀI KHOẢN CỦA BẠN</span><strong>{session.user.fullName || session.user.username}</strong><Link to="/orders" onClick={closeMenus}>Đơn hàng của tôi</Link><Link to="/notifications" onClick={closeMenus}>Thông báo<UnreadBadge key={session.user.id} /></Link><button type="button" disabled={busy} onClick={() => { closeMenus(); onLogout(); }}>{busy ? 'Đang thoát…' : 'Đăng xuất'}</button></div>}
+    {openPanel === 'account' && session?.authenticated && <div className="store-account-panel" id="store-account-panel"><span className="store-popover-label">TÀI KHOẢN CỦA BẠN</span><strong>{session.user.fullName || session.user.username}</strong><Link to="/orders" onClick={closeMenus}>Đơn hàng của tôi</Link><Link to="/wishlist" onClick={closeMenus}>Yêu thích</Link><Link to="/reviews" onClick={closeMenus}>Đánh giá</Link><Link to="/notifications" onClick={closeMenus}>Thông báo<UnreadBadge key={session.user.id} /></Link><button type="button" disabled={busy} onClick={() => { closeMenus(); onLogout(); }}>{busy ? 'Đang thoát…' : 'Đăng xuất'}</button></div>}
   </header>;
 }
