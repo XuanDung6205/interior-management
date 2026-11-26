@@ -1,0 +1,54 @@
+.store-header { position: relative; z-index: 30; background: #fffefa; border-bottom: 1px solid #eeeae3; }
+.store-header-inner { max-width: 1900px; min-height: 86px; margin: auto; padding: 0 clamp(24px, 3.3vw, 64px); display: flex; align-items: center; gap: clamp(24px, 3vw, 52px); }
+.store-brand { flex: 0 0 auto; font-family: Georgia, 'Times New Roman', serif; font-size: 31px; line-height: 1; letter-spacing: -.035em; white-space: nowrap; color: #252824; }
+.store-brand:hover { color: var(--teal); }
+.store-navigation { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: clamp(13px, 1.7vw, 32px); align-self: stretch; }
+.store-navigation>a, .store-nav-group>button { min-height: 44px; display: inline-flex; align-items: center; gap: 7px; padding: 0; border: 0; background: none; color: #252824; font-size: 14px; font-weight: 500; white-space: nowrap; }
+.store-navigation>a:hover, .store-navigation>a.active, .store-nav-group>button:hover, .store-nav-group>button[aria-expanded='true'] { color: var(--teal); }
+.store-nav-group { position: relative; display: flex; align-items: center; }
+.store-nav-group>button svg { transition: transform .2s ease; }
+.store-nav-group>button[aria-expanded='true'] svg { transform: rotate(180deg); }
+.store-nav-popover, .store-account-panel { position: absolute; top: calc(100% + 1px); min-width: 225px; padding: 18px; background: var(--paper); border: 1px solid var(--line); box-shadow: 0 16px 38px rgba(31, 33, 27, .12); }
+.store-nav-popover { left: -18px; display: grid; gap: 3px; }
+.store-popover-label { display: block; color: var(--wood); font-size: 9px; font-weight: 700; letter-spacing: .15em; margin-bottom: 8px; }
+.store-nav-popover a { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 38px; padding: 7px 2px; font-size: 12px; border-bottom: 1px solid #efede6; }
+.store-nav-popover a:last-child { border-bottom: 0; }
+.store-nav-popover a:hover, .store-account-panel a:hover, .store-account-panel button:hover { color: var(--teal); }
+.store-admin-popover { min-width: 235px; max-height: min(70vh, 490px); overflow-y: auto; }
+.store-actions { display: flex; align-items: center; gap: clamp(5px, 1vw, 17px); margin-left: auto; flex: 0 0 auto; }
+.store-icon-button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: none; color: #20231f; }
+.store-icon-button:hover, .store-icon-button[aria-expanded='true'] { color: var(--teal); }
+.store-menu-toggle { display: none; }
+.store-search-panel { position: absolute; top: 100%; left: 0; right: 0; padding: 25px clamp(24px, 3.3vw, 64px) 30px; background: var(--paper); border-top: 1px solid var(--line); box-shadow: 0 18px 30px rgba(31, 33, 27, .1); }
+.store-search-panel>label { display: block; max-width: 950px; margin: 0 auto 11px; font-family: 'Lora', Georgia, serif; font-size: 20px; }
+.store-search-panel>div { display: flex; align-items: center; gap: 12px; max-width: 950px; margin: auto; border-bottom: 1px solid #34352e; }
+.store-search-panel input { flex: 1; width: 100%; min-height: 48px; padding: 10px 0; border: 0; border-radius: 0; outline: none; font-size: 15px; }
+.store-search-panel input:focus { border: 0; }
+.store-search-panel button { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 0 5px; border: 0; background: none; color: var(--teal); font-weight: 600; }
+.store-account-panel { right: clamp(65px, 6vw, 128px); width: 250px; display: grid; gap: 4px; }
+.store-account-panel strong { margin-bottom: 10px; font-family: 'Lora', Georgia, serif; font-size: 17px; font-weight: 500; overflow-wrap: anywhere; }
+.store-account-panel a, .store-account-panel button { display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 7px 0; border: 0; border-bottom: 1px solid #efede6; background: none; text-align: left; font-size: 12px; }
+.store-account-panel button { border-bottom: 0; }
+@media (max-width: 1100px) {
+  .store-header-inner { min-height: 72px; padding: 0 24px; gap: 15px; }
+  .store-menu-toggle { display: grid; }
+  .store-navigation { display: none; position: absolute; top: 100%; left: 0; right: 0; max-height: calc(100vh - 72px); overflow-y: auto; padding: 17px 24px 23px; background: var(--paper); border-top: 1px solid var(--line); box-shadow: 0 18px 30px rgba(31, 33, 27, .1); }
+  .store-navigation.is-open { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; align-items: stretch; }
+  .store-navigation>a, .store-nav-group>button { width: 100%; justify-content: space-between; min-height: 50px; border-bottom: 1px solid #efede6; font-size: 14px; }
+  .store-nav-group { display: block; }
+  .store-nav-popover { position: static; min-width: 0; padding: 8px 14px 14px; border: 0; box-shadow: none; }
+  .store-admin-popover { max-height: none; }
+  .store-account-panel { right: 70px; }
+}
+@media (max-width: 560px) {
+  .store-header-inner { min-height: 64px; padding: 0 15px; gap: 5px; }
+  .store-brand { font-size: 24px; }
+  .store-actions { gap: 0; }
+  .store-icon-button { width: 44px; height: 44px; }
+  .store-navigation { max-height: calc(100vh - 64px); padding: 12px 18px 22px; }
+  .store-search-panel { padding: 20px 18px 25px; }
+  .store-search-panel>div { gap: 7px; }
+  .store-search-panel input { font-size: 16px; }
+  .store-search-panel button { font-size: 12px; }
+  .store-account-panel { right: 12px; width: min(260px, calc(100vw - 24px)); }
+}

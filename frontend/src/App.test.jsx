@@ -49,6 +49,23 @@ it('loads Home gallery images from the content API with accessible descriptions'
   expect(calls.some(call => call.url === '/api/commerce/home/gallery')).toBe(true);
 });
 
+it('searches the catalog from the header and keeps the query in the catalog field', async () => {
+  const { user, calls } = mount('/');
+  await user.click(screen.getByRole('button', { name: 'Tìm kiếm sản phẩm' }));
+  await user.type(screen.getByLabelText('Tìm món đồ cho nhà bạn'), 'Sofa');
+  await user.click(screen.getByRole('button', { name: 'Tìm kiếm', exact: true }));
+  expect(await screen.findByLabelText('Tìm sản phẩm')).toHaveValue('Sofa');
+  await waitFor(() => expect(calls.some(call => call.url.includes('/commerce/catalog/variants?query=Sofa'))).toBe(true));
+});
+
+it('opens a room menu and filters the catalog through its product link', async () => {
+  const { user, calls } = mount('/');
+  await user.click(screen.getByRole('button', { name: 'Phòng khách' }));
+  await user.click(screen.getByRole('link', { name: 'Bàn trà' }));
+  expect(await screen.findByLabelText('Tìm sản phẩm')).toHaveValue('Bàn trà');
+  await waitFor(() => expect(calls.some(call => call.url.includes('/commerce/catalog/variants?') && new URLSearchParams(call.url.split('?')[1]).get('query') === 'Bàn trà')).toBe(true));
+});
+
 it('rotates the Home gallery ring when the mouse enters and supports keyboard navigation', async () => {
   mount('/', { 'GET /api/commerce/home/gallery': { items: [
     { id: 1, title: 'Phòng khách', imageUrl: '/images/gallery-living-room.jpg', altText: 'Sofa kem' },
@@ -108,6 +125,7 @@ it('logs in, explicitly merges the guest cart, then shows the merged server stat
   await user.click(screen.getByRole('button', { name: 'Đăng nhập' }));
   await screen.findByRole('heading', { name: /Giỏ hàng của bạn/ });
   expect(calls.filter(c => c.url === '/api/cart/merge')).toHaveLength(1);
+  await user.click(screen.getByRole('button', { name: 'Quản trị' }));
   expect(screen.getByRole('link', { name: 'Quản lý ưu đãi' })).toBeInTheDocument();
 });
 
@@ -119,6 +137,7 @@ it('shows a recoverable merge failure after successful login without losing the 
   await user.click(screen.getByRole('button', { name: 'Đăng nhập' }));
   await screen.findByText('Số lượng sau khi gộp quá lớn.');
   expect(screen.getByRole('button', { name: 'Thử gộp lại' })).toBeEnabled();
+  await user.click(screen.getByRole('button', { name: 'Quản trị' }));
   expect(screen.getByRole('link', { name: 'Quản lý ưu đãi' })).toBeInTheDocument();
 });
 
