@@ -2,6 +2,7 @@ package org.example.eshop.commerce;
 
 import org.example.eshop.commerce.cache.Tv5Cache;
 import org.example.eshop.commerce.security.CommercePrincipal;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -56,20 +57,21 @@ class Tv5IntegrationTest {
     final CommercePrincipal customer = new CommercePrincipal(202L, "tv5-customer", "Khach TV5", null, Set.of("CUSTOMER"));
     final CommercePrincipal other = new CommercePrincipal(203L, "tv5-other", "Khach Khac", null, Set.of("CUSTOMER"));
 
+    private static final List<String> CLEANUP_TABLES = List.of(
+            "chat_messages", "chat_conversations", "review_images", "reviews", "wishlist_items",
+            "tracking_events", "articles", "banners", "warranty_requests",
+            "commerce_notifications", "commerce_notification_outbox", "audit_logs",
+            "refunds", "return_items", "return_requests", "payment_events", "payments",
+            "shipment_items", "shipments", "inventory_movements", "inventory_reservations",
+            "coupon_redemptions", "order_status_history", "order_addresses", "order_items", "orders",
+            "cart_items", "carts", "coupons", "user_addresses", "inventory_balances",
+            "product_images", "variant_materials", "product_variants", "products", "categories",
+            "user_roles", "users");
+
     @BeforeEach
     void reset() {
         assertTrue(jdbc.queryForObject("SELECT DATABASE()", String.class).startsWith("furniture_shop_test_"));
-        cache.clearAll();
-        for (String table : List.of(
-                "chat_messages", "chat_conversations", "review_images", "reviews", "wishlist_items",
-                "tracking_events", "articles", "banners", "refunds", "payment_events", "payments",
-                "shipment_items", "shipments", "inventory_movements", "inventory_reservations",
-                "coupon_redemptions", "order_status_history", "order_addresses", "order_items", "orders",
-                "cart_items", "carts", "coupons", "user_addresses", "inventory_balances",
-                "product_images", "variant_materials", "product_variants", "products", "categories",
-                "user_roles", "users")) {
-            jdbc.update("DELETE FROM " + table);
-        }
+        cleanDatabase();
         String hash = new BCryptPasswordEncoder().encode("test-password");
         for (var a : List.of(admin, customer, other)) {
             jdbc.update("INSERT INTO users(id,username,email,password_hash,full_name) VALUES(?,?,?,?,?)",
@@ -83,6 +85,21 @@ class Tv5IntegrationTest {
         jdbc.update("INSERT INTO inventory_balances(warehouse_id,variant_id,on_hand_quantity) SELECT id,2001,4 FROM warehouses WHERE code='MAIN'");
         jdbc.update("INSERT INTO inventory_balances(warehouse_id,variant_id,on_hand_quantity) SELECT id,2002,10 FROM warehouses WHERE code='MAIN'");
         mvc = webAppContextSetup(context).apply(springSecurity()).build();
+    }
+
+    // Dọn sạch các bảng TV5 sau mỗi test để không gây lỗi khóa ngoại khi các test TV3 chạy tiếp theo
+    @AfterEach
+    void cleanupAfterTest() {
+        if (jdbc.queryForObject("SELECT DATABASE()", String.class).startsWith("furniture_shop_test_")) {
+            cleanDatabase();
+        }
+    }
+
+    private void cleanDatabase() {
+        cache.clearAll();
+        for (String table : CLEANUP_TABLES) {
+            jdbc.update("DELETE FROM " + table);
+        }
     }
 
     private JsonNode json(MvcResult res) throws Exception {
