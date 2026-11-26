@@ -79,12 +79,14 @@ public class DashboardService {
                 SELECT COALESCE(SUM(amount), 0)
                 FROM payments
                 WHERE status = 'SUCCEEDED' AND COALESCE(paid_at, updated_at) >= ?
-                """, BigDecimal.class, from);
+                  AND COALESCE(paid_at, updated_at) < ?
+                """, BigDecimal.class, from, to);
         BigDecimal totalRefunded = jdbc.queryForObject("""
                 SELECT COALESCE(SUM(amount), 0)
                 FROM refunds
                 WHERE status = 'SUCCEEDED' AND COALESCE(completed_at, updated_at) >= ?
-                """, BigDecimal.class, from);
+                  AND COALESCE(completed_at, updated_at) < ?
+                """, BigDecimal.class, from, to);
 
         BigDecimal gross = grossCollected == null ? BigDecimal.ZERO : grossCollected;
         BigDecimal refunded = totalRefunded == null ? BigDecimal.ZERO : totalRefunded;
@@ -100,9 +102,9 @@ public class DashboardService {
         var statusRows = jdbc.queryForList("""
                 SELECT status, COUNT(*) AS cnt
                 FROM orders
-                WHERE placed_at >= ?
+                WHERE placed_at >= ? AND placed_at < ?
                 GROUP BY status
-                """, from);
+                """, from, to);
         for (var row : statusRows) {
             String st = String.valueOf(row.get("status"));
             long cnt = ((Number) row.get("cnt")).longValue();
@@ -117,7 +119,7 @@ public class DashboardService {
                        SUM(oi.line_total) AS gross_merchandise
                 FROM order_items oi
                 JOIN orders o ON o.id = oi.order_id
-                WHERE o.placed_at >= ? AND o.status <> 'CANCELLED'
+                WHERE o.placed_at >= ? AND o.placed_at < ? AND o.status <> 'CANCELLED'
                 GROUP BY oi.product_id, oi.product_name
                 ORDER BY units_sold DESC, gross_merchandise DESC
                 LIMIT 5
@@ -125,7 +127,7 @@ public class DashboardService {
                 rs.getLong("product_id"),
                 rs.getString("product_name"),
                 rs.getLong("units_sold"),
-                money(rs.getBigDecimal("gross_merchandise"))), from);
+                money(rs.getBigDecimal("gross_merchandise"))), from, to);
 
         // Danh sách biến thể đang kinh doanh có tồn khả dụng thấp để kho chủ động nhập thêm
         var lowStock = jdbc.query("""
@@ -157,10 +159,10 @@ public class DashboardService {
         var funnelRows = jdbc.queryForList("""
                 SELECT event_type, COUNT(*) AS cnt
                 FROM tracking_events
-                WHERE occurred_at >= ?
+                WHERE occurred_at >= ? AND occurred_at < ?
                   AND event_type IN ('PAGE_VIEW','PRODUCT_VIEW','SEARCH','ADD_TO_CART_CLICK','ADD_TO_CART','CHECKOUT_START','ORDER_PLACED')
                 GROUP BY event_type
-                """, from);
+                """, from, to);
         for (var row : funnelRows) {
             funnel.put(String.valueOf(row.get("event_type")), ((Number) row.get("cnt")).longValue());
         }

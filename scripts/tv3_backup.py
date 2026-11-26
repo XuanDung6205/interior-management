@@ -14,8 +14,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from tv3_schema import HISTORICAL_TABLES, LATEST_TABLES, inventory_revision
 
-TABLE_COUNT = 47
 CONTENT_TYPE = "application/vnd.tv3.mariadb-logical-backup+json"
 NAME = re.compile(r"[a-z][a-z0-9_]{0,63}\Z")
 HASH = re.compile(r"[0-9a-f]{64}\Z")
@@ -35,6 +35,14 @@ def database_name(value, restore=False):
 
 def sha256(value):
     return hashlib.sha256(value).hexdigest()
+
+
+def supported_inventory(tables):
+    try:
+        inventory_revision(tables)
+    except (ValueError, TypeError):
+        raise BackupError("Expected the exact supported 47-table or 49-table commerce inventory.") from None
+    return "commerce-" + str(len(tables))
 
 
 def tokens_and_statements(text):
@@ -80,7 +88,7 @@ def tokens_and_statements(text):
             else:
                 raise BackupError("Unterminated dump string or identifier.")
             token = text[start:pos]
-            if quote == "`" and not NAME.fullmatch(token[1:-1]):
+            if quote == "`" and not (NAME.fullmatch(token[1:-1]) or token in {"`M`", "`DISTANCE`"}):
                 raise BackupError("Unsupported SQL identifier.")
             statement.append(("string" if quote == "'" else "identifier", token))
         elif char == ";":
@@ -130,8 +138,19 @@ def analyze_dump(payload):
             if tokens[2][0] != "identifier" or raw[3] != "(":
                 raise BackupError("Unsupported CREATE TABLE syntax.")
             name = raw[2][1:-1]
+            if name not in LATEST_TABLES:
+                raise BackupError("Table name is outside the supported commerce inventory.")
             if name in tables or any(kind == "word" and value.upper() in forbidden for kind, value in tokens):
                 raise BackupError("Unsafe or duplicate table definition.")
+            # MariaDB quotes these two vector-index options as identifiers.
+            # Accept only the catalog index option sequence, never arbitrary
+            # uppercase identifiers or additional executable table options.
+            vector_options = [index for index, token in enumerate(raw) if token in {"`M`", "`DISTANCE`"}]
+            if vector_options:
+                valid_options = (name == "vector_store" and len(vector_options) == 2 and
+                                 re.search(r"VECTOR (?:KEY|INDEX) `idx_vector_store_embedding` \( `embedding` \) `M` = 6 `DISTANCE` = cosine(?= [,)]|;)", canonical, re.I))
+                if not valid_options:
+                    raise BackupError("Unsupported vector index options.")
             depth, closing = 0, None
             for index in range(3, len(tokens)):
                 if raw[index] == "(":
@@ -193,8 +212,7 @@ def analyze_dump(payload):
         else:
             raise BackupError("Dump contains a statement outside the recovery dialect.")
         statements.append(canonical)
-    if len(tables) != TABLE_COUNT:
-        raise BackupError("Recovery requires exactly 47 InnoDB tables.")
+    supported_inventory(tables)
     for name, digests in rows.items():
         tables[name]["data_sha256"] = sha256("\n".join(sorted(digests)).encode())
     return tables, "\n".join(statements)
@@ -254,8 +272,9 @@ class MariaDB:
                                  f"WHERE TRIGGER_SCHEMA='{name}') + (SELECT COUNT(*) FROM information_schema.ROUTINES "
                                  f"WHERE ROUTINE_SCHEMA='{name}') + (SELECT COUNT(*) FROM information_schema.EVENTS "
                                  f"WHERE EVENT_SCHEMA='{name}');")
-        if len(tables) != TABLE_COUNT or unsupported != "0":
-            raise BackupError("Expected 47 tables and no triggers, routines or events.")
+        supported_inventory(tables)
+        if unsupported != "0":
+            raise BackupError("Expected no triggers, routines or events.")
         return set(tables)
 
     def dump(self, name, destination):
@@ -297,9 +316,9 @@ def create_backup(db, source, directory):
     tables, _ = analyze_dump(payload)
     if set(tables) != expected or db.inspect(source) != expected:
         raise BackupError("Source table manifest changed while dumping; quiesce DDL and retry.")
-    manifest = {"content_type": CONTENT_TYPE, "version": 1, "source": source,
+    manifest = {"content_type": CONTENT_TYPE, "version": 2, "source": source,
                 "created_utc": datetime.now(timezone.utc).isoformat(), "dump_file": "dump.sql",
-                "sha256": sha256(payload), "tables": tables}
+                "sha256": sha256(payload), "tables": tables, "schema_inventory": supported_inventory(tables)}
     partial.rename(directory / "dump.sql")
     temporary = directory / "manifest.json.partial"
     temporary.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -318,9 +337,16 @@ def read_backup(directory):
     except (ValueError, UnicodeError):
         raise BackupError("Invalid backup manifest JSON.") from None
     fields = {"content_type", "version", "source", "created_utc", "dump_file", "sha256", "tables"}
-    if not isinstance(manifest, dict) or set(manifest) != fields:
+    if not isinstance(manifest, dict):
         raise BackupError("Manifest fields do not match the supported format.")
-    if type(manifest["version"]) is not int or manifest["version"] != 1 or manifest["content_type"] != CONTENT_TYPE or manifest["dump_file"] != "dump.sql":
+    version = manifest.get("version")
+    if type(version) is not int or version not in {1, 2}:
+        raise BackupError("Unsupported backup format version.")
+    if version == 2:
+        fields.add("schema_inventory")
+    if set(manifest) != fields:
+        raise BackupError("Manifest fields do not match the supported format.")
+    if manifest["content_type"] != CONTENT_TYPE or manifest["dump_file"] != "dump.sql":
         raise BackupError("Unsupported backup format, version or dump path.")
     database_name(manifest["source"])
     if not isinstance(manifest["created_utc"], str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?\+00:00", manifest["created_utc"]):
@@ -328,8 +354,12 @@ def read_backup(directory):
     if not isinstance(manifest["sha256"], str) or not HASH.fullmatch(manifest["sha256"]):
         raise BackupError("Manifest checksum is invalid.")
     tables = manifest["tables"]
-    if not isinstance(tables, dict) or len(tables) != TABLE_COUNT:
-        raise BackupError("Manifest must contain exactly 47 tables.")
+    if not isinstance(tables, dict):
+        raise BackupError("Manifest must contain the exact supported table inventory.")
+    inventory = supported_inventory(tables)
+    if (version == 1 and set(tables) != HISTORICAL_TABLES or
+            version == 2 and manifest["schema_inventory"] != inventory):
+        raise BackupError("Manifest schema inventory does not match its version or tables.")
     for name, value in tables.items():
         if not NAME.fullmatch(name) or not isinstance(value, dict) or set(value) != {"rows", "schema_sha256", "data_sha256"}:
             raise BackupError("Invalid manifest table entry.")
@@ -386,10 +416,10 @@ def main(argv=None):
     db = MariaDB(args.client, args.dump_client)
     if args.action == "backup":
         manifest = create_backup(db, args.database, args.output)
-        print("Backup verified locally: 47 InnoDB tables, " + str(sum(t["rows"] for t in manifest["tables"].values())) + " rows. Keep both files private.")
+        print("Backup verified locally: " + str(len(manifest["tables"])) + " InnoDB tables, " + str(sum(t["rows"] for t in manifest["tables"].values())) + " rows. Keep both files private.")
     else:
-        restore_backup(db, args.backup, args.target)
-        print("Restore verified: " + args.target + "; all 47 table schemas, counts and row digests match the snapshot.")
+        manifest = restore_backup(db, args.backup, args.target)
+        print("Restore verified: " + args.target + "; all " + str(len(manifest["tables"])) + " table schemas, counts and row digests match the snapshot.")
 
 
 if __name__ == "__main__":

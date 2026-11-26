@@ -105,10 +105,11 @@ public class ReviewService {
                 FROM order_items oi
                 JOIN orders o ON o.id = oi.order_id
                 WHERE o.user_id = ?
-                  AND (o.status = 'COMPLETED'
-                       OR EXISTS (SELECT 1 FROM shipment_items si
-                                  JOIN shipments s ON s.id = si.shipment_id
-                                  WHERE si.order_item_id = oi.id AND s.status = 'DELIVERED'))
+                  AND EXISTS (SELECT 1 FROM shipment_items si
+                              JOIN shipments s ON s.id = si.shipment_id AND s.order_id = si.order_id
+                              WHERE si.order_item_id = oi.id AND si.order_id = o.id AND si.quantity > 0
+                                AND s.status = 'DELIVERED' AND s.delivered_at IS NOT NULL
+                                AND s.delivered_at <= ?)
                   AND NOT EXISTS (SELECT 1 FROM reviews r WHERE r.order_item_id = oi.id)
                 ORDER BY o.placed_at DESC, oi.id DESC
                 LIMIT 50
@@ -120,7 +121,7 @@ public class ReviewService {
                 rs.getString("product_name"),
                 rs.getString("variant_name"),
                 rs.getString("image_url"),
-                toIso(rs.getTimestamp("placed_at"))), userId);
+                toIso(rs.getTimestamp("placed_at"))), userId, LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
     }
 
     // Danh sách đánh giá mà user hiện tại đã gửi (thấy được cả trạng thái PENDING/APPROVED/HIDDEN)
@@ -177,17 +178,19 @@ public class ReviewService {
 
         // Kiểm tra dòng đơn có tồn tại, đúng chủ đơn và đã giao hàng hay chưa
         var items = jdbc.query("""
-                SELECT oi.id, oi.order_id, oi.product_id, o.user_id, o.status AS order_status,
+                SELECT oi.id, oi.order_id, oi.product_id, o.user_id,
                        EXISTS (SELECT 1 FROM shipment_items si
-                               JOIN shipments s ON s.id = si.shipment_id
-                               WHERE si.order_item_id = oi.id AND s.status = 'DELIVERED') AS delivered
+                               JOIN shipments s ON s.id = si.shipment_id AND s.order_id = si.order_id
+                               WHERE si.order_item_id = oi.id AND si.order_id = o.id AND si.quantity > 0
+                                 AND s.status = 'DELIVERED' AND s.delivered_at IS NOT NULL
+                                 AND s.delivered_at <= ?) AS delivered
                 FROM order_items oi
                 JOIN orders o ON o.id = oi.order_id
                 WHERE oi.id = ?
                 """, (rs, row) -> new OrderItemCheck(
                 rs.getLong("id"), rs.getLong("order_id"), rs.getLong("product_id"),
                 rs.getObject("user_id") == null ? null : rs.getLong("user_id"),
-                rs.getString("order_status"), rs.getBoolean("delivered")), req.orderItemId());
+                rs.getBoolean("delivered")), LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC), req.orderItemId());
 
         if (items.isEmpty()) {
             throw CommerceException.notFound("Không tìm thấy dòng đơn hàng.");
@@ -196,7 +199,7 @@ public class ReviewService {
         if (!Long.valueOf(userId).equals(item.userId())) {
             throw CommerceException.forbidden("Bạn không có quyền đánh giá đơn hàng của người khác.");
         }
-        if (!"COMPLETED".equals(item.orderStatus()) && !item.delivered()) {
+        if (!item.delivered()) {
             throw CommerceException.conflict("REVIEW_NOT_ELIGIBLE", "Chỉ được đánh giá sau khi sản phẩm đã giao thành công.");
         }
 
@@ -369,7 +372,7 @@ public class ReviewService {
     }
 
     private record OrderItemCheck(
-            long orderItemId, long orderId, long productId, Long userId, String orderStatus, boolean delivered) {}
+            long orderItemId, long orderId, long productId, Long userId, boolean delivered) {}
 
     private static String toIso(Timestamp ts) {
         return ts == null ? null : ts.toLocalDateTime().atOffset(ZoneOffset.UTC).toString();

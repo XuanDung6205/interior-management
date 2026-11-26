@@ -1,6 +1,6 @@
 # Database nội thất — furniture_shop
 
-Schema bootstrap có 33 bảng nghiệp vụ chính và 12 bảng mở rộng, tổng cộng **45 bảng**. Runtime hiện tại có **47 bảng** sau V008 bổ sung hai bảng thông báo. Database được sử dụng là `furniture_shop`; database `eshop` cũ và các script khởi tạo/seed cũ đã được dọn theo yêu cầu.
+Schema bootstrap có 33 bảng nghiệp vụ chính và 12 bảng mở rộng, tổng cộng **45 bảng**. Runtime hiện tại có **49 bảng**: V008 thêm hai bảng thông báo, V013 thêm hai bảng vector/outbox; V014 chỉ thêm cột/index/FK. Registry dùng chung ở `scripts/tv3_schema.py` quy định thứ tự V001–V014 và tập tên bảng chính xác cho create/migrate, CI, release và recovery. Database được sử dụng là `furniture_shop`; database `eshop` cũ và các script khởi tạo/seed cũ đã được dọn theo yêu cầu.
 
 ## Kết nối bằng HeidiSQL
 
@@ -17,7 +17,10 @@ Mật khẩu không được ghi trong repository, SQL hay tài liệu này. Kh�
 - `V006__payments_confirmation_note.sql`: bổ sung ghi chú đối soát nội bộ cho khoản thu thủ công; không thay đổi dữ liệu tài chính cũ. Áp dụng sau V002–V005.
 - `V007__refunds_verification_notes.sql`: hai cột ghi chú đối soát/hủy yêu cầu hoàn thủ công, chỉ nhân viên đọc; không ghi đè lịch sử khoản thu/hoàn.
 - `V008__commerce_operations.sql`: ba cột hạn xác nhận/retry trên orders và hai bảng `commerce_notification_outbox`, `commerce_notifications`. Runtime có47bảng; không backfill hạn tự hủy cho đơn cũ.
-- `V009__commerce_read_indexes.sql`: ba index phục vụ danh sách đơn/khoản thu đã đo bằng EXPLAIN; không đổi số bảng. V009 không phải bản cuối; runtime hiện cần đủ V001–V012, áp dụng migration theo thứ tự.
+- `V009__commerce_read_indexes.sql`: ba index phục vụ danh sách đơn/khoản thu đã đo bằng EXPLAIN; không đổi số bảng.
+- V010/V011/V012: snapshot thanh toán SePay, đối soát/lease/retry và ý định hoàn; không thêm bảng hay lưu khóa provider.
+- `V013__tv5_vector_and_reindex_outbox.sql`: thêm `vector_store` (`VECTOR(768)`, cosine index) và `commerce_vector_reindex_outbox`; tổng49bảng. V001/V013 đã áp dụng được giữ nguyên.
+- `V014__commerce_vector_runtime.sql`: metadata catalog/fingerprint/model, FK cascade cho catalog vector và lease/retry cho outbox; không thêm bảng. Runtime cần đủ **V001–V014**, theo đúng registry.
 - `verify_schema.py`: kiểm tra tích hợp bằng MariaDB CLI, chỉ chấp nhận tên `furniture_shop` hoặc `furniture_shop_test_*`.
 - `verification-fixture.sql`: dữ liệu kiểm thử bên trong transaction; script kiểm tra sẽ rollback, không phải dữ liệu mẫu để import.
 
@@ -27,8 +30,9 @@ Kiểm tra bằng PowerShell sau khi đặt `MYSQL_PWD` trong environment tạm 
 
 ```powershell
 python docs/database/verify_schema.py --database furniture_shop
-# Khi đã áp dụng V008/V009, kiểm tra đủ47bảng:
+# Sau toàn bộ V001–V014, kiểm tra đúng49bảng:
 python docs/database/verify_schema.py --database furniture_shop --operations
+# Snapshot lịch sử V008–V012 dùng riêng --historical (đúng47bảng).
 ```
 
 Script mặc định dùng client `C:\Program Files\MariaDB 12.2\bin\mariadb.exe`; có thể đổi bằng `--client`, `--host`, `--port`. Hủy environment chứa mật khẩu sau khi dùng. Chỉ chạy verification trên database development, lúc chưa có ứng dụng ghi đồng thời. Test dùng transaction rollback nhưng bộ đếm AUTO_INCREMENT vẫn có thể tăng; ID bị khuyết là bình thường.
@@ -58,6 +62,8 @@ Script mặc định dùng client `C:\Program Files\MariaDB 12.2\bin\mariadb.exe
 **Hành vi/kiểm toán/chat (4):** `tracking_events`, `audit_logs`, `chat_conversations`, `chat_messages`.
 
 **Hạ tầng thông báo bổ sung V008 (2):** `commerce_notification_outbox`, `commerce_notifications`. Outbox ghi cùng transaction nghiệp vụ; worker chuyển đến hộp thư web riêng của khách, có retry và chống gửi trùng. Chưa có gửi email/SMTP.
+
+**Hạ tầng vector bổ sung V013 (2):** `vector_store`, `commerce_vector_reindex_outbox`. Chỉ index dữ liệu catalog công khai. `VECTOR_ENABLED=false` mặc định; khi tắt hoặc lỗi provider, chat/catalog tiếp tục dùng SQL. Key Gemini chỉ truyền bằng environment; không lưu trong schema. Xem [bàn giao/demo](../TV3_BAN_GIAO_VA_DEMO.md) và [backup/restore](../TV3_BACKUP_RESTORE.md).
 
 ## Quy ước và quyết định thiết kế
 
@@ -109,7 +115,7 @@ Hướng frontend là **React**, backend **Spring Boot REST API**. Source vẫn 
 
 V001 chỉ seed ADMIN, STAFF, CUSTOMER và kho MAIN. Chưa nhập dữ liệu từ `eshop`. Script demo riêng `scripts/tv3_database.py` tạo tài khoản và catalog trong DB cô lập; seed lại không reset tồn hiện có. Các lần verification rollback dữ liệu nghiệp vụ. Xem [bàn giao và demo](../TV3_BAN_GIAO_VA_DEMO.md) cho cấu hình và bằng chứng kiểm thử mới nhất.
 
-Bảng vector do Spring AI quản lý sẽ được cấu hình và đưa vào migration ở giai đoạn cập nhật app; không tự đoán tên/cấu trúc bảng phụ thuộc thư viện. Tính năng vector đã có trên server MariaDB hiện tại nhưng chưa khởi tạo cho database mới.
+Bảng vector được quản lý bằng migration đã phiên bản hóa, không dùng Spring AI tự tạo schema: V013 tạo `vector_store` native `VECTOR(768)` và `commerce_vector_reindex_outbox`; V014 thêm metadata catalog cùng lease/retry. Helper kiểm tra đúng49bảng, dimension768 và các cột V014. Runtime commerce mặc định tắt vector; [setup vector](../TV3_VECTOR_SETUP.md) hướng dẫn bật có chủ đích, private-config helper và giới hạn kiểm chứng provider. Query embedding chỉ dùng tạm thời; index bền vững chỉ chứa catalog công khai.
 
 V001 là bootstrap ban đầu, chưa cấu hình Flyway/Liquibase trong project. Các thay đổi sau lần cài đầu phải dùng script phiên bản mới; không chạy lại V001, không dùng `ddl-auto=update` để thay migration có kiểm soát.
 
@@ -123,7 +129,7 @@ V001 là bootstrap ban đầu, chưa cấu hình Flyway/Liquibase trong project.
 
 ### V010 — SePay
 
-`V010__sepay_payment_snapshots.sql` thêm 5 cột snapshot nullable và unique index cho mã DH trong `payments`, giữ nguyên 47 bảng và các khoản COD/chuyển khoản cũ. Không lưu token/secret. Script TV3 create/migrate áp dụng toàn bộ V001–V012 cho DB demo/test. Sao lưu DB đang dùng trước khi áp dụng migration.
+`V010__sepay_payment_snapshots.sql` thêm 5 cột snapshot nullable và unique index cho mã DH trong `payments`, giữ nguyên 47 bảng tại thời điểm V010 và các khoản COD/chuyển khoản cũ. Không lưu token/secret. Script TV3 create/migrate hiện áp dụng registry V001–V014 cho DB demo/test. Sao lưu DB đang dùng trước khi áp dụng migration.
 
 ### V011 — đối soát, hết hạn và duyệt sự kiện
 

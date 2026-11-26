@@ -15,6 +15,7 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 import zipfile
+from tv3_schema import LATEST_TABLES, MIGRATION_RANGE
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE_DIR = ROOT / 'target' / 'releases'
@@ -91,7 +92,8 @@ def build(offline=False):
         (staging / (JAR_NAME + '.sha256')).write_text(checksum + '  ' + JAR_NAME + '\n', encoding='ascii')
         metadata = {'formatVersion': 1, 'artifact': JAR_NAME, 'sha256': checksum,
                     'builtAtUtc': datetime.now(timezone.utc).isoformat(), 'javaMinimum': 17,
-                    'mainClass': START_CLASS, 'schemaMigrations': 'V001-V012',
+                    'mainClass': START_CLASS, 'schemaMigrations': MIGRATION_RANGE,
+                    'schemaTables': len(LATEST_TABLES),
                     'frontendAssets': assets, 'testsExecutedByBuild': False}
         (staging / 'release.json').write_text(json.dumps(metadata, indent=2) + '\n', encoding='utf-8')
         # Metadata is published last; run validates the pair before executing it.
@@ -119,6 +121,8 @@ def prepare_run(jar, database, port):
     checksum = digest(jar)
     if metadata.get('formatVersion') != 1 or metadata.get('artifact') != jar.name or metadata.get('sha256') != checksum:
         raise ValueError('Release metadata/checksum does not match the JAR; build again.')
+    if metadata.get('schemaMigrations') != MIGRATION_RANGE or type(metadata.get('schemaTables')) is not int or metadata['schemaTables'] != len(LATEST_TABLES):
+        raise ValueError('Release schema metadata is obsolete or unsupported; build again.')
     checksum_file = (jar.parent / (jar.name + '.sha256')).read_text(encoding='ascii').split()
     if checksum_file != [checksum, jar.name]:
         raise ValueError('Release SHA256 file does not match the JAR.')

@@ -1,6 +1,7 @@
 package org.example.eshop.commerce.inventory;
 
 import org.example.eshop.commerce.common.CommerceException;
+import org.example.eshop.commerce.cache.Tv5Cache;
 import org.example.eshop.commerce.port.CommerceActor;
 import org.example.eshop.commerce.port.CurrentActorPort;
 import org.example.eshop.commerce.port.InventoryPort;
@@ -47,7 +48,7 @@ class OrderDispatchTest {
     @Import({OrderDispatchService.class, ShipmentLifecycleService.class, ShipmentScheduleService.class,
         OrderCompletionPolicy.class, OrderLifecycleService.class,
         OrderStore.class, OrderAdminAccess.class, OrderLifecyclePolicy.class, AdminOrderQueryService.class,
-        OrderQueryService.class, OrderCancellationService.class, JdbcOrderAuditAdapter.class})
+        OrderQueryService.class, OrderCancellationService.class, JdbcOrderAuditAdapter.class, Tv5Cache.class})
     static class Config {
         @Bean DataSource dataSource() {
             return new DriverManagerDataSource(System.getenv("TV3_TEST_DB_URL"),

@@ -8,11 +8,12 @@ and Node 24, matching `frontend/package.json`.
 The job performs these checks in order:
 
 1. Run the Python operational helper tests, including recovery/release guards.
-2. Create `furniture_shop_test_tv3_policy_ci` with V001-V010 and require 47
-   InnoDB tables. Run the complete Maven test suite against it.
+2. Create `furniture_shop_test_tv3_policy_ci` with the shared ordered V001-V014
+   registry, repeat the additive migration pass, and require the exact 49
+   InnoDB table names. Run the complete Maven test suite against it.
 3. Run `scripts/ci_verify_tests.py`. Every Java class gated by
    `TV3_TEST_DB_URL` or `LEGACY_TEST_DB_URL` must appear in Surefire results and
-   have no skipped tests (currently 14 commerce classes and one legacy class).
+   have no skipped tests. The gate discovers the current classes from source.
    The `tv3_policy_` database prefix also enables the order completion policy
    integration tests. Live Gemini tests stay explicitly disabled; the only
    Gemini key is an offline placeholder needed to instantiate the legacy
@@ -21,14 +22,16 @@ The job performs these checks in order:
    the portable demo through `scripts/tv3_release.py build`.
 5. Create and seed a separate demo database, back it up, and restore it into the
    new `furniture_shop_test_restore_ci` database. Recovery verifies the schemas,
-   row counts and row digests of all 47 tables.
+   row counts and row digests of all 49 tables, including native vector storage.
 6. Start the verified JAR on port 8080 against the recovered database. Check
    runtime isolation, `/cart`, a direct `/orders/123` request, the bundled
    JavaScript, and missing asset/API responses. Then run the complete existing
    Playwright suite against the JAR, using installed Chromium. Vite is not a
    server in this test.
 
-Commerce scheduled workers are disabled so they cannot alter test fixtures.
+Commerce scheduled workers and automatic vector indexing are disabled so they
+cannot alter test fixtures or call a provider. Vector transport tests use local
+deterministic HTTP fixtures; a passing fixture is not a live Gemini result.
 The legacy `EshopApplicationTests` context uses a separate
 `furniture_shop_test_legacy_ci` database through `LEGACY_TEST_DB_URL`. The test
 requires this isolated database prefix, validates the URL and sets Hibernate
@@ -68,7 +71,7 @@ service at job completion.
 
 To reproduce the key gates on a local disposable database, set `DB_PASSWORD`,
 `DB_USERNAME` and `TV3_TEST_DB_URL` in the process environment. The URL must point
-to `furniture_shop_test_tv3_policy_*` with V001-V010 already applied. A complete
+to `furniture_shop_test_tv3_policy_*` with the registered V001-V014 schema already applied. A complete
 Maven run also needs `LEGACY_TEST_DB_URL` and `DB_URL` pointing to a separate
 initially empty `furniture_shop_test_legacy_*` database, a temporary Base64
 `JWT_SECRET` encoding at least 32 bytes, and

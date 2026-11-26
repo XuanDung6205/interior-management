@@ -85,6 +85,7 @@ export default function ChatWidget() {
             ))}
           </div>
           <ErrorNotice error={error} />
+          <p className="muted small tv5-chat-disclosure">Khi dịch vụ AI được bật, nội dung câu hỏi được gửi đến dịch vụ AI để tìm sản phẩm và trả lời.</p>
           <form className="tv5-chat-form" onSubmit={submit}>
             <label className="sr-only" htmlFor="tv5-chat-input">Nhập câu hỏi tư vấn</label>
             <input

@@ -42,6 +42,7 @@ jobs:
       TV3_DEMO_PASSWORD: demo-${{ github.run_id }}-${{ github.run_attempt }}-disposable
       TV3_TEST_DB_URL: jdbc:mariadb://127.0.0.1:3306/furniture_shop_test_tv3_policy_ci
       COMMERCE_JOBS_ENABLED: 'false'
+      VECTOR_ENABLED: 'false'
       PAYMENT_BANK_MODE: DEMO
       SEPAY_ENABLED: 'true'
       SEPAY_BANK: VietinBank
@@ -114,12 +115,13 @@ jobs:
       - name: Run operational helper tests
         run: python -m unittest discover -s tests/operations -p 'test_*.py' -v
 
-      - name: Provision V001-V012 schema and require all 47 InnoDB tables
+      - name: Provision registered schema and verify the exact latest InnoDB inventory
         run: |
           python scripts/tv3_database.py create --database furniture_shop_test_tv3_policy_ci --client mariadb
+          # A second additive pass proves repeatability without replacing data.
+          python scripts/tv3_database.py migrate --database furniture_shop_test_tv3_policy_ci --client mariadb
+          python scripts/tv3_database.py verify --database furniture_shop_test_tv3_policy_ci --client mariadb
           export MYSQL_PWD="$DB_PASSWORD"
-          count=$(mariadb --protocol=tcp --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USERNAME" --database=furniture_shop_test_tv3_policy_ci --batch --skip-column-names --execute="SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE='BASE TABLE' AND ENGINE='InnoDB'")
-          test "$count" = 47
           # EshopApplicationTests loads the separate legacy context. It needs a
           # own guarded create-drop schema, never the commerce database.
           mariadb --protocol=tcp --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USERNAME" --execute="CREATE DATABASE furniture_shop_test_legacy_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"

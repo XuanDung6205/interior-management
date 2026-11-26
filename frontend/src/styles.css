@@ -982,4 +982,5 @@ input[type='radio'] { accent-color: var(--teal); width: 18px; height: 18px; min-
 .tv5-chat-sources a { color: var(--teal); text-decoration: underline; }
 .tv5-chat-form { display: flex; gap: 8px; padding: 14px; border-top: 1px solid var(--line); background: var(--paper); }
 .tv5-chat-form input { flex: 1; }
+.tv5-chat-disclosure { margin: 0; padding: 0 14px 8px; }
 @media print { .tv5-chat-root { display: none !important; } }

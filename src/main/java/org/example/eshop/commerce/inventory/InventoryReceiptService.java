@@ -1,6 +1,7 @@
 package org.example.eshop.commerce.inventory;
 
 import org.example.eshop.commerce.common.CommerceException;
+import org.example.eshop.commerce.cache.Tv5Cache;
 import org.example.eshop.commerce.port.CurrentActorPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -23,11 +24,13 @@ public class InventoryReceiptService {
     private final JdbcTemplate jdbc;
     private final CurrentActorPort actors;
     private final Clock clock;
+    private final Tv5Cache cache;
 
-    public InventoryReceiptService(JdbcTemplate jdbc, CurrentActorPort actors, Clock clock) {
+    public InventoryReceiptService(JdbcTemplate jdbc, CurrentActorPort actors, Clock clock, Tv5Cache cache) {
         this.jdbc = jdbc;
         this.actors = actors;
         this.clock = clock;
+        this.cache = cache;
     }
 
     public record WarehouseView(long id, String code, String name) {}
@@ -136,6 +139,7 @@ public class InventoryReceiptService {
             statement.setObject(8, now);
             return statement;
         }, keys);
+        cache.evictAfterCommit(Tv5Cache.DASHBOARD);
         return view(keys.getKey().longValue(), false);
     }
 

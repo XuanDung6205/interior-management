@@ -1,6 +1,7 @@
 package org.example.eshop.commerce.inventory;
 
 import org.example.eshop.commerce.common.CommerceException;
+import org.example.eshop.commerce.cache.Tv5Cache;
 import org.example.eshop.commerce.port.CurrentActorPort;
 import org.example.eshop.commerce.order.OrderCompletionPolicy;
 import org.example.eshop.commerce.order.OrderLifecycleService;
@@ -25,14 +26,16 @@ public class ShipmentLifecycleService {
     private final Clock clock;
     private final OrderCompletionPolicy completion;
     private final OrderLifecycleService orders;
+    private final Tv5Cache cache;
 
     public ShipmentLifecycleService(JdbcTemplate jdbc, CurrentActorPort actors, Clock clock,
-            OrderCompletionPolicy completion, OrderLifecycleService orders) {
+            OrderCompletionPolicy completion, OrderLifecycleService orders, Tv5Cache cache) {
         this.jdbc = jdbc;
         this.actors = actors;
         this.clock = clock;
         this.completion = completion;
         this.orders = orders;
+        this.cache = cache;
     }
 
     public record ShipmentView(long id, long orderId, String orderNumber, long warehouseId,
@@ -129,6 +132,7 @@ public class ShipmentLifecycleService {
             orders.transition(shipment.orderId(), "PROCESSING", "COMPLETED",
                     "Đã giao đủ hàng và hoàn tất thanh toán, lắp đặt theo yêu cầu.");
         }
+        cache.evictAfterCommit(Tv5Cache.DASHBOARD);
         return current(shipmentId, false);
     }
 
