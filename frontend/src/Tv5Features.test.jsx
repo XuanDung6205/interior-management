@@ -39,6 +39,18 @@ function mount(path, handlers = {}, session = guest) {
   return { user: userEvent.setup(), calls };
 }
 
+it('keeps TV5 content, engagement and admin pages reachable from the new navbar', async () => {
+  const { user } = mount('/login', {}, staff);
+  expect(await screen.findByRole('link', { name: 'Bài viết' })).toHaveAttribute('href', '/articles');
+  await user.click(screen.getByRole('button', { name: 'Quản trị' }));
+  for (const [name, path] of [['Thống kê', '/admin/dashboard'], ['Nội dung', '/admin/content'], ['Duyệt đánh giá', '/admin/reviews']]) {
+    expect(screen.getByRole('link', { name })).toHaveAttribute('href', path);
+  }
+  await user.click(screen.getByRole('button', { name: 'Tài khoản' }));
+  expect(screen.getByRole('link', { name: 'Yêu thích' })).toHaveAttribute('href', '/wishlist');
+  expect(screen.getByRole('link', { name: 'Đánh giá' })).toHaveAttribute('href', '/reviews');
+});
+
 it('renders public articles list and detail without raw HTML execution', async () => {
   const summary = {
     id: 1,

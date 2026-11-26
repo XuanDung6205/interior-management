@@ -45,7 +45,7 @@ export default function CartPage() {
   const [query, setQuery] = useState(requestedQuery);
   const [page, setPage] = useState(0);
   const [revision, setRevision] = useState(0);
-  useEffect(() => { setSearch(requestedQuery); setQuery(requestedQuery); setPage(0); }, [requestedQuery]);
+  useEffect(() => { setSearch(requestedQuery); setQuery(requestedQuery); setPage(0); }, [requestedQuery, location.key]);
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true); setError(null);
