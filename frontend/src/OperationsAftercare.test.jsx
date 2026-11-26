@@ -43,7 +43,7 @@ it('protects notifications and operations without making private API requests', 
 it('shows the owner inbox, marks read through CSRF, and preserves customer navigation', async () => {
   const { user, calls } = mount('/notifications');
   await screen.findByText('Đã duyệt trả hàng');
-  expect(within(screen.getByRole('navigation', { name: 'Điều hướng chính' })).getAllByRole('link')).toHaveLength(4);
+  expect(within(screen.getByRole('navigation', { name: 'Điều hướng chính' })).getAllByRole('link')).toHaveLength(7);
   await user.click(screen.getByRole('button', { name: 'Đánh dấu đã đọc' }));
   await waitFor(() => expect(calls.some(c => c.url === '/api/notifications/8/read' && c.headers['X-CSRF-TOKEN'] === 'csrf')).toBe(true));
   expect(screen.getByRole('link', { name: 'Xem đơn NN42' })).toHaveAttribute('href', '/orders/42');
@@ -55,7 +55,7 @@ it('guards staff operations and only triggers bounded jobs explicitly', async ()
   expect(calls.filter(c => c.method === 'POST')).toHaveLength(0);
   await user.click(screen.getByRole('button', { name: 'Chạy kiểm tra hết hạn COD' }));
   await screen.findByText('Đã hết hạn: 2');
-  expect(within(screen.getByRole('navigation', { name: 'Điều hướng chính' })).getAllByRole('link')).toHaveLength(13);
+  expect(within(screen.getByRole('navigation', { name: 'Điều hướng chính' })).getAllByRole('link')).toHaveLength(19);
 });
 it('uses delivered returnable quantities and keeps exact actor-scoped request across an uncertain reload', async () => {
   let attempt;
