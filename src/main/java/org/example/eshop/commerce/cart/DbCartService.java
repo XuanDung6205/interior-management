@@ -4,6 +4,8 @@ import jakarta.persistence.PersistenceContext;
 
 import org.example.eshop.commerce.common.CommerceException;
 import org.example.eshop.commerce.port.*;
+import org.example.eshop.commerce.tracking.CommerceTrackingService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,7 @@ public class DbCartService {
     private final InventoryPort inventory;
     private final Clock clock;
     @PersistenceContext private EntityManager entityManager;
+    @Autowired(required = false) private CommerceTrackingService tracking;
     public DbCartService(CartRepository carts,CartItemRepository items,JdbcTemplate jdbc,CurrentActorPort actors,CatalogPort catalog,InventoryPort inventory,Clock clock){this.carts=carts;this.items=items;this.jdbc=jdbc;this.actors=actors;this.catalog=catalog;this.inventory=inventory;this.clock=clock;}
 
     @Transactional(readOnly=true) public CartView get(){
@@ -41,6 +44,12 @@ public class DbCartService {
         checkIncrease(variantId,wanted);
         CartItemEntity item=existing.orElseGet(()->{var line=new CartItemEntity();line.setCartId(cart.getId());line.setVariantId(variantId);line.setCreatedAt(now());return line;});
         item.setQuantity(wanted);item.setUpdatedAt(now());items.saveAndFlush(item);touch(cart);
+        // Ghi sự kiện ADD_TO_CART xác nhận từ server sau khi lưu giỏ thành công (fail-safe ko ảnh hưởng luồng giỏ)
+        if (tracking != null) {
+            VariantSnapshot v = catalog.findVariants(Set.of(variantId)).get(variantId);
+            tracking.recordServerEvent("ADD_TO_CART", "cart-" + cart.getId(), actors.currentActor().userId(),
+                    v == null ? null : v.productId(), v == null ? null : variantId, null, quantity);
+        }
         return view(cart);
     }
     @Transactional(isolation=Isolation.READ_COMMITTED) public CartView update(Long itemId,int quantity){

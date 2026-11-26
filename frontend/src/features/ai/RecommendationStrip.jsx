@@ -32,7 +32,8 @@ export default function RecommendationStrip({ productId = null, limit = 4, headi
       </div>
       <div className="product-grid">
         {items.map(item => (
-          <Link to="/cart#catalog" className="product-card" key={item.productId}>
+          // Bấm vào món gợi ý là mở thẳng trang chi tiết sp theo slug luôn
+          <Link to={item.productSlug ? `/products/${item.productSlug}` : '/sale'} className="product-card" key={item.productId}>
             <ProductImage src={item.imageUrl} name={item.productName} />
             <div className="product-card-content">
               <span className="sku">{item.reason}</span>

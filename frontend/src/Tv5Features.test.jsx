@@ -28,6 +28,7 @@ function mount(path, handlers = {}, session = guest) {
     } else if (url === '/api/session') body = session;
     else if (url === '/api/csrf') body = { token: 'csrf', headerName: 'X-CSRF-TOKEN' };
     else if (url === '/api/notifications/unread-count') body = { unreadCount: 0 };
+    else if (url === '/api/tracking/events' && method === 'POST') { status = 202; body = null; }
     else if (url.startsWith('/api/commerce/recommendations?')) body = { items: [{ productId: 99, productName: 'Đèn sàn Bắc Âu', productSlug: 'den-san', categoryName: 'Đèn', defaultVariantId: 99, minPrice: '1800000.00', imageUrl: null, totalAvailable: 5, reason: 'Phối hợp đẹp cùng Ghế' }] };
     else throw new Error(`Unexpected HTTP ${method} ${url}`);
     return new Response(status === 204 ? null : JSON.stringify(body), {
@@ -109,17 +110,31 @@ it('guards TV5 admin dashboard for non-staff and displays net revenue and cache 
   expect(calls.some(c => c.method === 'POST' && c.url === '/api/admin/dashboard/cache/clear')).toBe(true);
 });
 
-it('opens chat widget on demand and displays live product sources', async () => {
+it('opens chat widget on demand, loads history and links sources to product detail', async () => {
   const { user, calls } = mount('/articles', {
     'GET /api/commerce/content/articles?query=&page=0&size=9': page([]),
+    'GET /api/commerce/chat': [{
+      publicId: '22222222-2222-4222-8222-222222222222',
+      title: 'Hỏi sofa phòng khách',
+      status: 'OPEN',
+      updatedAt: '2026-11-26T00:00:00Z',
+    }],
+    'GET /api/commerce/chat/22222222-2222-4222-8222-222222222222': {
+      publicId: '22222222-2222-4222-8222-222222222222',
+      title: 'Hỏi sofa phòng khách',
+      status: 'OPEN',
+      aiConfigured: false,
+      messages: [{ id: 1, sequenceNumber: 1, role: 'USER', content: 'Cho mình xem sofa', sources: [], createdAt: '2026-11-26T00:00:00Z' }],
+    },
     'POST /api/commerce/chat': {
       conversationId: '11111111-1111-4111-8111-111111111111',
       aiConfigured: false,
       model: 'UNCONFIGURED',
       reply: 'Trợ lý AI hiện chưa được kích hoạt khóa API.',
       sources: [{
-        productId: 1, productName: 'Bàn trà Oslo', sku: 'BT-OSLO',
-        variantName: 'Gỗ sồi', categoryName: 'Bàn trà', price: '3200000.00', availableQuantity: 4, imageUrl: null,
+        productId: 1, productSlug: 'ban-tra-oslo', productName: 'Bàn trà Oslo', sku: 'BT-OSLO',
+        variantName: 'Gỗ sồi', categoryName: 'Bàn trà', price: '3200000.00', availableQuantity: 4,
+        imageUrl: null, dimensions: '1200 x 600 x 450 mm', materials: 'Gỗ sồi', rooms: 'Phòng khách',
       }],
       createdAt: '2026-11-26T00:00:00Z',
     },
@@ -133,7 +148,11 @@ it('opens chat widget on demand and displays live product sources', async () => 
   await user.click(screen.getByRole('button', { name: 'Gửi' }));
 
   await screen.findByText(/Trợ lý AI hiện chưa được kích hoạt/);
-  expect(screen.getByText(/Bàn trà Oslo/)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Bàn trà Oslo/ })).toHaveAttribute('href', '/products/ban-tra-oslo');
+
+  await user.click(screen.getByRole('button', { name: 'Lịch sử' }));
+  await user.click(await screen.findByRole('button', { name: /Hỏi sofa phòng khách/ }));
+  await screen.findByText('Cho mình xem sofa');
 });
 
 it('allows authenticated customer to view wishlist and remove an item', async () => {
@@ -148,6 +167,65 @@ it('allows authenticated customer to view wishlist and remove an item', async ()
 
   await screen.findByText('Ghế thư giãn Aalto');
   expect(await screen.findByText('Đèn sàn Bắc Âu')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Đèn sàn Bắc Âu/ })).toHaveAttribute('href', '/products/den-san');
   await user.click(screen.getByRole('button', { name: 'Bỏ lưu' }));
   await screen.findByText('Danh sách yêu thích đang trống');
+});
+
+it('wires wishlist toggle, verified reviews, recommendations and view tracking on product detail', async () => {
+  const { user, calls } = mount('/products/demo-ghe-an-06-01', {
+    'GET /api/catalog/products/demo-ghe-an-06-01': {
+      id: 51, slug: 'demo-ghe-an-06-01', name: 'Ghế ăn Mộc An', shortDescription: 'Gỗ sồi nhẹ nhàng',
+      description: 'Thiết kế gọn gàng.', careInstructions: null, categoryName: 'Ghế ăn',
+      categorySlug: 'demo-ghe-an', warrantyMonths: 12, assemblyRequired: false,
+      images: [{ url: '/images/gallery-dining-room.jpg', altText: 'Ghế ăn Mộc An' }],
+      specifications: [],
+      variants: [{ id: 51, sku: 'NN-DEMO-06-01', name: 'Mộc An', widthMm: 480, depthMm: 520, heightMm: 790, price: '1890000.00', compareAtPrice: null, leadTimeDays: 0, availableQuantity: 10, materials: ['Gỗ sồi'] }],
+    },
+    'GET /api/wishlist': [],
+    'POST /api/wishlist/51': { status: 201, body: [{ productId: 51 }] },
+    'GET /api/commerce/products/51/reviews?page=0&size=10': {
+      productId: 51, averageRating: 4.8, totalReviews: 1, page: 0, size: 10, totalPages: 1,
+      items: [{ id: 9, orderId: 1, orderItemId: 1, productId: 51, productName: 'Ghế ăn Mộc An', authorName: 'Minh Anh', rating: 5, title: 'Rất chắc chắn', content: 'Ngồi êm và nhẹ.', status: 'APPROVED', staffReply: 'Cảm ơn bạn nhé!', repliedByName: 'Nếp Nhà', repliedAt: '2026-11-26T00:00:00Z', createdAt: '2026-11-26T00:00:00Z', images: [] }],
+    },
+  }, customer);
+
+  await screen.findByRole('heading', { name: 'Ghế ăn Mộc An' });
+  expect(await screen.findByText('Ngồi êm và nhẹ.')).toBeInTheDocument();
+  expect(screen.getByText('Cảm ơn bạn nhé!')).toBeInTheDocument();
+  expect(await screen.findByText('Đèn sàn Bắc Âu')).toBeInTheDocument();
+  expect(calls.some(c => c.method === 'POST' && c.url === '/api/tracking/events')).toBe(true);
+
+  await user.click(screen.getByRole('button', { name: '♡ Yêu thích' }));
+  await screen.findByRole('button', { name: '♥ Đã yêu thích' });
+  expect(calls.some(c => c.method === 'POST' && c.url === '/api/wishlist/51')).toBe(true);
+  expect(screen.getByRole('link', { name: 'Xem yêu thích' })).toHaveAttribute('href', '/wishlist');
+  expect(screen.queryByRole('link', { name: 'Xem giỏ hàng' })).not.toBeInTheDocument();
+});
+
+it('shows staff shortcut to /admin/content on public articles page', async () => {
+  mount('/articles', {
+    'GET /api/commerce/content/articles?query=&page=0&size=9': page([]),
+  }, staff);
+
+  expect(await screen.findByRole('link', { name: /Quản lý \/ Viết bài/ })).toHaveAttribute('href', '/admin/content');
+});
+
+it('displays dynamic hero banner and latest articles on home page', async () => {
+  mount('/', {
+    'GET /api/catalog/products?size=100': page([]),
+    'GET /api/commerce/home/gallery': { items: [] },
+    'GET /api/commerce/content/banners?placement=HOME_HERO': [{
+      id: 1, title: 'Bộ sưu tập gỗ sồi mùa đông', subtitle: 'Ấm áp từng góc nhỏ.',
+      imageUrl: '/images/home-hero.jpg', targetUrl: '/sale', placement: 'HOME_HERO', sortOrder: 0, isActive: true,
+    }],
+    'GET /api/commerce/content/articles?query=&page=0&size=3': page([{
+      id: 2, title: 'Bí quyết chọn đèn phòng khách', slug: 'bi-quyet-chon-den',
+      summary: 'Ánh sáng vàng giúp không gian ấm hơn.', coverImageUrl: null,
+      status: 'PUBLISHED', authorName: 'Nếp Nhà', publishedAt: '2026-11-26T00:00:00Z', updatedAt: '2026-11-26T00:00:00Z',
+    }]),
+  });
+
+  expect(await screen.findByRole('heading', { name: 'Bộ sưu tập gỗ sồi mùa đông' })).toBeInTheDocument();
+  expect(await screen.findByRole('link', { name: /Bí quyết chọn đèn phòng khách/ })).toHaveAttribute('href', '/articles/bi-quyet-chon-den');
 });

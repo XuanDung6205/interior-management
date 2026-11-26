@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ErrorNotice, Icon, Loading, Pager, ProductImage } from '../../components/ui';
 import { formatMoney } from '../../lib/format';
 import { useCommerce } from '../../lib/session';
+import { trackEvent } from '../../lib/tracking';
 import './catalog.css';
 
 const roomLabels = { 'phong-khach': 'Phòng khách', 'phong-an': 'Phòng ăn', 'phong-ngu': 'Phòng ngủ' };
@@ -39,6 +40,10 @@ export default function SalePage() {
 
   useEffect(() => { setDraft(query); }, [query]);
   useEffect(() => {
+    // Ghi nhận lượt xem trang danh mục / sale cho phễu hành vi
+    trackEvent(api, { eventType: 'PAGE_VIEW', pagePath: '/sale' });
+  }, [api]);
+  useEffect(() => {
     const controller = new AbortController();
     const path = `/catalog/categories?${new URLSearchParams({ room })}`;
     const previous = cached(api, path);
@@ -56,7 +61,16 @@ export default function SalePage() {
     if (previous) setCatalog(previous);
     setLoading(true); setError(null);
     api.request(path, { signal: controller.signal })
-      .then(value => { if (!controller.signal.aborted) { remember(api, path, value, 15_000); setCatalog(value); } })
+      .then(value => {
+        if (!controller.signal.aborted) {
+          remember(api, path, value, 15_000);
+          setCatalog(value);
+          // Khi khách có gõ từ khóa tìm kiếm thì lưu sự kiện SEARCH phục vụ cá nhân hóa & dashboard
+          if (query) {
+            trackEvent(api, { eventType: 'SEARCH', keyword: query, resultCount: value.totalElements ?? 0, pagePath: '/sale' });
+          }
+        }
+      })
       .catch(value => { if (value.name !== 'AbortError') { setError(value); if (!previous) setCatalog(null); } })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();

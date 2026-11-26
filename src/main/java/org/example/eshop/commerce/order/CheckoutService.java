@@ -3,6 +3,8 @@ package org.example.eshop.commerce.order;
 import org.example.eshop.commerce.common.CommerceException;
 import org.example.eshop.commerce.port.InventoryPort;
 import org.example.eshop.commerce.notification.OrderNotifications;
+import org.example.eshop.commerce.tracking.CommerceTrackingService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
@@ -19,6 +21,7 @@ public class CheckoutService {
     private final Clock clock;
     private final long confirmationTtl;
     private final org.example.eshop.commerce.payment.SePayPayments sepay;
+    @Autowired(required = false) private CommerceTrackingService tracking;
     public CheckoutService(OrderStore store,CheckoutQuoteService quotes,OrderQueryService orders,InventoryPort inventory,Clock clock,org.example.eshop.commerce.payment.SePayPayments sepay,@Value("${commerce.order.confirmation-ttl-seconds:86400}")long confirmationTtl){this.sepay=sepay;this.store=store;this.quotes=quotes;this.orders=orders;this.inventory=inventory;this.clock=clock;if(confirmationTtl<60||confirmationTtl>604800)throw new IllegalArgumentException("COD confirmation TTL must be60..604800seconds");this.confirmationTtl=confirmationTtl;}
     @Transactional(isolation=Isolation.READ_COMMITTED)
     public Map<String,Object> place(CheckoutRequest request,String key){
@@ -65,6 +68,10 @@ public class CheckoutService {
         OrderNotifications.placed(store.jdbc(),clock,id);
         int converted=store.jdbc().update("UPDATE carts SET status='CONVERTED',updated_at=? WHERE id=? AND user_id=? AND status='ACTIVE'",now,request.cartId(),user);
         if(converted!=1)throw CommerceException.conflict("CART_UNAVAILABLE","Giỏ hàng đã thay đổi.");
+        // Ghi sự kiện ORDER_PLACED xác nhận từ server sau khi đơn đã tạo xong (fail-safe ko ảnh hưởng transaction đặt đơn)
+        if (tracking != null) {
+            tracking.recordServerEvent("ORDER_PLACED", "order-" + id, user, null, null, id, null);
+        }
         return orders.detailFor(id,user);
     }
 }

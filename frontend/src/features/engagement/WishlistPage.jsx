@@ -64,7 +64,7 @@ export default function WishlistPage() {
         <h1>Sản phẩm yêu thích<span className="heading-dot">.</span></h1>
         <p>Những món nội thất bạn đã đánh dấu để cân nhắc cho không gian sống.</p>
       </div>
-      <Link to="/cart#catalog" className="inline-link">Khám phá thêm <Icon name="arrow" size={16} /></Link>
+      <Link to="/sale" className="inline-link">Khám phá thêm <Icon name="arrow" size={16} /></Link>
     </div>
 
     <ErrorNotice error={error} onRetry={() => setRevision(v => v + 1)} />
@@ -75,10 +75,16 @@ export default function WishlistPage() {
       <div className="product-grid">
         {items.map(item => (
           <article className="product-card" key={item.productId}>
-            <ProductImage src={item.imageUrl} name={item.productName} />
+            <Link to={item.productSlug ? `/products/${item.productSlug}` : '/sale'}>
+              <ProductImage src={item.imageUrl} name={item.productName} />
+            </Link>
             <div className="product-card-content">
               <span className="sku">{item.categoryName}</span>
-              <h3>{item.productName}</h3>
+              <h3>
+                <Link to={item.productSlug ? `/products/${item.productSlug}` : '/sale'}>
+                  {item.productName}
+                </Link>
+              </h3>
               <strong>{item.minPrice ? formatMoney(item.minPrice) : 'Đang cập nhật'}</strong>
               <p className="muted small">
                 {!item.active ? 'Ngừng bán' : item.totalAvailable > 0 ? `Còn sẵn: ${item.totalAvailable}` : 'Tạm hết hàng'}
@@ -103,7 +109,7 @@ export default function WishlistPage() {
       <div className="empty-state">
         <h3>Danh sách yêu thích đang trống</h3>
         <p>Hãy khám phá cửa hàng và lưu lại những món đồ bạn ưng ý.</p>
-        <Link to="/cart#catalog" className="button">Xem sản phẩm</Link>
+        <Link to="/sale" className="button">Xem sản phẩm</Link>
       </div>
     ))}
 

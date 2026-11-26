@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ErrorNotice, Icon, Loading } from '../../components/ui';
 import { useCommerce } from '../../lib/session';
+import { trackEvent } from '../../lib/tracking';
 import { AddressSnapshot, MoneyBreakdown, OrderItems, OrderNote, paymentMethods } from '../orders/OrderParts';
 import { checkoutApi, clearAttempt, readAttempt, saveAttempt } from './checkoutApi';
 
@@ -33,6 +34,10 @@ export default function CheckoutPage() {
   const [revision, setRevision] = useState(0);
   const [changed, setChanged] = useState(false);
   const placing = useRef(false);
+  useEffect(() => {
+    // Ghi nhận khách vừa vào trang thanh toán / đặt hàng
+    trackEvent(api, { eventType: 'CHECKOUT_START', pagePath: '/checkout' });
+  }, [api]);
   const errorRef = useRef(null);
   const quoteRef = useRef(null);
   const navigate = useNavigate();

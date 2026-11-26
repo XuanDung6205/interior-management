@@ -20,6 +20,7 @@ function mount(path = '/checkout', handlers = {}, session = staff) {
     else if (url === '/api/cart') result = cart;
     else if (url === '/api/checkout/addresses') result = { items: [address] };
     else if (url === '/api/orders/101') result = order;
+    else if (url === '/api/tracking/events') result = { status: 202, body: {} };
     else throw new Error(`Unexpected HTTP ${method} ${url}`);
     return new Response(JSON.stringify(result.body ?? result), { status: Object.hasOwn(result, 'body') ? result.status : 200, headers: { 'Content-Type': 'application/json' } });
   }));

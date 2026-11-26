@@ -34,11 +34,21 @@ TTL khởi điểm khi nhóm bật Redis (`spring-boot-starter-cache`, `spring-b
 Chạy đo tải cục bộ (khi ứng dụng đang chạy tại `http://127.0.0.1:8080`):
 
 ```powershell
-# Lượt 1: Cold cache
+# Lượt 1: Cold cache (khởi động backend với $env:TV5_CACHE_ENABLED='false')
 python tests/performance/tv5/tv5_load.py --base-url http://127.0.0.1:8080 --vus 10 --iterations 30 --label cold
 
-# Lượt 2: Warm cache (kèm đo dashboard nếu cung cấp tài khoản staff)
-python tests/performance/tv5/tv5_load.py --base-url http://127.0.0.1:8080 --vus 10 --iterations 30 --label warm --staff-user staff --staff-password <mat-khau>
+# Lượt 2: Warm cache (bật $env:TV5_CACHE_ENABLED='true', đo kèm dashboard + AI chat riêng)
+python tests/performance/tv5/tv5_load.py --base-url http://127.0.0.1:8080 --vus 10 --iterations 30 --label warm --staff-user tv3.admin --staff-password <mat-khau> --include-ai --ai-requests 5
 ```
 
-Ghi lại số đo thực tế (`p50Ms`, `p95Ms`, `errorRatePercent`, `rps`) cùng cấu hình máy và số liệu Hikari pool từ `/admin/operations` trước khi nộp báo cáo cuối kỳ.
+### Mẫu bảng ghi số đo thực tế trước khi nộp
+
+| Endpoint | Cold p50 (ms) | Cold p95 (ms) | Warm p50 (ms) | Warm p95 (ms) | Error rate (%) | Ghi chú / Cache hit |
+| --- | --- | --- | --- | --- | --- | --- |
+| `GET /api/commerce/content/banners` | _điền số đo thật_ | _điền_ | _điền_ | _điền_ | _điền_ | TTL 10 phút |
+| `GET /api/commerce/content/articles` | _điền số đo thật_ | _điền_ | _điền_ | _điền_ | _điền_ | TTL 10 phút |
+| `GET /api/commerce/recommendations` | _điền số đo thật_ | _điền_ | _điền_ | _điền_ | _điền_ | TTL 3 phút |
+| `GET /api/admin/dashboard/summary` | _điền số đo thật_ | _điền_ | _điền_ | _điền_ | _điền_ | TTL 2 phút |
+| `POST /api/commerce/chat` (AI riêng) | _điền số đo thật_ | _điền_ | — | — | _điền_ | Đo riêng không cache giá/tồn |
+
+Ghi kèm cấu hình máy (`machine` từ JSON xuất ra) và số liệu Hikari pool đọc tại `/admin/operations`.

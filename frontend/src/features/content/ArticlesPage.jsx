@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom';
 import { ErrorNotice, Icon, Loading, Pager, ProductImage } from '../../components/ui';
 import { formatDate } from '../../lib/format';
 import { useCommerce } from '../../lib/session';
+import { trackEvent } from '../../lib/tracking';
 import { contentApi } from './contentApi';
 
 // Trang danh sách bài viết công khai cho khách (route /articles)
 export default function ArticlesPage() {
-  const { api } = useCommerce();
+  const { api, isStaff } = useCommerce();
   const client = useMemo(() => contentApi(api), [api]);
   const [data, setData] = useState(null);
   const [search, setSearch] = useState(''); // Giá trị đang gõ trên ô tìm kiếm
@@ -15,6 +16,11 @@ export default function ArticlesPage() {
   const [page, setPage] = useState(0);
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    // Ghi nhận lượt xem trang tạp chí để dashboard phễu hành vi có số PAGE_VIEW thật
+    trackEvent(api, { eventType: 'PAGE_VIEW', pagePath: '/articles' });
+  }, [api]);
 
   useEffect(() => {
     const controller = new AbortController(); // Hủy request cũ nếu user đổi trang nhanh
@@ -43,18 +49,24 @@ export default function ArticlesPage() {
         <h1>Tạp chí Nếp Nhà<span className="heading-dot">.</span></h1>
         <p>Gợi ý bài trí, chọn chất liệu và giữ gìn đồ nội thất trong tổ ấm của bạn.</p>
       </div>
-      <form className="search-form" onSubmit={onSearch}>
-        <Icon name="search" />
-        <label className="sr-only" htmlFor="article-search">Tìm bài viết</label>
-        <input
-          id="article-search"
-          type="search"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Tìm theo tiêu đề..."
-        />
-        <button className="button secondary">Tìm kiếm</button>
-      </form>
+      <div className="tv5-row-actions">
+        {isStaff && (
+          // Nếu là admin/staff thì hiện nút tắt qua trang quản trị viết bài luôn cho tiện
+          <Link to="/admin/content" className="button">Quản lý / Viết bài</Link>
+        )}
+        <form className="search-form" onSubmit={onSearch}>
+          <Icon name="search" />
+          <label className="sr-only" htmlFor="article-search">Tìm bài viết</label>
+          <input
+            id="article-search"
+            type="search"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Tìm theo tiêu đề..."
+          />
+          <button className="button secondary">Tìm kiếm</button>
+        </form>
+      </div>
     </div>
 
     <ErrorNotice error={error} onRetry={() => setRevision(v => v + 1)} />

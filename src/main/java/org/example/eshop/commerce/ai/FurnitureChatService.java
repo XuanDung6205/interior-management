@@ -84,9 +84,11 @@ public class FurnitureChatService {
         this.httpClient = RestClient.builder().requestFactory(requestFactory).build();
     }
 
+    // Thông tin 1 mẫu sản phẩm thật trả kèm câu trả lời AI (có slug để bấm mở thẳng trang chi tiết, kèm kích thước/chất liệu/phòng)
     public record ChatSource(
-            long productId, String productName, String sku, String variantName,
-            String categoryName, String price, int availableQuantity, String imageUrl) {}
+            long productId, String productSlug, String productName, String sku, String variantName,
+            String categoryName, String price, int availableQuantity, String imageUrl,
+            String dimensions, String materials, String rooms) {}
 
     public record ChatMessageView(
             long id, int sequenceNumber, String role, String content,
@@ -306,28 +308,40 @@ public class FurnitureChatService {
         return now.atOffset(ZoneOffset.UTC).toString();
     }
 
-    // Truy vấn trực tiếp catalog và tồn kho hiện tại theo từ khóa + ngân sách trong câu hỏi của khách
+    // Câu SELECT lấy đủ giá/tồn kho thật + kích thước, chất liệu, phòng để AI tư vấn cho chuẩn chứ ko chém gió
+    private static final String LIVE_CATALOG_SELECT = """
+            SELECT p.id AS product_id, p.slug AS product_slug, p.name AS product_name,
+                   v.sku, v.name AS variant_name, c.name AS category_name, v.price,
+                   v.width_mm, v.depth_mm, v.height_mm,
+                   COALESCE((SELECT SUM(ib.available_quantity)
+                             FROM inventory_balances ib
+                             JOIN warehouses w ON w.id = ib.warehouse_id AND w.is_active = 1
+                             WHERE ib.variant_id = v.id), 0) AS available_quantity,
+                   (SELECT pi.url FROM product_images pi
+                    WHERE pi.product_id = p.id AND (pi.variant_id = v.id OR pi.variant_id IS NULL)
+                    ORDER BY CASE WHEN pi.variant_id = v.id THEN 0 ELSE 1 END, pi.sort_order ASC, pi.id ASC
+                    LIMIT 1) AS image_url,
+                   (SELECT GROUP_CONCAT(DISTINCT m.name ORDER BY m.name SEPARATOR ', ')
+                    FROM variant_materials vm
+                    JOIN materials m ON m.id = vm.material_id
+                    WHERE vm.variant_id = v.id) AS materials_text,
+                   (SELECT GROUP_CONCAT(DISTINCT r.name ORDER BY r.name SEPARATOR ', ')
+                    FROM product_rooms pr
+                    JOIN rooms r ON r.id = pr.room_id
+                    WHERE pr.product_id = p.id) AS rooms_text
+            FROM product_variants v
+            JOIN products p ON p.id = v.product_id
+            JOIN categories c ON c.id = p.category_id
+            WHERE p.status = 'ACTIVE' AND v.status = 'ACTIVE'
+            """;
+
+    // Truy vấn trực tiếp catalog và tồn kho hiện tại theo vector / từ khóa + ngân sách trong câu hỏi của khách
     private List<ChatSource> retrieveLiveCatalog(String question) {
         BigDecimal maxBudget = extractBudgetVnd(question);
         List<String> tokens = extractSearchTokens(question);
         List<Long> semanticIds = vectorSearch == null ? List.of() : vectorSearch.searchProducts(question, 5);
 
-        StringBuilder sql = new StringBuilder("""
-                SELECT p.id AS product_id, p.name AS product_name, v.sku, v.name AS variant_name,
-                       c.name AS category_name, v.price,
-                       COALESCE((SELECT SUM(ib.available_quantity)
-                                 FROM inventory_balances ib
-                                 JOIN warehouses w ON w.id = ib.warehouse_id AND w.is_active = 1
-                                 WHERE ib.variant_id = v.id), 0) AS available_quantity,
-                       (SELECT pi.url FROM product_images pi
-                        WHERE pi.product_id = p.id AND (pi.variant_id = v.id OR pi.variant_id IS NULL)
-                        ORDER BY CASE WHEN pi.variant_id = v.id THEN 0 ELSE 1 END, pi.sort_order ASC, pi.id ASC
-                        LIMIT 1) AS image_url
-                FROM product_variants v
-                JOIN products p ON p.id = v.product_id
-                JOIN categories c ON c.id = p.category_id
-                WHERE p.status = 'ACTIVE' AND v.status = 'ACTIVE'
-                """);
+        StringBuilder sql = new StringBuilder(LIVE_CATALOG_SELECT);
         var args = new ArrayList<Object>();
 
         if (maxBudget != null) {
@@ -338,11 +352,23 @@ public class FurnitureChatService {
             sql.append(" AND p.id IN (").append(String.join(",", java.util.Collections.nCopies(semanticIds.size(), "?"))).append(")");
             args.addAll(semanticIds);
         } else if (!tokens.isEmpty()) {
+            // Tìm cả trên tên SP, biến thể, danh mục, mô tả, chất liệu và tên phòng luôn cho dễ trúng ý khách
             sql.append(" AND (");
             for (int i = 0; i < tokens.size(); i++) {
                 if (i > 0) sql.append(" OR ");
                 String like = "%" + tokens.get(i).replace("=", "==").replace("%", "=%").replace("_", "=_") + "%";
-                sql.append("(LOWER(p.name) LIKE ? ESCAPE '=' OR LOWER(v.name) LIKE ? ESCAPE '=' OR LOWER(c.name) LIKE ? ESCAPE '=' OR LOWER(COALESCE(p.short_description, '')) LIKE ? ESCAPE '=')");
+                sql.append("""
+                        (LOWER(p.name) LIKE ? ESCAPE '='
+                         OR LOWER(v.name) LIKE ? ESCAPE '='
+                         OR LOWER(c.name) LIKE ? ESCAPE '='
+                         OR LOWER(COALESCE(p.short_description, '')) LIKE ? ESCAPE '='
+                         OR EXISTS (SELECT 1 FROM variant_materials vm2 JOIN materials m2 ON m2.id = vm2.material_id
+                                    WHERE vm2.variant_id = v.id AND LOWER(m2.name) LIKE ? ESCAPE '=')
+                         OR EXISTS (SELECT 1 FROM product_rooms pr2 JOIN rooms r2 ON r2.id = pr2.room_id
+                                    WHERE pr2.product_id = p.id AND LOWER(r2.name) LIKE ? ESCAPE '='))
+                        """);
+                args.add(like);
+                args.add(like);
                 args.add(like);
                 args.add(like);
                 args.add(like);
@@ -352,45 +378,43 @@ public class FurnitureChatService {
         }
         sql.append(" ORDER BY available_quantity DESC, v.price ASC LIMIT 5");
 
-        var rows = jdbc.query(sql.toString(), (rs, r) -> new ChatSource(
+        var rows = jdbc.query(sql.toString(), FurnitureChatService::mapCatalogRow, args.toArray());
+
+        // Ko khớp từ khóa sát thì fallback lấy vài mẫu còn nhiều hàng trong tầm giá cho khách tham khảo đỡ trống
+        if (rows.isEmpty() && (!tokens.isEmpty() || !semanticIds.isEmpty())) {
+            String fallbackSql = LIVE_CATALOG_SELECT
+                    + (maxBudget != null ? " AND v.price <= ?" : "")
+                    + " ORDER BY available_quantity DESC, v.price ASC LIMIT 4";
+            Object[] fbArgs = maxBudget != null ? new Object[]{maxBudget} : new Object[]{};
+            return jdbc.query(fallbackSql, FurnitureChatService::mapCatalogRow, fbArgs);
+        }
+        return rows;
+    }
+
+    // Gộp 3 thông số dài x sâu x cao (mm) thành chuỗi gọn đẹp cho AI và UI đọc
+    private static ChatSource mapCatalogRow(java.sql.ResultSet rs, int row) throws java.sql.SQLException {
+        BigDecimal w = rs.getBigDecimal("width_mm");
+        BigDecimal d = rs.getBigDecimal("depth_mm");
+        BigDecimal h = rs.getBigDecimal("height_mm");
+        var dims = new ArrayList<String>();
+        if (w != null) dims.add(w.stripTrailingZeros().toPlainString());
+        if (d != null) dims.add(d.stripTrailingZeros().toPlainString());
+        if (h != null) dims.add(h.stripTrailingZeros().toPlainString());
+        String dimText = dims.isEmpty() ? null : String.join(" x ", dims) + " mm";
+
+        return new ChatSource(
                 rs.getLong("product_id"),
+                rs.getString("product_slug"),
                 rs.getString("product_name"),
                 rs.getString("sku"),
                 rs.getString("variant_name"),
                 rs.getString("category_name"),
                 rs.getBigDecimal("price").setScale(2, RoundingMode.HALF_UP).toPlainString(),
                 Math.max(0, rs.getInt("available_quantity")),
-                rs.getString("image_url")), args.toArray());
-
-        // Nếu không khớp từ khóa cụ thể nhưng có ngân sách hoặc câu hỏi chung thì lấy vài mẫu đang có sẵn
-        if (rows.isEmpty() && (!tokens.isEmpty() || !semanticIds.isEmpty())) {
-            String fallbackSql = """
-                    SELECT p.id AS product_id, p.name AS product_name, v.sku, v.name AS variant_name,
-                           c.name AS category_name, v.price,
-                           COALESCE((SELECT SUM(ib.available_quantity)
-                                     FROM inventory_balances ib
-                                     JOIN warehouses w ON w.id = ib.warehouse_id AND w.is_active = 1
-                                     WHERE ib.variant_id = v.id), 0) AS available_quantity,
-                           (SELECT pi.url FROM product_images pi
-                            WHERE pi.product_id = p.id
-                            ORDER BY pi.sort_order ASC, pi.id ASC LIMIT 1) AS image_url
-                    FROM product_variants v
-                    JOIN products p ON p.id = v.product_id
-                    JOIN categories c ON c.id = p.category_id
-                    WHERE p.status = 'ACTIVE' AND v.status = 'ACTIVE'
-                    """ + (maxBudget != null ? " AND v.price <= ?" : "") + " ORDER BY available_quantity DESC, v.price ASC LIMIT 4";
-            Object[] fbArgs = maxBudget != null ? new Object[]{maxBudget} : new Object[]{};
-            return jdbc.query(fallbackSql, (rs, r) -> new ChatSource(
-                    rs.getLong("product_id"),
-                    rs.getString("product_name"),
-                    rs.getString("sku"),
-                    rs.getString("variant_name"),
-                    rs.getString("category_name"),
-                    rs.getBigDecimal("price").setScale(2, RoundingMode.HALF_UP).toPlainString(),
-                    Math.max(0, rs.getInt("available_quantity")),
-                    rs.getString("image_url")), fbArgs);
-        }
-        return rows;
+                rs.getString("image_url"),
+                dimText,
+                rs.getString("materials_text"),
+                rs.getString("rooms_text"));
     }
 
     // Gọi Google Gemini nếu đã cấu hình GEMINI_API_KEY; nếu chưa cấu hình hoặc lỗi mạng thì báo rõ trạng thái thật
@@ -446,9 +470,14 @@ public class FurnitureChatService {
         if (sources.isEmpty()) {
             sb.append("- Hiện chưa có sản phẩm khớp trực tiếp.\n");
         } else {
+            // Đẩy đủ giá, tồn, kích thước, chất liệu và phòng vào prompt để AI tư vấn chi tiết hơn
             for (var s : sources) {
-                sb.append(String.format("- %s (%s, SKU %s, danh mục %s): giá %s VND, tồn khả dụng %d\n",
+                sb.append(String.format("- %s (%s, SKU %s, danh mục %s): giá %s VND, tồn %d",
                         s.productName(), s.variantName(), s.sku(), s.categoryName(), s.price(), s.availableQuantity()));
+                if (s.dimensions() != null) sb.append(", kích thước ").append(s.dimensions());
+                if (s.materials() != null) sb.append(", chất liệu ").append(s.materials());
+                if (s.rooms() != null) sb.append(", phù hợp ").append(s.rooms());
+                sb.append('\n');
             }
         }
         if (!history.isEmpty()) {
@@ -527,15 +556,20 @@ public class FurnitureChatService {
             if (!arr.isArray()) return List.of();
             var list = new ArrayList<ChatSource>();
             for (JsonNode n : arr) {
+                // Đọc tương thích ngược cả các bản ghi chat cũ chưa lưu productSlug/dimensions/materials/rooms
                 list.add(new ChatSource(
                         n.path("productId").asLong(),
+                        n.path("productSlug").isNull() ? null : n.path("productSlug").asText(null),
                         n.path("productName").asText(""),
                         n.path("sku").asText(""),
                         n.path("variantName").asText(""),
                         n.path("categoryName").asText(""),
                         n.path("price").asText("0.00"),
                         n.path("availableQuantity").asInt(0),
-                        n.path("imageUrl").isNull() ? null : n.path("imageUrl").asText(null)));
+                        n.path("imageUrl").isNull() ? null : n.path("imageUrl").asText(null),
+                        n.path("dimensions").isNull() ? null : n.path("dimensions").asText(null),
+                        n.path("materials").isNull() ? null : n.path("materials").asText(null),
+                        n.path("rooms").isNull() ? null : n.path("rooms").asText(null)));
             }
             return list;
         } catch (Exception ex) {
