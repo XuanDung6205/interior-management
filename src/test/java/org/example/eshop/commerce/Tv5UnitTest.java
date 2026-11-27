@@ -4,24 +4,34 @@ import org.example.eshop.commerce.ai.FurnitureChatService;
 import org.example.eshop.commerce.analytics.DashboardService;
 import org.example.eshop.commerce.cache.Tv5Cache;
 import org.example.eshop.commerce.common.CommerceException;
+import org.example.eshop.commerce.content.BannerService;
 import org.example.eshop.commerce.content.ContentValidation;
 import org.example.eshop.commerce.port.CommerceActor;
 import org.example.eshop.commerce.port.CurrentActorPort;
 import org.example.eshop.commerce.tracking.CommerceTrackingService;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.jdbc.core.JdbcTemplate;
+import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 // Kiểm thử nhanh logic validate, phân tích ngân sách AI và ràng buộc tracking của TV5 mà không cần DB ngoài
 class Tv5UnitTest {
@@ -125,6 +135,80 @@ class Tv5UnitTest {
         });
         assertEquals("v2", third);
         assertEquals(2, cache.stats().misses());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void cacheUsesRedisJsonAndInvalidatesByGeneration() {
+        var redisStore = new HashMap<String, String>();
+        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        ValueOperations<String, String> ops = mock(ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(ops);
+        when(ops.get(anyString())).thenAnswer(inv -> redisStore.get(inv.getArgument(0, String.class)));
+        doAnswer(inv -> {
+            redisStore.put(inv.getArgument(0, String.class), inv.getArgument(1, String.class));
+            return null;
+        }).when(ops).set(anyString(), anyString(), any(Duration.class));
+        when(ops.increment(anyString())).thenAnswer(inv -> {
+            String key = inv.getArgument(0, String.class);
+            long next = Long.parseLong(redisStore.getOrDefault(key, "0")) + 1;
+            redisStore.put(key, Long.toString(next));
+            return next;
+        });
+
+        var cache = new Tv5Cache(FIXED_CLOCK, true, true, redis, new ObjectMapper());
+        var listType = new TypeReference<List<BannerService.BannerView>>() {};
+        int[] loads = {0};
+        var first = cache.getOrLoad(Tv5Cache.BANNERS, "HOME_HERO", Duration.ofMinutes(10), listType, () -> {
+            loads[0]++;
+            return List.of(new BannerService.BannerView(1, "Banner " + loads[0], null, "/images/home-hero.jpg",
+                    null, null, "/sale", "HOME_HERO", 0, true, null, null, null));
+        });
+        var second = cache.getOrLoad(Tv5Cache.BANNERS, "HOME_HERO", Duration.ofMinutes(10), listType, () -> {
+            loads[0]++;
+            return List.of();
+        });
+        assertEquals("Banner 1", first.get(0).title());
+        assertEquals("Banner 1", second.get(0).title());
+        assertEquals(1, loads[0]);
+        assertEquals("REDIS", cache.stats().backend());
+        assertEquals(1, cache.stats().hits());
+        assertEquals(1, cache.stats().misses());
+
+        // Khi admin sửa banner -> tăng generation trong Redis -> lần đọc tiếp theo tự tải bản mới từ DB
+        cache.clearNamespace(Tv5Cache.BANNERS);
+        var third = cache.getOrLoad(Tv5Cache.BANNERS, "HOME_HERO", Duration.ofMinutes(10), listType, () -> {
+            loads[0]++;
+            return List.of(new BannerService.BannerView(1, "Banner " + loads[0], null, "/images/home-hero.jpg",
+                    null, null, "/sale", "HOME_HERO", 0, true, null, null, null));
+        });
+        assertEquals("Banner 2", third.get(0).title());
+        assertEquals(2, loads[0]);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void cacheFallsBackToMemoryWhenRedisFails() {
+        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        ValueOperations<String, String> ops = mock(ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(ops);
+        when(ops.get(anyString())).thenThrow(new RuntimeException("Connection refused"));
+
+        var cache = new Tv5Cache(FIXED_CLOCK, true, true, redis, new ObjectMapper());
+        int[] loads = {0};
+        String first = cache.getOrLoad(Tv5Cache.ARTICLES, "slug:demo", Duration.ofMinutes(5), String.class, () -> {
+            loads[0]++;
+            return "bai-viet-" + loads[0];
+        });
+        String second = cache.getOrLoad(Tv5Cache.ARTICLES, "slug:demo", Duration.ofMinutes(5), String.class, () -> {
+            loads[0]++;
+            return "bai-viet-" + loads[0];
+        });
+        assertEquals("bai-viet-1", first);
+        assertEquals("bai-viet-1", second);
+        assertEquals(1, loads[0]);
+        assertEquals("MEMORY_FALLBACK", cache.stats().backend());
+        assertEquals(1, cache.stats().hits());
     }
 
     @Test

@@ -67,7 +67,7 @@ public class ArticleService {
         String q = ContentValidation.trimToNull(query);
         if (q == null && page <= 2) {
             return cache.getOrLoad(Tv5Cache.ARTICLES, "list:" + page + ":" + size, PUBLIC_CACHE_TTL,
-                    () -> queryPublicList(null, page, size));
+                    ArticlePage.class, () -> queryPublicList(null, page, size));
         }
         return queryPublicList(q, page, size);
     }
@@ -107,7 +107,7 @@ public class ArticleService {
     // Xem chi tiết 1 bài viết public theo slug (có cache 10 phút, xóa ngay khi admin cập nhật)
     public ArticleDetail getPublicBySlug(String slug) {
         String normalized = slug == null ? "" : slug.trim().toLowerCase(Locale.ROOT);
-        return cache.getOrLoad(Tv5Cache.ARTICLES, "slug:" + normalized, PUBLIC_CACHE_TTL, () -> {
+        return cache.getOrLoad(Tv5Cache.ARTICLES, "slug:" + normalized, PUBLIC_CACHE_TTL, ArticleDetail.class, () -> {
             LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
             var rows = jdbc.query("""
                     SELECT a.id, a.title, a.slug, a.summary, a.content, a.cover_image_url, a.status,

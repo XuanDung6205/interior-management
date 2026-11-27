@@ -57,7 +57,7 @@ public class DashboardService {
             throw CommerceException.badRequest("INVALID_RANGE", "Khoảng thống kê phải từ 1 đến 365 ngày.");
         }
         DashboardSummary cached = cache.getOrLoad(Tv5Cache.DASHBOARD, "days:" + days, SUMMARY_CACHE_TTL,
-                () -> loadSummary(days));
+                DashboardSummary.class, () -> loadSummary(days));
         return new DashboardSummary(
                 cached.days(), cached.fromUtc(), cached.toUtc(), cached.revenue(),
                 cached.totalOrders(), cached.ordersByStatus(), cached.topProducts(),
@@ -152,7 +152,7 @@ public class DashboardService {
 
         // Phễu hành vi từ tracking_events (tách rõ lượt bấm client và sự kiện xác nhận từ server)
         var funnel = new LinkedHashMap<String, Long>();
-        for (String step : List.of("PAGE_VIEW", "PRODUCT_VIEW", "SEARCH", "ADD_TO_CART_CLICK",
+        for (String step : List.of("PAGE_VIEW", "PRODUCT_VIEW", "SEARCH", "FILTER", "ADD_TO_CART_CLICK",
                 "ADD_TO_CART", "CHECKOUT_START", "ORDER_PLACED")) {
             funnel.put(step, 0L);
         }
@@ -160,7 +160,7 @@ public class DashboardService {
                 SELECT event_type, COUNT(*) AS cnt
                 FROM tracking_events
                 WHERE occurred_at >= ? AND occurred_at < ?
-                  AND event_type IN ('PAGE_VIEW','PRODUCT_VIEW','SEARCH','ADD_TO_CART_CLICK','ADD_TO_CART','CHECKOUT_START','ORDER_PLACED')
+                  AND event_type IN ('PAGE_VIEW','PRODUCT_VIEW','SEARCH','FILTER','ADD_TO_CART_CLICK','ADD_TO_CART','CHECKOUT_START','ORDER_PLACED')
                 GROUP BY event_type
                 """, from, to);
         for (var row : funnelRows) {
