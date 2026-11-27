@@ -43,7 +43,7 @@ public class CommerceSecurityConfiguration {
         http.authenticationProvider(provider)
             .csrf(csrf -> csrf.ignoringRequestMatchers(request -> "POST".equals(request.getMethod()) && (request.getContextPath()+"/api/payments/sepay/webhook").equals(request.getRequestURI())).csrfTokenRepository(new HttpSessionCsrfTokenRepository()).csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/admin/coupons","/api/admin/coupons/**","/api/admin/orders","/api/admin/orders/**","/api/admin/inventory","/api/admin/inventory/**","/api/admin/payments","/api/admin/payments/**","/api/admin/refunds","/api/admin/refunds/**","/api/admin/aftercare/**","/api/admin/operations","/api/admin/operations/**","/api/admin/content","/api/admin/content/**","/api/admin/reviews","/api/admin/reviews/**","/api/admin/dashboard","/api/admin/dashboard/**").hasAnyRole("ADMIN","STAFF")
+                .requestMatchers("/api/admin","/api/admin/**").hasAnyRole("ADMIN","STAFF")
                 .requestMatchers("/api/cart/merge","/api/checkout","/api/checkout/**","/api/orders","/api/orders/**","/api/notifications","/api/notifications/**","/api/wishlist","/api/wishlist/**","/api/reviews","/api/reviews/**","/api/account","/api/account/**").authenticated()
                 .anyRequest().permitAll())
             .exceptionHandling(errors -> errors

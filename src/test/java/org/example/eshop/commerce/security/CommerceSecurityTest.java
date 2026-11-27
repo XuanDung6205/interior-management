@@ -35,6 +35,10 @@ class CommerceSecurityTest {
     }
     @RestController static class ProbeController {
         @GetMapping("/api/admin/coupons") Object admin() { return java.util.Map.of("ok",true); }
+        @GetMapping("/api/admin/future") Object futureAdmin() { return java.util.Map.of("ok",true); }
+        @GetMapping("/api/catalog/public-probe") Object publicCatalog() { return java.util.Map.of("ok",true); }
+        @GetMapping("/api/commerce/content/public-probe") Object publicContent() { return java.util.Map.of("ok",true); }
+        @PostMapping("/api/payments/sepay/webhook") Object webhook() { return java.util.Map.of("ok",true); }
         @GetMapping("/api/admin/inventory/warehouses") Object inventory() { return java.util.Map.of("ok",true); }
         @PostMapping("/api/admin/inventory/receipts") Object receive() { return java.util.Map.of("ok",true); }
         @GetMapping("/api/admin/inventory/orders") Object dispatchQueue() { return java.util.Map.of("ok",true); }
@@ -87,6 +91,12 @@ class CommerceSecurityTest {
         mvc.perform(get("/api/account/addresses").session(token.session())).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/account/addresses").session(token.session()).header(token.header(),token.value())).andExpect(status().isUnauthorized());
     }
+    @Test void protectsAllAdminApiRoutesWithoutBlockingPublicApisOrPaymentWebhook() throws Exception {
+        mvc.perform(get("/api/admin/future")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/catalog/public-probe")).andExpect(status().isOk());
+        mvc.perform(get("/api/commerce/content/public-probe")).andExpect(status().isOk());
+        mvc.perform(post("/api/payments/sepay/webhook")).andExpect(status().isOk());
+    }
     @Test void loginReturnsSafeSessionAndRolesAndStatusAreRevalidated() throws Exception {
         var token = csrf(new MockHttpSession());
         var login = mvc.perform(post("/api/session/login").session(token.session()).header(token.header(),token.value()).param("username","alice").param("password","correct-password"))
@@ -94,6 +104,7 @@ class CommerceSecurityTest {
             .andExpect(jsonPath("$.user.password").doesNotExist()).andExpect(jsonPath("$.user.passwordHash").doesNotExist()).andReturn();
         var session = (MockHttpSession)login.getRequest().getSession();
         mvc.perform(get("/api/admin/coupons").session(session)).andExpect(status().isOk());
+        mvc.perform(get("/api/admin/future").session(session)).andExpect(status().isOk());
         mvc.perform(get("/api/admin/inventory/warehouses").session(session)).andExpect(status().isOk());
         mvc.perform(get("/api/admin/inventory/orders").session(session)).andExpect(status().isOk());
         mvc.perform(get("/api/admin/inventory/shipments").session(session)).andExpect(status().isOk());
@@ -107,6 +118,7 @@ class CommerceSecurityTest {
         mvc.perform(post("/api/admin/inventory/shipments/42/status").session(staffToken.session()).header(staffToken.header(),staffToken.value())).andExpect(status().isOk());
         account = new CommerceUserAccount(77L,"alice","Alice",null,"ACTIVE",Set.of("CUSTOMER"));
         mvc.perform(get("/api/admin/coupons").session(session)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/future").session(session)).andExpect(status().isForbidden());
         mvc.perform(get("/api/admin/inventory/warehouses").session(session)).andExpect(status().isForbidden());
         mvc.perform(get("/api/admin/inventory/orders").session(session)).andExpect(status().isForbidden());
         mvc.perform(get("/api/admin/inventory/shipments").session(session)).andExpect(status().isForbidden());
