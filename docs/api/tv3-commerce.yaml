@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: TV3 Furniture Commerce API
-  version: 1.10.0
+  version: 1.11.0
   description: 'TV3 session/CSRF, cart/coupons, orders, manual COD/bank payments and refunds, SePay Test mode HMAC/API reconciliation and recoverable Sandbox refunds, safe COD/SePay expiry, notifications, operations and aftercare. Production banking and external SMTP are not implemented.'
 servers:
 - url: http://localhost:8080
@@ -12,6 +12,7 @@ tags:
 - name: Catalog
 - name: Coupons
 - name: Checkout
+- name: Account
 - name: Orders
 - name: Order administration
 - name: Manual payments
@@ -82,7 +83,12 @@ paths:
         '400': *id001
         '401': *id002
         '403': *id003
-        '404': *id004
+        '404':
+          description: Address not found or does not belong to the signed-in account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '409': *id005
   /api/session/login:
     post:
@@ -101,7 +107,12 @@ paths:
         '400': *id001
         '401': *id002
         '403': *id003
-        '404': *id004
+        '404':
+          description: Address not found or does not belong to the signed-in account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '409': *id005
       description: Refresh CSRF after login and explicitly merge guest cart. Password is never returned.
       parameters:
@@ -206,7 +217,12 @@ paths:
         '400': *id001
         '401': *id002
         '403': *id003
-        '404': *id004
+        '404':
+          description: Address not found or does not belong to the signed-in account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
         '409': *id005
       parameters:
       - *id006
@@ -556,6 +572,134 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RuntimeInfo'
+  /api/account/addresses:
+    get:
+      operationId: listAccountAddresses
+      summary: List addresses for the signed-in account
+      tags:
+      - Account
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Addresses with the default address first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressBookList'
+        '401': *id002
+        '403': *id003
+    post:
+      operationId: createAccountAddress
+      summary: Add an address to the signed-in account
+      description: The first address is made default automatically. The account ID is derived from the session, never from the request.
+      tags:
+      - Account
+      security:
+      - cookieSession: []
+      parameters:
+      - *id006
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressBookRequest'
+      responses:
+        '201':
+          description: Address created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressBookEntry'
+        '400': *id001
+        '401': *id002
+        '403': *id003
+        '409': *id005
+  /api/account/addresses/{id}:
+    put:
+      operationId: updateAccountAddress
+      summary: Update an address owned by the signed-in account
+      tags:
+      - Account
+      security:
+      - cookieSession: []
+      parameters:
+      - *id006
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressBookRequest'
+      responses:
+        '200':
+          description: Updated address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressBookEntry'
+        '400': *id001
+        '401': *id002
+        '403': *id003
+        '404': *id004
+    delete:
+      operationId: deleteAccountAddress
+      summary: Delete an address owned by the signed-in account
+      tags:
+      - Account
+      security:
+      - cookieSession: []
+      parameters:
+      - *id006
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      responses:
+        '204':
+          description: Address deleted
+        '401': *id002
+        '403': *id003
+        '404': *id004
+  /api/account/addresses/{id}/default:
+    patch:
+      operationId: setDefaultAccountAddress
+      summary: Set an owned address as the account default
+      description: The previous default is cleared before the new one is set in the same transaction.
+      tags:
+      - Account
+      security:
+      - cookieSession: []
+      parameters:
+      - *id006
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      responses:
+        '200':
+          description: Address marked as default
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressBookEntry'
+        '401': *id002
+        '403': *id003
+        '404': *id004
   /api/checkout/addresses:
     get:
       operationId: getCheckoutAddresses
@@ -4209,6 +4353,102 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CheckoutAddress'
+    AddressBookEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        label:
+          type: string
+          nullable: true
+        recipientName: *id009
+        phone:
+          type: string
+          maxLength: 30
+        addressLine1:
+          type: string
+          maxLength: 255
+        addressLine2:
+          type: string
+          nullable: true
+        wardName:
+          type: string
+          nullable: true
+        districtName:
+          type: string
+          nullable: true
+        provinceName:
+          type: string
+          nullable: true
+        postalCode:
+          type: string
+          nullable: true
+        countryCode:
+          type: string
+          minLength: 2
+          maxLength: 2
+        isDefault:
+          type: boolean
+      required:
+      - id
+      - recipientName
+      - phone
+      - addressLine1
+      - countryCode
+      - isDefault
+    AddressBookList:
+      type: array
+      items:
+        $ref: '#/components/schemas/AddressBookEntry'
+    AddressBookRequest:
+      type: object
+      properties:
+        label:
+          type: string
+          maxLength: 80
+          nullable: true
+        recipientName:
+          type: string
+          minLength: 1
+          maxLength: 150
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 30
+          pattern: '^[+0-9 .()\-]+$'
+        addressLine1:
+          type: string
+          minLength: 1
+          maxLength: 255
+        addressLine2:
+          type: string
+          maxLength: 255
+          nullable: true
+        wardName:
+          type: string
+          maxLength: 120
+          nullable: true
+        districtName:
+          type: string
+          maxLength: 120
+          nullable: true
+        provinceName:
+          type: string
+          maxLength: 120
+          nullable: true
+        postalCode:
+          type: string
+          maxLength: 20
+          nullable: true
+        countryCode:
+          type: string
+          pattern: '^[A-Za-z]{2}$'
+          description: Defaults to VN when omitted.
+      required:
+      - recipientName
+      - phone
+      - addressLine1
     CancelOrderRequest:
       type: object
       properties:
