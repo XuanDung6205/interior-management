@@ -77,6 +77,11 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <!-- Bean Validation để kiểm tra dữ liệu đầu vào -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
