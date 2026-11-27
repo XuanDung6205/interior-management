@@ -55,7 +55,7 @@ it.each(['/admin/refunds', '/admin/refunds/81', '/admin/orders/101/refunds'])('g
   await user.click(await screen.findByRole('link', { name: 'Đăng nhập tài khoản khác' }));
   await user.type(screen.getByLabelText('Tên đăng nhập'), 'staff'); await user.type(screen.getByLabelText('Mật khẩu', { exact: true }), 'password'); await user.click(screen.getByRole('button', { name: 'Đăng nhập' }));
   await screen.findByRole('heading', { name: path === '/admin/refunds' ? 'Quản lý hoàn tiền.' : path.endsWith('/81') ? 'Đối chiếu hoàn #81' : 'Hoàn tiền đơn NN-101' });
-  expect(document.title).toBe('Quản lý hoàn tiền · Nếp Nhà');
+  await waitFor(() => expect(document.title).toBe('Quản lý hoàn tiền · Nếp Nhà'));
   await user.click(screen.getByRole('button', { name: 'Quản trị' }));
   expect(within(screen.getByRole('navigation', { name: 'Điều hướng chính' })).getAllByRole('link')).toHaveLength(17);
 });
