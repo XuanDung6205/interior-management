@@ -1,0 +1,31 @@
+services:
+  mariadb:
+    image: mariadb:12.2
+    environment:
+      MARIADB_DATABASE: furniture_shop
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your environment or .env file}
+      MARIADB_ROOT_HOST: "%"
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  mariadb_data:

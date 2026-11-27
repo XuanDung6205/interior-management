@@ -58,7 +58,7 @@ it('guards staff operations and only triggers bounded jobs explicitly', async ()
   await user.click(screen.getByRole('button', { name: 'Chạy kiểm tra hết hạn COD' }));
   await screen.findByText('Đã hết hạn: 2');
   await user.click(screen.getByRole('button', { name: 'Quản trị' }));
-  expect(within(screen.getByRole('navigation', { name: 'Điều hướng chính' })).getAllByRole('link')).toHaveLength(16);
+  expect(within(screen.getByRole('navigation', { name: 'Điều hướng chính' })).getAllByRole('link')).toHaveLength(17);
 });
 it('uses delivered returnable quantities and keeps exact actor-scoped request across an uncertain reload', async () => {
   let attempt;

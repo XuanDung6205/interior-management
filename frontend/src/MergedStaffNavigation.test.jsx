@@ -21,6 +21,7 @@ function mount(path, session = guest) {
     else if (url === '/api/csrf') body = { token: 'csrf', headerName: 'X-CSRF-TOKEN' };
     else if (url === '/api/session/login') body = staff;
     else if (url === '/api/cart/merge' || url === '/api/cart') body = emptyCart;
+    else if (url === '/api/account/addresses') body = [{ id: 8, label: 'Nhà riêng', recipientName: 'Minh An', phone: '0900000000', addressLine1: '12 Nguyễn Trãi', wardName: 'Phường 1', districtName: 'Quận 5', provinceName: 'TP. Hồ Chí Minh', countryCode: 'VN', isDefault: true }];
     else if (url === '/api/admin/inventory/warehouses') body = [];
     else if (url.startsWith('/api/commerce/catalog/variants?') || (url.startsWith('/api/admin/inventory/') && (options.method || 'GET') === 'GET')) body = { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 };
     else throw new Error(`Unexpected HTTP ${options.method || 'GET'} ${url}`);
@@ -36,6 +37,18 @@ it.each(pages)('keeps the incoming %s inventory route behind the shared staff gu
   expect(fetch.mock.calls.some(([url]) => url.startsWith('/api/admin/inventory/'))).toBe(false);
 });
 
+it('requires sign-in for account pages and loads the signed-in user address book', async () => {
+  mount('/account');
+  await screen.findByRole('heading', { name: 'Đăng nhập để tiếp tục' });
+  expect(fetch.mock.calls.some(([url]) => url === '/api/account/addresses')).toBe(false);
+
+  const user = mount('/account', staff);
+  expect(await screen.findByRole('heading', { name: 'Tài khoản của bạn' })).toBeInTheDocument();
+  await user.click(screen.getByRole('tab', { name: 'Sổ địa chỉ' }));
+  expect(await screen.findByText('12 Nguyễn Trãi, Phường 1, Quận 5, TP. Hồ Chí Minh, Việt Nam')).toBeInTheDocument();
+  expect(screen.getByText('Mặc định')).toBeInTheDocument();
+});
+
 it.each(pages)('returns to the intended %s inventory route after login without losing existing admin navigation', async (route, title, heading) => {
   const user = mount(`/admin/inventory/${route}`);
   await screen.findByRole('heading', { name: 'Khu vực dành cho nhân viên' });
@@ -48,7 +61,10 @@ it.each(pages)('returns to the intended %s inventory route after login without l
   await waitFor(() => expect(document.title).toBe(`${title} · Nếp Nhà`));
   const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
   await user.click(screen.getByRole('button', { name: 'Quản trị' }));
-  expect(nav.querySelectorAll('#store-menu-admin a')).toHaveLength(12);
+  expect(nav.querySelectorAll('#store-menu-admin a')).toHaveLength(13);
+  expect(screen.getByRole('link', { name: 'Tổng quan quản trị' })).toHaveAttribute('href', '/admin');
   expect(screen.getByRole('link', { name: 'Quản lý đơn hàng' })).toHaveAttribute('href', '/admin/orders');
   expect(screen.getByRole('link', { name: 'Quản lý ưu đãi' })).toHaveAttribute('href', '/admin/coupons');
+  await user.click(screen.getByRole('button', { name: 'Tài khoản' }));
+  expect(screen.getByRole('link', { name: 'Hồ sơ & sổ địa chỉ' })).toHaveAttribute('href', '/account');
 });

@@ -24,6 +24,12 @@ Mật khẩu không được ghi trong repository, SQL hay tài liệu này. Kh�
 - `verify_schema.py`: kiểm tra tích hợp bằng MariaDB CLI, chỉ chấp nhận tên `furniture_shop` hoặc `furniture_shop_test_*`.
 - `verification-fixture.sql`: dữ liệu kiểm thử bên trong transaction; script kiểm tra sẽ rollback, không phải dữ liệu mẫu để import.
 
+## MariaDB và Redis cục bộ
+
+`docker-compose.yml` cung cấp MariaDB 12.2 và Redis 7 cho môi trường phát triển. Compose khởi tạo database mặc định `furniture_shop`, lưu dữ liệu MariaDB trong named volume và chỉ publish hai cổng trên loopback. Đặt `DB_PASSWORD` trong environment hoặc file `.env` cục bộ trước khi chạy `docker compose up -d mariadb redis`; không commit file `.env`. Compose chỉ khởi động service, **không** chạy migration hay seed dữ liệu.
+
+Commerce đọc Redis host/port từ `REDIS_HOST`/`REDIS_PORT` (mặc định `localhost:6379`). `CommerceRedisCacheConfiguration` bật Spring Cache với `RedisCacheManager` và TTL mặc định 10 phút; cấu hình serializer mặc định của Spring Data Redis được sử dụng. `Tv5Cache` hiện hữu vẫn là cache in-memory riêng cho tới khi module của nó được tích hợp/chuyển đổi có phối hợp.
+
 Để import trên một máy khác, mở **File → Load SQL file** trong HeidiSQL, chọn file V001 và chạy toàn bộ khi `furniture_shop` chưa tồn tại. Đây là script bootstrap được giữ lại; các script khởi tạo database và cập nhật ảnh công nghệ cũ đã bị xóa.
 
 Kiểm tra bằng PowerShell sau khi đặt `MYSQL_PWD` trong environment tạm thời:

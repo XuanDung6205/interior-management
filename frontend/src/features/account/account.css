@@ -1,0 +1,15 @@
+.account-tabs { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+.account-panel { overflow: hidden; }
+.account-panel-body { padding: 27px; }
+.account-profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 22px; }
+.account-profile-grid>div { display: flex; flex-direction: column; gap: 5px; overflow-wrap: anywhere; }
+.account-profile-grid .eyebrow { margin-bottom: 0; }
+.account-address-list { display: grid; gap: 16px; }
+.account-address { border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
+.account-address-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.account-address p { font-size: 12px; margin-top: 9px; }
+
+@media (max-width: 600px) {
+  .account-panel-body { padding: 20px; }
+  .account-address { padding: 17px; }
+}

@@ -11,8 +11,8 @@ class CommerceSpaControllerTest {
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new CommerceSpaController()).build();
 
     @Test void knownBrowserDeepLinksForwardToTheReactEntry() throws Exception {
-        for (String path : new String[]{"/", "/cart", "/login", "/register", "/checkout", "/orders", "/orders/123",
-                "/orders/123/payments", "/orders/123/returns", "/orders/123/print", "/notifications", "/admin/coupons",
+        for (String path : new String[]{"/", "/cart", "/login", "/register", "/account", "/checkout", "/orders", "/orders/123",
+                "/orders/123/payments", "/orders/123/returns", "/orders/123/print", "/notifications", "/admin", "/admin/coupons",
                 "/admin/orders", "/admin/orders/123", "/admin/orders/123/refunds", "/admin/orders/123/aftercare", "/admin/orders/123/print",
                 "/admin/payments", "/admin/payments/123", "/admin/refunds", "/admin/refunds/123",
                 "/admin/operations", "/admin/inventory/receipts", "/admin/inventory/operations",
