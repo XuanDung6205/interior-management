@@ -28,7 +28,7 @@ Mật khẩu không được ghi trong repository, SQL hay tài liệu này. Kh�
 
 `docker-compose.yml` cung cấp MariaDB 12.2 và Redis 7 cho môi trường phát triển. Compose khởi tạo database mặc định `furniture_shop`, lưu dữ liệu MariaDB trong named volume và chỉ publish hai cổng trên loopback. Đặt `DB_PASSWORD` trong environment hoặc file `.env` cục bộ trước khi chạy `docker compose up -d mariadb redis`; không commit file `.env`. Compose chỉ khởi động service, **không** chạy migration hay seed dữ liệu.
 
-Commerce đọc Redis host/port từ `REDIS_HOST`/`REDIS_PORT` (mặc định `localhost:6379`). `CommerceRedisCacheConfiguration` bật Spring Cache với `RedisCacheManager` và TTL mặc định 10 phút; cấu hình serializer mặc định của Spring Data Redis được sử dụng. `Tv5Cache` hiện hữu vẫn là cache in-memory riêng cho tới khi module của nó được tích hợp/chuyển đổi có phối hợp.
+Commerce đọc Redis host/port từ `REDIS_HOST`/`REDIS_PORT` (mặc định `localhost:6379`, timeout `REDIS_TIMEOUT=1500ms`). `CommerceRedisCacheConfiguration` bật Spring Cache với `RedisCacheManager` và TTL mặc định 10 phút. `Tv5Cache` ưu tiên lưu JSON vào Redis (có invalidation theo generation key `tv5:gen:*`) và tự động chuyển sang bộ đệm RAM cục bộ trong 30 giây nếu Redis tạm ngừng kết nối.
 
 Để import trên một máy khác, mở **File → Load SQL file** trong HeidiSQL, chọn file V001 và chạy toàn bộ khi `furniture_shop` chưa tồn tại. Đây là script bootstrap được giữ lại; các script khởi tạo database và cập nhật ảnh công nghệ cũ đã bị xóa.
 

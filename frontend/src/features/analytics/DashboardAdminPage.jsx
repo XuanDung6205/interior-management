@@ -16,10 +16,18 @@ const FUNNEL_LABELS = {
   PAGE_VIEW: 'Lượt xem trang (client)',
   PRODUCT_VIEW: 'Xem sản phẩm (client)',
   SEARCH: 'Tìm kiếm (client)',
+  FILTER: 'Lọc danh mục (client)',
   ADD_TO_CART_CLICK: 'Bấm thêm giỏ (client)',
   ADD_TO_CART: 'Thêm giỏ thành công (server)',
   CHECKOUT_START: 'Vào trang đặt hàng (client)',
   ORDER_PLACED: 'Đặt đơn thành công (server)',
+};
+
+const CACHE_BACKEND_LABELS = {
+  REDIS: 'Redis',
+  MEMORY_FALLBACK: 'RAM cục bộ (dự phòng khi Redis tắt)',
+  MEMORY: 'RAM cục bộ',
+  DISABLED: 'Đang tắt',
 };
 
 // Trang Dashboard doanh thu thực và vận hành bán hàng dành cho nhân viên/admin (route /admin/dashboard)
@@ -173,6 +181,9 @@ export default function DashboardAdminPage() {
             </div>
             <dl className="operations-metrics">
               <div><dt>Trạng thái</dt><dd>{data.cacheStats.enabled ? 'Đang bật' : 'Đang tắt'}</dd></div>
+              {data.cacheStats.backend && (
+                <div><dt>Bộ đệm</dt><dd>{CACHE_BACKEND_LABELS[data.cacheStats.backend] || data.cacheStats.backend}</dd></div>
+              )}
               <div><dt>Cache hits</dt><dd>{data.cacheStats.hits}</dd></div>
               <div><dt>Cache misses</dt><dd>{data.cacheStats.misses}</dd></div>
               <div><dt>Tỷ lệ hit</dt><dd>{data.cacheStats.hitRatePercent}%</dd></div>

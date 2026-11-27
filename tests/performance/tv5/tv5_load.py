@@ -181,11 +181,20 @@ def main():
         row['name'] = name
         results.append(row)
 
+    cache_stats = None
     if args.staff_user and args.staff_password:
         for name, path in STAFF_ROUTES.items():
             row = benchmark_route(base_url, path, args.vus, args.iterations, args.staff_user, args.staff_password, args.timeout)
             row['name'] = name
             results.append(row)
+        # Đọc nhanh cacheStats từ dashboard sau khi chạy xong để ghi luôn hit rate & backend (REDIS / MEMORY) vào báo cáo
+        try:
+            op = make_opener(base_url, args.staff_user, args.staff_password, args.timeout)
+            req = Request(base_url + STAFF_ROUTES['dashboard'], headers={'Accept': 'application/json'})
+            with op.open(req, timeout=args.timeout) as resp:
+                cache_stats = json.loads(resp.read().decode('utf-8')).get('cacheStats')
+        except (HTTPError, URLError, TimeoutError, ValueError):
+            cache_stats = None
 
     if args.include_ai:
         results.append(benchmark_ai_chat(base_url, max(1, min(10, args.ai_requests)), args.timeout))
@@ -196,6 +205,7 @@ def main():
         'measuredAtUtc': datetime.now(timezone.utc).isoformat(),
         'vus': args.vus,
         'iterationsPerVu': args.iterations,
+        'cacheStats': cache_stats,
         'results': results,
     }
     print(json.dumps(report, indent=2, ensure_ascii=False))

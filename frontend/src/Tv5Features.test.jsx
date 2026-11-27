@@ -93,16 +93,17 @@ it('guards TV5 admin dashboard for non-staff and displays net revenue and cache 
     topProducts: [{ productId: 10, productName: 'Sofa Modena', unitsSold: 3, grossMerchandise: '15000000.00' }],
     lowStockVariants: [{ warehouseId: 1, warehouseCode: 'MAIN', variantId: 20, sku: 'SOFA-KEM', productName: 'Sofa Modena', variantName: 'Kem', availableQuantity: 2 }],
     funnel: { PRODUCT_VIEW: 25, ADD_TO_CART: 6, ORDER_PLACED: 4 },
-    cacheStats: { enabled: true, hits: 12, misses: 4, hitRatePercent: 75, entriesByNamespace: {} },
+    cacheStats: { enabled: true, backend: 'REDIS', hits: 12, misses: 4, hitRatePercent: 75, entriesByNamespace: {} },
   };
   const { user, calls } = mount('/admin/dashboard', {
     'GET /api/admin/dashboard/summary?days=30': summary,
-    'POST /api/admin/dashboard/cache/clear': { enabled: true, hits: 0, misses: 0, hitRatePercent: 0, entriesByNamespace: {} },
+    'POST /api/admin/dashboard/cache/clear': { enabled: true, backend: 'REDIS', hits: 0, misses: 0, hitRatePercent: 0, entriesByNamespace: {} },
   }, staff);
 
   await screen.findByRole('heading', { name: /Bảng điều khiển/ });
   expect(await screen.findByText('13.000.000 ₫')).toBeInTheDocument();
   expect(screen.getByText('SOFA-KEM')).toBeInTheDocument();
+  expect(screen.getByText('Redis')).toBeInTheDocument();
   expect(screen.getByText('75%')).toBeInTheDocument();
 
   await user.click(screen.getByRole('button', { name: 'Xóa cache TV5' }));

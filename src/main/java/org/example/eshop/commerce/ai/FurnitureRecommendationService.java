@@ -121,7 +121,7 @@ public class FurnitureRecommendationService {
         String scope = userId != null ? "u:" + userId : (safeSession != null ? "s:" + safeSession : "anon");
         String cacheKey = (productId == null ? "none" : productId) + ":" + limit + ":" + scope;
         return cache.getOrLoad(Tv5Cache.RECOMMENDATIONS, cacheKey, REC_CACHE_TTL,
-                () -> computeRecommendations(productId, safeSession, limit));
+                RecommendationResponse.class, () -> computeRecommendations(productId, safeSession, limit));
     }
 
     private RecommendationResponse computeRecommendations(Long productId, String sessionId, int limit) {

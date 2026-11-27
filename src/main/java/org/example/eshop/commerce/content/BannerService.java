@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.type.TypeReference;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -25,6 +26,7 @@ import java.util.Locale;
 @Transactional(readOnly = true) // Mặc định chỉ đọc để DB không mở lock ghi không cần thiết
 public class BannerService {
     private static final Duration PUBLIC_CACHE_TTL = Duration.ofMinutes(10);
+    private static final TypeReference<List<BannerView>> BANNER_LIST_TYPE = new TypeReference<>() {};
 
     private final JdbcTemplate jdbc;
     private final Clock clock;
@@ -58,7 +60,7 @@ public class BannerService {
     public List<BannerView> listPublic(String placement) {
         String target = ContentValidation.trimToNull(placement);
         String normalized = target == null ? "HOME_HERO" : target.toUpperCase(Locale.ROOT);
-        return cache.getOrLoad(Tv5Cache.BANNERS, normalized, PUBLIC_CACHE_TTL, () -> {
+        return cache.getOrLoad(Tv5Cache.BANNERS, normalized, PUBLIC_CACHE_TTL, BANNER_LIST_TYPE, () -> {
             // Quy ước dự án: cột DATETIME(6) trong MariaDB lưu theo giờ UTC
             LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
             return jdbc.query("""
