@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Icon } from './ui';
+import { BrandLogo } from './BrandLogo';
 import { UnreadBadge } from '../features/notifications/NotificationsPage';
 
-const rooms = [
-  { key: 'living', slug: 'phong-khach', label: 'Phòng khách', links: [['Sofa', 'demo-sofa'], ['Bàn trà', 'demo-ban-tra'], ['Ghế thư giãn', 'demo-ghe-thu-gian']] },
-  { key: 'dining', slug: 'phong-an', label: 'Phòng ăn', links: [['Bàn ăn', 'demo-ban-an'], ['Ghế ăn', 'demo-ghe-an']] },
-  { key: 'bedroom', slug: 'phong-ngu', label: 'Phòng ngủ', links: [['Giường', 'demo-giuong'], ['Tủ', 'demo-tu-ke']] },
+export const rooms = [
+  { key: 'living', slug: 'phong-khach', label: 'Phòng khách', links: [['Sofa', 'demo-sofa', 'sofa'], ['Bàn trà', 'demo-ban-tra', 'coffee-table'], ['Ghế thư giãn', 'demo-ghe-thu-gian', 'armchair']] },
+  { key: 'dining', slug: 'phong-an', label: 'Phòng ăn', links: [['Bàn ăn', 'demo-ban-an', 'dining-table'], ['Ghế ăn', 'demo-ghe-an', 'dining-chair']] },
+  { key: 'bedroom', slug: 'phong-ngu', label: 'Phòng ngủ', links: [['Giường', 'demo-giuong', 'bed'], ['Tủ', 'demo-tu-ke', 'wardrobe']] },
 ];
 const adminLinks = [
   ['/admin', 'Tổng quan quản trị'],
@@ -24,7 +25,7 @@ const adminLinks = [
   ['/admin/inventory/shipments', 'Vận đơn'],
 ];
 const catalogHref = query => query ? `/sale?query=${encodeURIComponent(query)}` : '/sale';
-const roomHref = (room, category) => `/sale?${new URLSearchParams({ room, ...(category ? { category } : {}) })}`;
+export const roomHref = (room, category) => `/sale?${new URLSearchParams({ room, ...(category ? { category } : {}) })}`;
 
 export default function StoreHeader({ session, isStaff, busy, onLogout }) {
   const location = useLocation();
@@ -59,13 +60,13 @@ export default function StoreHeader({ session, isStaff, busy, onLogout }) {
   return <header className="site-header store-header" ref={headerRef}>
     <div className="store-header-inner">
       <button type="button" className="store-icon-button store-menu-toggle" aria-label={mobileOpen ? 'Đóng menu' : 'Mở menu'} aria-expanded={mobileOpen} aria-controls="store-navigation" onClick={() => { setMobileOpen(value => !value); setOpenPanel(null); }}><Icon name={mobileOpen ? 'close' : 'menu'} size={25} /></button>
-      <Link to="/" className="store-brand" aria-label="Nếp Nhà — Trang chủ" onClick={closeMenus}>Nếp Nhà</Link>
+      <Link to="/" className="store-brand" aria-label="Nếp Nhà — Trang chủ" onClick={closeMenus}><BrandLogo /></Link>
       <nav id="store-navigation" className={`store-navigation${mobileOpen ? ' is-open' : ''}`} aria-label="Điều hướng chính" onClick={event => { if (event.target.closest('a')) closeMenus(); }}>
         <NavLink to="/" end>Trang chủ</NavLink>
         <NavLink to="/sale">Sale &amp; sản phẩm</NavLink>
         {rooms.map(room => <div className="store-nav-group" key={room.key}>
           <button type="button" aria-expanded={openPanel === room.key} aria-controls={`store-menu-${room.key}`} onClick={() => togglePanel(room.key)}>{room.label}<Icon name="chevron" size={15} /></button>
-          {openPanel === room.key && <div className="store-nav-popover" id={`store-menu-${room.key}`}><span className="store-popover-label">KHÁM PHÁ {room.label.toUpperCase()}</span><Link to={roomHref(room.slug)}>Tất cả {room.label.toLowerCase()}<Icon name="arrow" size={16} /></Link>{room.links.map(([label, category]) => <Link key={label} to={roomHref(room.slug, category)}>{label}<Icon name="arrow" size={16} /></Link>)}</div>}
+          {openPanel === room.key && <div className="store-nav-popover" id={`store-menu-${room.key}`}><span className="store-popover-label">KHÁM PHÁ {room.label.toUpperCase()}</span><Link to={roomHref(room.slug)}>Tất cả {room.label.toLowerCase()}<Icon name="arrow" size={16} /></Link>{room.links.map(([label, category, icon]) => <Link key={label} to={roomHref(room.slug, category)}><span className="store-popover-item"><Icon name={icon} size={19} />{label}</span><Icon name="arrow" size={16} /></Link>)}</div>}
         </div>)}
         <Link to="/#home-inspiration">Cảm hứng</Link>
         <NavLink to="/articles">Bài viết</NavLink>

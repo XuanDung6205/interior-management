@@ -1,7 +1,16 @@
 .store-header { position: relative; z-index: 30; background: #fffefa; border-bottom: 1px solid #eeeae3; }
 .store-header-inner { max-width: 1900px; min-height: 86px; margin: auto; padding: 0 clamp(24px, 3.3vw, 64px); display: flex; align-items: center; gap: clamp(24px, 3vw, 52px); }
-.store-brand { flex: 0 0 auto; font-family: 'Lora', 'Times New Roman', serif; font-size: 31px; line-height: 1; letter-spacing: -.035em; white-space: nowrap; color: #252824; }
+.store-brand { flex: 0 0 auto; display: inline-flex; align-items: center; white-space: nowrap; color: #252824; }
+.store-brand .brand-mark { color: var(--teal); transition: transform .2s ease; }
 .store-brand:hover { color: var(--teal); }
+.store-brand:hover .brand-mark { transform: rotate(-4deg); }
+.brand-logo { display: inline-flex; align-items: center; gap: 11px; }
+.brand-logo-text { display: grid; gap: 3px; }
+.brand-logo-name { font-family: 'Lora', 'Times New Roman', serif; font-size: 27px; line-height: 1; letter-spacing: -.035em; }
+.brand-logo-tagline { font-family: 'Be Vietnam Pro', sans-serif; font-size: 8px; font-weight: 600; letter-spacing: .24em; color: var(--wood); }
+.store-popover-item { display: inline-flex; align-items: center; gap: 11px; }
+.store-popover-item svg { color: var(--wood); }
+.store-nav-popover a:hover .store-popover-item svg { color: var(--teal); }
 .store-navigation { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: clamp(13px, 1.7vw, 32px); align-self: stretch; }
 .store-navigation>a, .store-nav-group>button { min-height: 44px; display: inline-flex; align-items: center; gap: 7px; padding: 0; border: 0; background: none; color: #252824; font-size: 14px; font-weight: 500; white-space: nowrap; }
 .store-navigation>a:hover, .store-navigation>a.active, .store-nav-group>button:hover, .store-nav-group>button[aria-expanded='true'] { color: var(--teal); }
@@ -43,7 +52,9 @@
 }
 @media (max-width: 560px) {
   .store-header-inner { min-height: 64px; padding: 0 15px; gap: 5px; }
-  .store-brand { font-size: 24px; }
+  .brand-logo-name { font-size: 22px; }
+  .brand-logo-tagline { display: none; }
+  .store-brand .brand-mark { width: 30px; height: 30px; }
   .store-actions { gap: 0; }
   .store-icon-button { width: 44px; height: 44px; }
   .store-navigation { max-height: calc(100vh - 64px); padding: 12px 18px 22px; }

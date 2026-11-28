@@ -166,9 +166,21 @@ dd { margin: 0; }
 .add-button:hover:not(:disabled) { background: var(--teal); color: white; border-color: var(--teal); }
 .pager { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 25px; font-size: 11px; }
 .pager .button { padding: 10px 14px; font-size: 10px; }
-.site-footer { background: #efeee7; border-top: 1px solid var(--line); padding: 29px max(40px, calc((100vw - 1232px) / 2)); display: flex; align-items: center; gap: 30px; color: var(--muted); font-size: 10px; }
-.footer-brand { font-family: 'Lora', Georgia, serif; font-size: 24px; color: var(--teal); letter-spacing: -.04em; }
-.site-footer>span:last-child { margin-left: auto; }
+.site-footer { background: #1f3a35; color: #d9e2dc; padding: 0 max(40px, calc((100vw - 1232px) / 2)); font-size: 12px; }
+.site-footer-inner { display: grid; grid-template-columns: 1.6fr repeat(3, 1fr); gap: 40px; padding: 56px 0 40px; }
+.footer-brand { display: inline-flex; color: #fffefa; }
+.footer-brand .brand-mark { color: #2f6b62; }
+.footer-brand .brand-logo-tagline { color: #c9b08d; }
+.site-footer-brand p { max-width: 320px; margin-top: 18px; line-height: 1.8; color: #b9c8c1; }
+.site-footer-promises { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 9px; }
+.site-footer-promises li { display: flex; align-items: center; gap: 10px; color: #e9efe9; }
+.site-footer-promises svg { color: #c9b08d; }
+.site-footer-column { display: flex; flex-direction: column; gap: 11px; }
+.site-footer-column h2 { margin: 0 0 6px; font-family: 'Be Vietnam Pro', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #c9b08d; }
+.site-footer-column a { color: #d9e2dc; width: fit-content; }
+.site-footer-column a:hover { color: #fffefa; text-decoration: underline; text-underline-offset: 4px; }
+.site-footer-bottom { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 0 22px; border-top: 1px solid rgba(255, 255, 255, .12); font-size: 11px; color: #9fb2aa; }
+.site-footer-icons { display: inline-flex; gap: 14px; color: #c9b08d; }
 .login-layout { display: grid; grid-template-columns: 1fr 1fr; max-width: 1040px; margin: 38px auto 30px; min-height: 560px; gap: 0; }
 .login-story { background: #ebe8db; padding: 53px 48px 34px; border-radius: 12px 0 0 12px; position: relative; overflow: hidden; }
 .login-story .eyebrow { margin-bottom: 22px; }
@@ -307,8 +319,9 @@ dd { margin: 0; }
   .line-art, .story-note { display: none; }
   .login-panel { border-radius: 0 0 12px 12px; border-top: 0; }
   .login-story>p { margin-top: 15px; max-width: none; }
-  .site-footer { flex-wrap: wrap; padding: 25px; gap: 15px 25px; }
-  .site-footer>span:last-child { margin-left: 0; }
+  .site-footer { padding: 0 25px; }
+  .site-footer-inner { grid-template-columns: 1fr 1fr; gap: 32px 25px; padding: 40px 0 28px; }
+  .site-footer-brand { grid-column: 1 / -1; }
 }
 @media (max-width: 560px) {
   body { font-size: 16px; }
@@ -369,8 +382,8 @@ dd { margin: 0; }
   .product-card-bottom .add-button { width: 36px; height: 36px; }
   .pager { gap: 12px; padding: 20px 10px; font-size: 10px; }
   .pager .button { font-size: 9px; padding: 9px; min-height: 42px; }
-  .site-footer { padding: 24px 18px; font-size: 9px; gap: 13px 18px; }
-  .footer-brand { font-size: 21px; }
+  .site-footer { padding: 0 18px; }
+  .site-footer-bottom { flex-direction: column; align-items: flex-start; }
   .site-footer>span:last-child { display: block; width: 100%; }
   .login-story, .login-panel { padding: 28px 22px; }
   .login-story h1 { font-size: 27px; }
