@@ -1,6 +1,7 @@
 """Seed 50 original demo products into a selected furniture database.
 
-Each SKU uses one distinct illustrative JPEG in frontend/public/images/catalog.
+Each of the 50 products has three SKUs and one distinct illustrative JPEG.
+Variant colors and additional room photos are explicitly demo illustrations.
 Run with DB_PASSWORD in the environment. The primary DB requires an explicit flag.
 Re-running does not reset stock or orders.
 """
@@ -160,23 +161,33 @@ def catalog_extensions():
             statements.append(f"INSERT IGNORE INTO collection_products(collection_id,product_id) SELECT c.id,p.id FROM collections c CROSS JOIN products p WHERE c.slug={quote(collection)} AND p.slug={quote(slug)};")
             if family_index in (1,4,7,9):
                 statements.append(f"INSERT IGNORE INTO collection_products(collection_id,product_id) SELECT c.id,p.id FROM collections c CROSS JOIN products p WHERE c.slug='demo-an-yen' AND p.slug={quote(slug)};")
-        if family_index not in (1,3,4,5,7,8):
-            continue
-        product=f"(SELECT id FROM products WHERE slug={quote(f'demo-{category}-{family_index:02d}-01')})"
-        base_sku=f'NN-DEMO-{family_index:02d}-01'
-        for suffix,color,hex_value,width_delta,price_delta in [('BE-L','Be ấm','#C9B8A1',200,500000),('NAU-M','Nâu trầm','#70543E',100,200000)]:
-            sku=base_sku+'-'+suffix
-            width=family[5]+width_delta
-            statements.append(f"INSERT INTO product_variants(product_id,sku,variant_key,name,color_name,color_hex,size_label,width_mm,depth_mm,height_mm,price,lead_time_days,status) VALUES({product},{quote(sku)},{quote(suffix.lower())},{quote(color+' / '+str(width)+' mm')},{quote(color)},{quote(hex_value)},{quote(str(width)+' mm')},{width},{family[6]},{family[7]},{family[8]+price_delta},5,'ACTIVE') ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id);")
-            variant=f"(SELECT id FROM product_variants WHERE sku={quote(sku)})"
-            statements.append(f"INSERT IGNORE INTO variant_materials(variant_id,material_id) SELECT {variant},id FROM materials WHERE slug={quote('demo-'+family[3])};")
-            statements.append(f"INSERT IGNORE INTO inventory_balances(warehouse_id,variant_id,on_hand_quantity) SELECT w.id,{variant},8 FROM warehouses w WHERE w.code='MAIN';")
-        # Room photos are explicitly labelled inspiration, never a claimed view of a different SKU.
-        room_photo={'phong-khach':'gallery-living-room.jpg','phong-an':'gallery-dining-room.jpg','phong-ngu':'gallery-bedroom.jpg'}[family[2]]
-        for order,photo in [(1,room_photo),(2,'gallery-reading-corner.jpg')]:
-            url='/images/'+photo
-            alt='Ảnh tham khảo bố trí không gian, không phải ảnh SKU đang chọn'
-            statements.append(f"INSERT INTO product_images(product_id,url,alt_text,sort_order) SELECT {product},{quote(url)},{quote(alt)},{order} WHERE NOT EXISTS(SELECT 1 FROM product_images WHERE product_id={product} AND url={quote(url)});")
+        for style_index, (style, _, _, uplift) in enumerate(STYLES, start=1):
+            slug=f'demo-{category}-{family_index:02d}-{style_index:02d}'
+            product=f"(SELECT id FROM products WHERE slug={quote(slug)})"
+            base_sku=f'NN-DEMO-{family_index:02d}-{style_index:02d}'
+            for suffix,color,hex_value,width_delta,price_delta in [('BE-L','Be ấm','#C9B8A1',200,500000),('NAU-M','Nâu trầm','#70543E',100,200000)]:
+                sku=base_sku+'-'+suffix
+                width=family[5]+width_delta
+                size=f'{width} × {family[6]} × {family[7]} mm'
+                # Preserve the size label of the twelve previously published extra SKUs.
+                if style_index==1 and family_index in (1,3,4,5,7,8):
+                    size=str(width)+' mm'
+                statements.append(f"INSERT INTO product_variants(product_id,sku,variant_key,name,color_name,color_hex,size_label,width_mm,depth_mm,height_mm,price,lead_time_days,status) VALUES({product},{quote(sku)},{quote(suffix.lower())},{quote(color+' / '+str(width)+' mm')},{quote(color)},{quote(hex_value)},{quote(size)},{width},{family[6]},{family[7]},{family[8]+uplift*100000+price_delta},5,'ACTIVE') ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id);")
+                variant=f"(SELECT id FROM product_variants WHERE sku={quote(sku)})"
+                statements.append(f"INSERT IGNORE INTO variant_materials(variant_id,material_id) SELECT {variant},id FROM materials WHERE slug={quote('demo-'+family[3])};")
+                statements.append(f"INSERT IGNORE INTO inventory_balances(warehouse_id,variant_id,on_hand_quantity) SELECT w.id,{variant},8 FROM warehouses w WHERE w.code='MAIN';")
+            if style_index==1 and family_index in (1,3,4,5,7,8):
+                # Room photos are explicitly labelled inspiration, never another view of the SKU.
+                room_photo={'phong-khach':'gallery-living-room.jpg','phong-an':'gallery-dining-room.jpg','phong-ngu':'gallery-bedroom.jpg'}[family[2]]
+                for order,photo in [(1,room_photo),(2,'gallery-reading-corner.jpg')]:
+                    url='/images/'+photo
+                    alt='Ảnh tham khảo bố trí không gian, không phải ảnh SKU đang chọn'
+                    statements.append(f"INSERT INTO product_images(product_id,url,alt_text,sort_order) SELECT {product},{quote(url)},{quote(alt)},{order} WHERE NOT EXISTS(SELECT 1 FROM product_images WHERE product_id={product} AND url={quote(url)});")
+    # External SQL changes must conflict with an already-open admin editor.
+    demo_slugs=','.join(quote(f'demo-{f[1]}-{i:02d}-{j:02d}') for i,f in enumerate(FAMILIES,1) for j in range(1,len(STYLES)+1))
+    statements.append(f"UPDATE products SET version=version+1 WHERE slug IN ({demo_slugs});")
+    # Reuse TV5's durable worker; no credentials or embedding call in seed SQL.
+    statements.append(f"INSERT INTO commerce_vector_reindex_outbox(product_id,action,state,next_attempt_at) SELECT p.id,'UPSERT','PENDING',UTC_TIMESTAMP(6) FROM products p WHERE p.slug IN ({demo_slugs}) AND NOT EXISTS(SELECT 1 FROM commerce_vector_reindex_outbox o WHERE o.product_id=p.id AND o.state IN ('PENDING','RETRY'));")
     return statements
 
 
@@ -204,7 +215,7 @@ def main():
                             env=dict(os.environ, MYSQL_PWD=password))
     if result.returncode:
         raise RuntimeError("MariaDB seed failed; check connection and V001-V015 schema.")
-    print(f"Seeded 50 demo products and 62 SKUs into {database}, with categories, details, illustrations and initial MAIN stock.")
+    print(f"Seeded 50 demo products and 150 SKUs into {database}, with categories, details, illustrations and initial MAIN stock.")
 
 
 if __name__ == "__main__":

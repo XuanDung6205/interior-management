@@ -2,6 +2,8 @@
 
 Schema bootstrap có 33 bảng nghiệp vụ chính và 12 bảng mở rộng, tổng cộng **45 bảng**. Runtime hiện tại có **49 bảng**: V008 thêm hai bảng thông báo, V013 thêm hai bảng vector/outbox; V014 chỉ thêm cột/index/FK. Registry dùng chung ở `scripts/tv3_schema.py` quy định thứ tự V001–V015 và tập tên bảng chính xác cho create/migrate, CI, release và recovery. Database được sử dụng là `furniture_shop`; database `eshop` cũ và các script khởi tạo/seed cũ đã được dọn theo yêu cầu.
 
+Bộ SQL dùng chung của TV2: [tạo DB và nạp 50 sản phẩm / 150 SKU](demo/README.md).
+
 ## Kết nối bằng HeidiSQL
 
 1. Mở phiên kết nối MariaDB cục bộ đang dùng: host `127.0.0.1`, port `3306`, user `root`; dùng mật khẩu đã nhập trong phiên của bạn.

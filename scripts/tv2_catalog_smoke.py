@@ -52,6 +52,8 @@ def main():
     assert products['totalElements']==50
     sample=request('/api/catalog/products/demo-sofa-01-01')
     assert len(sample['variants'])==3 and len(sample['images'])>=3
+    for slug in ('demo-sofa-01-02','demo-ghe-an-06-05','demo-ban-console-10-05'):
+        assert len(request('/api/catalog/products/'+slug)['variants'])==3
     checks.append('50 demo products, multi-SKU detail and gallery')
     material=next(m['slug'] for m in facets['materials'] if m['slug']=='demo-vai-boc')
     filtered=request('/api/catalog/products?'+urllib.parse.urlencode({'material':material,'minPrice':'10000000','maxWidth':'3000','room':'phong-khach'}))
@@ -95,7 +97,7 @@ def main():
         for _ in range(20):
             start=time.perf_counter(); request(path); samples.append((time.perf_counter()-start)*1000)
         timings[name]={'requests':len(samples),'medianMs':round(statistics.median(samples),2),'p95Ms':round(sorted(samples)[18],2)}
-    report={'verifiedAtUtc':datetime.now(timezone.utc).isoformat(),'environment':'local Docker Compose, 50 demo products / 62 demo SKUs',
+    report={'verifiedAtUtc':datetime.now(timezone.utc).isoformat(),'environment':'local Docker Compose, 50 demo products / 150 demo SKUs',
         'checks':checks,'readTimings':timings,'scope':'Catalog only; not a load test or live AI/payment-provider verification.'}
     output=Path(args.output); output.parent.mkdir(parents=True,exist_ok=True)
     output.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')

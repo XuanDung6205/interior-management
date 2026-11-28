@@ -5,6 +5,7 @@ Runtime commerce dùng **Spring Boot REST API + React + MariaDB**, main class `o
 ## Chạy và bàn giao
 
 - **[Thành viên 2: catalog và Docker](docs/TV2_CATALOG_HANDOFF.md)** — quản trị sản phẩm/SKU/phân loại, bộ lọc, gallery, demo và hợp đồng bàn giao cho TV3–TV5.
+- [SQL đồng bộ cho cả nhóm: 50 sản phẩm / 150 SKU](docs/database/demo/README.md) — có file full DB mới và file data cho DB đã có.
 - [Hợp đồng API catalog](docs/api/TV2_CATALOG_API.md), [bằng chứng kiểm thử TV2](docs/TV2_VERIFICATION.md).
 
 - [Build/chạy demo bằng một JAR](docs/TV3_RELEASE.md): React và API cùng origin, không cần mở Vite/Docker khi chạy gói.

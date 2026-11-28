@@ -19,7 +19,7 @@ class CatalogSeedTests(unittest.TestCase):
         self.assertNotIn("status='ACTIVE';",sql)
         self.assertIn('INSERT IGNORE INTO inventory_balances',sql)
         self.assertIn('INSERT IGNORE INTO collection_products',sql)
-        self.assertEqual(sum('INSERT INTO product_variants(' in line for line in sql.splitlines()),62)
+        self.assertEqual(sum('INSERT INTO product_variants(' in line for line in sql.splitlines()),150)
     def test_sql_quotes_are_independent_of_backslash_mode(self):
         value="gỗ 'sồi' \\ thử"
         self.assertEqual(seed.quote(value),"CONVERT(X'"+value.encode().hex()+"' USING utf8mb4)")

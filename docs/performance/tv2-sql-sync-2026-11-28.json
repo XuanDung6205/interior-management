@@ -1,0 +1,46 @@
+{
+  "verifiedAtUtc": "2026-11-28T11:09:15.569838+00:00",
+  "engine": "12.2.2-MariaDB-ubu2404",
+  "schema": "V001-V015",
+  "products": 50,
+  "skus": 150,
+  "checks": [
+    "Two fresh SQL imports produce identical product/SKU IDs and business data",
+    "Upgrade from 62 to 150 SKUs and repeated seed preserve existing data",
+    "A failed seed transaction rolls back catalog versions and data",
+    "All imports: 49 tables, 50 products / 150 SKUs, three variants per product, UTF-8 and linked images/collections/stock"
+  ],
+  "scope": "Disposable Docker MariaDB only; no user records or secrets in shared SQL.",
+  "httpSmoke": {
+    "verifiedAtUtc": "2026-11-28T11:11:25.368161+00:00",
+    "environment": "local Docker Compose, 50 demo products / 150 demo SKUs",
+    "checks": [
+      "public facets and collections",
+      "50 demo products, multi-SKU detail and gallery",
+      "combined filters, ranges and hierarchy",
+      "admin create, publish, cache invalidation, price update, SKU identity, stale version, archive"
+    ],
+    "readTimings": {
+      "list": {
+        "requests": 20,
+        "medianMs": 62.72,
+        "p95Ms": 87.41
+      },
+      "detail": {
+        "requests": 20,
+        "medianMs": 38.98,
+        "p95Ms": 99.78
+      }
+    },
+    "scope": "Catalog only; not a load test or live AI/payment-provider verification."
+  },
+  "browser": {
+    "passed": 5,
+    "failed": 0,
+    "durationSeconds": 27.9,
+    "files": [
+      "e2e/catalog-sale.spec.js",
+      "e2e/tv2-catalog.spec.js"
+    ]
+  }
+}

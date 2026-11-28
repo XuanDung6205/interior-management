@@ -33,6 +33,10 @@ docker compose exec redis redis-cli ping
 docker compose logs --tail 60 app
 ```
 
+## SQL gửi cả nhóm để đồng bộ
+
+Dữ liệu hiện có **50 sản phẩm / 150 SKU**, mỗi sản phẩm ba phiên bản. Gửi [hai file SQL và hướng dẫn HeidiSQL](database/demo/README.md) cùng nhánh `Nhon`: `TV2_FULL_DATABASE_DEMO.sql` cho DB mới (đủ 49 bảng + dữ liệu), `TV2_CATALOG_DATA.sql` cho DB đã đủ V015. Bản data nâng từ 62 SKU cũ lên 150, giữ ID/giá/trạng thái/tồn đã sửa; không hard-code lại ID dùng ở giỏ/đơn/kho. SQL được sinh từ migration + seed có version và vector outbox; dùng `python scripts/build_tv2_catalog_sql.py --check` để kiểm tra file luôn khớp source.
+
 ## Phạm vi hoàn thành
 
 - Quản trị năm nhóm phân loại: danh mục cha/con, phòng, thương hiệu, chất liệu, bộ sưu tập. Có mô tả, ảnh/logo, thứ tự, quốc gia/chăm sóc theo loại; ẩn thay vì xóa mất liên kết. Ẩn danh mục cha sẽ ẩn các danh mục con trong cùng transaction; mở cha không tự mở lại con, cần bật con theo chủ đích.
