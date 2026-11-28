@@ -22,7 +22,7 @@ export function Icon({ name, size = 20, ...props }) {
 }
 export function ErrorNotice({ error, onRetry }) {
   if (!error) return null;
-  return <div className="notice error" role="alert"><strong>{error.status === 401 ? 'Phiên đăng nhập đã kết thúc. ' : ''}{error.message || error}</strong>{error.status === 403 && <p>Vui lòng kiểm tra quyền truy cập hoặc thử lại để làm mới phiên bảo mật.</p>}{onRetry && <button className="text-button" onClick={onRetry}>Thử lại</button>}</div>;
+  return <div className="notice error" role="alert"><strong>{error.status === 401 && error.code !== 'INVALID_CREDENTIALS' ? 'Phiên đăng nhập đã kết thúc. ' : ''}{error.message || error}</strong>{error.status === 403 && <p>Vui lòng kiểm tra quyền truy cập hoặc thử lại để làm mới phiên bảo mật.</p>}{onRetry && <button className="text-button" onClick={onRetry}>Thử lại</button>}</div>;
 }
 export function Loading({ text = 'Đang tải…' }) { return <div className="loading" role="status"><span className="spinner" />{text}</div>; }
 export function ProductImage({ src, name }) {

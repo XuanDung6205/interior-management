@@ -22,7 +22,10 @@ export default function LoginPage() {
     event.preventDefault(); setBusy(true); setError(null); setMergeError(null);
     const form = new FormData(event.currentTarget);
     try { setSession(await api.login(form.get('username').trim(), form.get('password'))); await merge(); }
-    catch (value) { setError(value); }
+    catch (value) {
+      if (value?.code === 'INVALID_CREDENTIALS') value.message = 'Tên đăng nhập hoặc mật khẩu không đúng.';
+      setError(value);
+    }
     finally { setBusy(false); }
   }
   return <section className="login-layout">
