@@ -11,7 +11,16 @@ $env:DB_PASSWORD = '<mật khẩu MariaDB của bạn>'
 python scripts/seed_demo_catalog.py
 ```
 
-Có thể đặt thêm `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `MARIADB_CLIENT`. Script chỉ chấp nhận `furniture_shop_tv3_dev` hoặc `furniture_shop_test_ci_demo`; để chọn database CI, đặt `DB_NAME`. Chạy lại không tạo trùng sản phẩm, SKU hay ảnh và không đặt lại lượng tồn kho đã thay đổi.
+Có thể đặt thêm `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `MARIADB_CLIENT`. Mặc định script nạp vào `furniture_shop_tv3_dev`; CI đặt `DB_NAME=furniture_shop_test_ci_demo`. Chạy lại không tạo trùng sản phẩm, SKU hay ảnh và không đặt lại lượng tồn kho đã thay đổi.
+
+Nếu nhóm dùng database mặc định `furniture_shop`, hãy sao lưu và kiểm tra bản sao lưu trước khi nạp dữ liệu mẫu. Sau đó chỉ định rõ cả tên DB và cờ cho phép:
+
+```powershell
+$env:DB_PASSWORD = Read-Host 'Mật khẩu MariaDB'
+python scripts/seed_demo_catalog.py --database furniture_shop --allow-main-db
+```
+
+Lệnh này thêm 50 SKU demo vào chính `furniture_shop`; nó không tạo schema hay tài khoản. Khi chạy lại, script cập nhật tên, mô tả và giá của các SKU demo trùng mã nhưng không đặt lại tồn kho hoặc lịch sử đơn. Mỗi máy dùng MariaDB riêng vẫn phải chạy lệnh riêng; clone Git chỉ mang script và 50 ảnh.
 
 Trang `/sale` hiển thị tất cả sản phẩm đang bán, tìm kiếm, lọc danh mục, sắp xếp và phân trang. Trang `/products/{slug}` hiển thị ảnh, mô tả, SKU, thông số, giá, tồn kho và cho phép thêm vào giỏ. API công khai: `GET /api/catalog/categories`, `GET /api/catalog/products`, `GET /api/catalog/products/{slug}`.
 

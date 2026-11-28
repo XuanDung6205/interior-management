@@ -11,6 +11,7 @@ Runtime commerce dùng **Spring Boot REST API + React + MariaDB**, main class `o
 - [Backup/restore MariaDB](docs/TV3_BACKUP_RESTORE.md): snapshot riêng tư, checksum, phục hồi vào DB test mới và đối chiếu đúng 49 bảng (bản lịch sử trước V013 là 47 bảng).
 - [GitHub CI](docs/TV3_CI.md): integration MariaDB, test React, gói JAR, recovery và Chrome cùng origin; trạng thái hosted execution phải đọc cùng bằng chứng thực tế.
 - [Schema và migration](docs/database/README.md), [OpenAPI](docs/api/tv3-commerce.yaml).
+- [Nạp 50 sản phẩm và ảnh demo](docs/demo-catalog.md) vào database đã chọn.
 
 ## Gói demo
 

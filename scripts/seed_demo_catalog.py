@@ -1,9 +1,11 @@
-"""Seed 50 original demo product descriptions into the isolated furniture demo DB.
+"""Seed 50 original demo products into a selected furniture database.
 
 Each SKU uses one distinct illustrative JPEG in frontend/public/images/catalog.
-Run with DB_PASSWORD in the environment. Re-running does not reset stock or orders.
+Run with DB_PASSWORD in the environment. The primary DB requires an explicit flag.
+Re-running does not reset stock or orders.
 """
 
+import argparse
 import os
 from pathlib import Path
 import shutil
@@ -118,10 +120,26 @@ def sql_rows():
     return "\n".join(statements)
 
 
+def target_database(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--database")
+    parser.add_argument("--allow-main-db", action="store_true",
+                        help="Explicitly permit seeding the primary furniture_shop database after backing it up.")
+    args = parser.parse_args(argv)
+    database = args.database or os.environ.get("DB_NAME", "furniture_shop_tv3_dev")
+    if database == "furniture_shop":
+        if args.database != "furniture_shop" or not args.allow_main_db:
+            raise RuntimeError("furniture_shop requires --database furniture_shop --allow-main-db and a verified backup.")
+    elif database in ("furniture_shop_tv3_dev", "furniture_shop_test_ci_demo"):
+        if args.allow_main_db:
+            raise RuntimeError("--allow-main-db may only be used with furniture_shop.")
+    else:
+        raise RuntimeError("Only furniture_shop, furniture_shop_tv3_dev or furniture_shop_test_ci_demo can be seeded.")
+    return database
+
+
 def main():
-    database = os.environ.get("DB_NAME", "furniture_shop_tv3_dev")
-    if database not in ("furniture_shop_tv3_dev", "furniture_shop_test_ci_demo"):
-        raise RuntimeError("Only isolated demo databases can be seeded.")
+    database = target_database()
     password = os.environ.get("DB_PASSWORD")
     if not password:
         raise RuntimeError("Supply DB_PASSWORD in the environment.")
@@ -136,7 +154,7 @@ def main():
                 raise RuntimeError(f"Duplicate catalog image: {image.name}")
             hashes.add(digest)
     client = [os.environ.get("MARIADB_CLIENT") or shutil.which("mariadb") or r"C:\Program Files\MariaDB 12.2\bin\mariadb.exe",
-              "--protocol=tcp", "--host=" + os.environ.get("DB_HOST", "127.0.0.1"),
+              "--no-defaults", "--protocol=tcp", "--host=" + os.environ.get("DB_HOST", "127.0.0.1"),
               "--port=" + os.environ.get("DB_PORT", "3306"),
               "--user=" + os.environ.get("DB_USERNAME", "root"), "--database=" + database,
               "--default-character-set=utf8mb4", "--batch", "--skip-column-names"]
@@ -144,7 +162,7 @@ def main():
                             env=dict(os.environ, MYSQL_PWD=password))
     if result.returncode:
         raise RuntimeError("MariaDB seed failed; check connection and V001-V012 schema.")
-    print("Seeded 50 demo products, 50 SKUs, categories, details, illustrations and initial MAIN stock.")
+    print(f"Seeded 50 demo products and 50 SKUs into {database}, with categories, details, illustrations and initial MAIN stock.")
 
 
 if __name__ == "__main__":
