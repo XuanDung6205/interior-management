@@ -11,6 +11,7 @@ import ProductDetailPage from './features/catalog/ProductDetailPage';
 import LoginPage from './features/auth/LoginPage';
 import RegisterPage from './features/auth/RegisterPage';
 import AccountPage from './features/account/AccountPage';
+import UserAdminPage from './features/accounts/UserAdminPage';
 import CouponAdminPage from './features/promotions/CouponAdminPage';
 import InventoryReceiptPage from './features/inventory/InventoryReceiptPage';
 import StockOperationsPage from './features/inventory/StockOperationsPage';
@@ -47,6 +48,9 @@ function StaffPage({ isStaff, children }) {
   const location = useLocation();
   return isStaff ? children : <section className="access-state panel"><Icon name="shield" size={40} /><h1>Khu vực dành cho nhân viên</h1><p>Bạn cần tài khoản nhân viên hoặc quản trị viên để sử dụng khu vực này.</p><Link to="/login" state={{ returnTo: location.pathname + location.search }} className="button">Đăng nhập tài khoản khác</Link></section>;
 }
+function AdminPage({ isAdmin, children }) {
+  return isAdmin ? children : <section className="access-state panel"><Icon name="shield" size={40} /><h1>Chỉ ADMIN được quản lý tài khoản</h1><p>Nhân viên không có quyền khóa hoặc mở khóa tài khoản.</p><Link to="/admin/dashboard" className="button">Về bảng điều khiển</Link></section>;
+}
 
 export default function App() {
   const [api] = useState(() => createApiClient());
@@ -65,7 +69,8 @@ export default function App() {
   useEffect(() => {
     if (location.hash && session) document.getElementById(location.hash.slice(1))?.scrollIntoView?.();
   }, [location.pathname, location.hash, session]);
-  useEffect(() => { document.title = `${location.pathname === '/' ? 'Trang chủ' : location.pathname === '/sale' ? ({ 'phong-khach': 'Phòng khách', 'phong-an': 'Phòng ăn', 'phong-ngu': 'Phòng ngủ' }[new URLSearchParams(location.search).get('room')] || 'Sale & sản phẩm') : location.pathname.startsWith('/products/') ? 'Chi tiết sản phẩm' : location.pathname.startsWith('/articles') ? 'Bài viết' : location.pathname === '/account' ? 'Tài khoản' : location.pathname === '/wishlist' ? 'Yêu thích' : location.pathname === '/reviews' ? 'Đánh giá' : location.pathname === '/admin' || location.pathname === '/admin/dashboard' ? 'Bảng điều khiển' : location.pathname === '/admin/content' ? 'Quản lý nội dung' : location.pathname === '/admin/reviews' ? 'Kiểm duyệt đánh giá' : /^\/(?:admin\/)?orders\/\d+\/print$/.test(location.pathname) ? 'Phiếu đơn hàng' : location.pathname === '/notifications' ? 'Thông báo' : location.pathname === '/admin/operations' ? 'Vận hành hệ thống' : /^\/admin\/orders\/\d+\/aftercare$/.test(location.pathname) ? 'Hậu mãi đơn hàng' : /^\/orders\/\d+\/returns$/.test(location.pathname) ? 'Trả hàng' : (location.pathname.startsWith('/admin/refunds') || /^\/admin\/orders\/\d+\/refunds$/.test(location.pathname)) ? 'Quản lý hoàn tiền' : location.pathname.startsWith('/admin/payments') ? 'Quản lý thanh toán' : location.pathname.startsWith('/admin/orders') ? 'Quản lý đơn hàng' : location.pathname.startsWith('/admin/inventory/shipments') ? 'Theo dõi vận đơn' : location.pathname.startsWith('/admin/inventory/dispatch') ? 'Xuất kho giao hàng' : location.pathname.startsWith('/admin/inventory/operations') ? 'Điều chỉnh và chuyển kho' : location.pathname.startsWith('/admin/inventory/receipts') ? 'Nhập kho' : location.pathname.startsWith('/admin/coupons') ? 'Quản lý ưu đãi' : location.pathname === '/register' ? 'Đăng ký' : location.pathname === '/login' ? 'Đăng nhập' : location.pathname === '/checkout' ? 'Đặt hàng' : /^\/orders\/\d+\/payments$/.test(location.pathname) ? 'Thanh toán đơn' : location.pathname.startsWith('/orders') ? 'Đơn hàng' : 'Giỏ hàng'} · Nếp Nhà`; }, [location.pathname, location.search]);
+  useEffect(() => { document.title = `${location.pathname === '/' ? 'Trang chủ' : location.pathname === '/sale' ? ({ 'phong-khach': 'Phòng khách', 'phong-an': 'Phòng ăn', 'phong-ngu': 'Phòng ngủ' }[new URLSearchParams(location.search).get('room')] || 'Sale & sản phẩm') : location.pathname.startsWith('/products/') ? 'Chi tiết sản phẩm' : location.pathname.startsWith('/articles') ? 'Bài viết' : location.pathname === '/account' ? 'Tài khoản' : location.pathname === '/wishlist' ? 'Yêu thích' : location.pathname === '/reviews' ? 'Đánh giá' : location.pathname === '/admin/users' ? 'Quản lý tài khoản' : location.pathname === '/admin' || location.pathname === '/admin/dashboard' ? 'Bảng điều khiển' : location.pathname === '/admin/content' ? 'Quản lý nội dung' : location.pathname === '/admin/reviews' ? 'Kiểm duyệt đánh giá' : /^\/(?:admin\/)?orders\/\d+\/print$/.test(location.pathname) ? 'Phiếu đơn hàng' : location.pathname === '/notifications' ? 'Thông báo' : location.pathname === '/admin/operations' ? 'Vận hành hệ thống' : /^\/admin\/orders\/\d+\/aftercare$/.test(location.pathname) ? 'Hậu mãi đơn hàng' : /^\/orders\/\d+\/returns$/.test(location.pathname) ? 'Trả hàng' : (location.pathname.startsWith('/admin/refunds') || /^\/admin\/orders\/\d+\/refunds$/.test(location.pathname)) ? 'Quản lý hoàn tiền' : location.pathname.startsWith('/admin/payments') ? 'Quản lý thanh toán' : location.pathname.startsWith('/admin/orders') ? 'Quản lý đơn hàng' : location.pathname.startsWith('/admin/inventory/shipments') ? 'Theo dõi vận đơn' : location.pathname.startsWith('/admin/inventory/dispatch') ? 'Xuất kho giao hàng' : location.pathname.startsWith('/admin/inventory/operations') ? 'Điều chỉnh và chuyển kho' : location.pathname.startsWith('/admin/inventory/receipts') ? 'Nhập kho' : location.pathname.startsWith('/admin/coupons') ? 'Quản lý ưu đãi' : location.pathname === '/register' ? 'Đăng ký' : location.pathname === '/login' ? 'Đăng nhập' : location.pathname === '/checkout' ? 'Đặt hàng' : /^\/orders\/\d+\/payments$/.test(location.pathname) ? 'Thanh toán đơn' : location.pathname.startsWith('/orders') ? 'Đơn hàng' : 'Giỏ hàng'} · Nếp Nhà`; }, [location.pathname, location.search]);
+  const isAdmin = session?.user?.roles?.includes('ADMIN');
   const isStaff = session?.user?.roles?.some(role => role === 'STAFF' || role === 'ADMIN');
   async function logout() {
     setBusy(true); setError(null);
@@ -73,9 +78,9 @@ export default function App() {
     catch (value) { setError(value); }
     finally { setBusy(false); }
   }
-  return <SessionContext.Provider value={{ api, session, setSession, isStaff }}>
+  return <SessionContext.Provider value={{ api, session, setSession, isStaff, isAdmin }}>
     <a className="skip-link" href="#main">Đến nội dung chính</a>
-    <StoreHeader session={session} isStaff={isStaff} busy={busy} onLogout={logout} />
+    <StoreHeader session={session} isStaff={isStaff} isAdmin={isAdmin} busy={busy} onLogout={logout} />
     <main id="main" className={location.pathname === '/' ? 'page-shell home-shell' : 'page-shell'} tabIndex="-1">
       <ErrorNotice error={error} onRetry={() => setRevision(value => value + 1)} />
       {!session ? !error && <Loading text="Đang kết nối cửa hàng…" /> : <Routes>
@@ -92,6 +97,7 @@ export default function App() {
         <Route path="/orders/:id/payments" element={<PrivatePage session={session}><PaymentPage key={`${session.user?.id ?? 'guest'}-${location.pathname}`} /></PrivatePage>} />
         <Route path="/notifications" element={<PrivatePage session={session}><NotificationsPage key={`${session.user?.id ?? 'guest'}-${location.pathname}`} /></PrivatePage>} />
         <Route path="/admin" element={<StaffPage isStaff={isStaff}><Navigate to="/admin/dashboard" replace /></StaffPage>} />
+        <Route path="/admin/users" element={<StaffPage isStaff={isStaff}><AdminPage isAdmin={isAdmin}><UserAdminPage key={session.user?.id ?? 'guest'} /></AdminPage></StaffPage>} />
         <Route path="/admin/operations" element={<StaffPage isStaff={isStaff}><OperationsPage key={`${session.user?.id ?? 'guest'}-${location.pathname}`} /></StaffPage>} />
         <Route path="/orders/:id/returns" element={<PrivatePage session={session}><AftercarePage key={`${session.user?.id ?? 'guest'}-${location.pathname}`} /></PrivatePage>} />
         <Route path="/admin/orders/:id/aftercare" element={<StaffPage isStaff={isStaff}><AftercarePage staff key={`${session.user?.id ?? 'guest'}-${location.pathname}`} /></StaffPage>} />

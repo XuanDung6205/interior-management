@@ -1,5 +1,6 @@
 export const guest = { authenticated: false, user: null };
 export const staff = { authenticated: true, user: { id: 7, username: 'staff', fullName: 'Minh An', roles: ['STAFF'] } };
+export const admin = { authenticated: true, user: { id: 8, username: 'admin', fullName: 'Quản trị viên', roles: ['ADMIN'] } };
 export const emptyCart = { id: null, itemCount: 0, subtotal: '0.00', currency: 'VND', items: [], warnings: [] };
 export const chair = { id: 12, productId: 3, sku: 'CHAIR-OAK', productName: 'Ghế gỗ sồi', variantName: 'Gỗ tự nhiên', price: '1250000.00', imageUrl: null, active: true, availableQuantity: 6 };
 export const cart = { id: 4, itemCount: 2, subtotal: '2500000.00', currency: 'VND', items: [{ id: 8, variantId: 12, productId: 3, sku: 'CHAIR-OAK', productName: 'Ghế gỗ sồi', variantName: 'Gỗ tự nhiên', imageUrl: null, quantity: 2, unitPrice: '1250000.00', lineTotal: '2500000.00', availableQuantity: 6, active: true, issues: [] }], warnings: [] };

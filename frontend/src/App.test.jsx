@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App';
-import { cart, chair, coupon, emptyCart, guest, page, staff } from './test/fixtures';
+import { admin, cart, chair, coupon, emptyCart, guest, page, staff } from './test/fixtures';
 
 afterEach(() => vi.unstubAllGlobals());
 function mount(path, handlers = {}, session = guest) {
@@ -31,6 +31,7 @@ function mount(path, handlers = {}, session = guest) {
     else if (url === '/api/wishlist' && method === 'GET') body = [];
     else if (url === '/api/tracking/events' && method === 'POST') { status = 202; body = null; }
     else if (url.startsWith('/api/admin/coupons?')) body = page([coupon]);
+    else if (url.startsWith('/api/admin/users?')) body = page([]);
     else throw new Error(`Unexpected HTTP ${method} ${url}`);
     return new Response(status === 204 ? null : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
   }));
@@ -104,6 +105,38 @@ it('preserves TV5 content and customer links in the redesigned header', async ()
   expect(admin.getByRole('link', { name: 'Thống kê', exact: true })).toHaveAttribute('href', '/admin/dashboard');
   expect(admin.getByRole('link', { name: 'Nội dung', exact: true })).toHaveAttribute('href', '/admin/content');
   expect(admin.getByRole('link', { name: 'Duyệt đánh giá', exact: true })).toHaveAttribute('href', '/admin/reviews');
+  expect(admin.queryByRole('link', { name: 'Quản lý tài khoản', exact: true })).not.toBeInTheDocument();
+});
+
+it('lets admins lock and unlock accounts from the admin navigation', async () => {
+  let customerStatus = 'ACTIVE';
+  const handlers = {
+    'GET /api/admin/users?query=&role=&status=&page=0&size=20': () => page([
+      { id: 8, username: 'admin', fullName: 'Quản trị viên', email: 'admin@example.invalid', phone: null, status: 'ACTIVE', roles: ['ADMIN'] },
+      { id: 9, username: 'demo.customer', fullName: 'Khách thử', email: 'customer@example.invalid', phone: '0900000000', status: customerStatus, roles: ['CUSTOMER'] },
+    ]),
+    'PATCH /api/admin/users/9/status': options => {
+      customerStatus = JSON.parse(options.body).status;
+      return { status: 200, body: { id: 9, username: 'demo.customer', fullName: 'Khách thử', email: 'customer@example.invalid', phone: '0900000000', status: customerStatus, roles: ['CUSTOMER'] } };
+    },
+  };
+  const { user, calls } = mount('/admin/users', handlers, admin);
+  expect(await screen.findByRole('heading', { name: /Quản lý tài khoản/ })).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Quản trị', exact: true }));
+  expect(within(document.getElementById('store-menu-admin')).getByRole('link', { name: 'Quản lý tài khoản', exact: true })).toHaveAttribute('href', '/admin/users');
+
+  const customerRow = await screen.findByRole('row', { name: /demo\.customer/ });
+  await user.click(within(customerRow).getByRole('button', { name: 'Khóa' }));
+  expect(screen.getByRole('alert')).toHaveTextContent('không thể đăng nhập');
+  await user.click(screen.getByRole('button', { name: 'Xác nhận' }));
+  expect(await screen.findByText('Đã khóa tài khoản demo.customer.')).toBeInTheDocument();
+  expect(calls.some(call => call.url === '/api/admin/users/9/status' && call.method === 'PATCH' && JSON.parse(call.body).status === 'LOCKED')).toBe(true);
+
+  const lockedRow = await screen.findByRole('row', { name: /demo\.customer/ });
+  await user.click(within(lockedRow).getByRole('button', { name: 'Mở khóa' }));
+  await user.click(screen.getByRole('button', { name: 'Xác nhận' }));
+  expect(await screen.findByText('Đã mở khóa tài khoản demo.customer.')).toBeInTheDocument();
+  expect(calls.filter(call => call.url === '/api/admin/users/9/status' && call.method === 'PATCH').map(call => JSON.parse(call.body).status)).toEqual(['LOCKED', 'ACTIVE']);
 });
 
 it('searches the catalog from the header and keeps the query in the catalog field', async () => {

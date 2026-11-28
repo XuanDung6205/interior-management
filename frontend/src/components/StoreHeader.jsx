@@ -26,7 +26,7 @@ const adminLinks = [
 const catalogHref = query => query ? `/sale?query=${encodeURIComponent(query)}` : '/sale';
 const roomHref = (room, category) => `/sale?${new URLSearchParams({ room, ...(category ? { category } : {}) })}`;
 
-export default function StoreHeader({ session, isStaff, busy, onLogout }) {
+export default function StoreHeader({ session, isStaff, isAdmin, busy, onLogout }) {
   const location = useLocation();
   const navigate = useNavigate();
   const headerRef = useRef(null);
@@ -71,7 +71,7 @@ export default function StoreHeader({ session, isStaff, busy, onLogout }) {
         <NavLink to="/articles">Bài viết</NavLink>
         {isStaff && <div className="store-nav-group store-admin-group">
           <button type="button" aria-expanded={openPanel === 'admin'} aria-controls="store-menu-admin" onClick={() => togglePanel('admin')}>Quản trị<Icon name="chevron" size={15} /></button>
-          {openPanel === 'admin' && <div className="store-nav-popover store-admin-popover" id="store-menu-admin"><span className="store-popover-label">KHÔNG GIAN QUẢN TRỊ</span>{adminLinks.map(([path, label]) => <NavLink key={path} to={path} end={path === '/admin'}>{label}<Icon name="arrow" size={16} /></NavLink>)}</div>}
+          {openPanel === 'admin' && <div className="store-nav-popover store-admin-popover" id="store-menu-admin"><span className="store-popover-label">KHÔNG GIAN QUẢN TRỊ</span>{[...adminLinks, ...(isAdmin ? [['/admin/users', 'Quản lý tài khoản']] : [])].map(([path, label]) => <NavLink key={path} to={path} end={path === '/admin'}>{label}<Icon name="arrow" size={16} /></NavLink>)}</div>}
         </div>}
       </nav>
       <div className="store-actions">
