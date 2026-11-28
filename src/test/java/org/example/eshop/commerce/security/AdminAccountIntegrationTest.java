@@ -106,6 +106,45 @@ class AdminAccountIntegrationTest {
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CANNOT_LOCK_SELF"));
     }
 
+    @Test
+    void onlyAdminCanSwitchStaffAndCustomerRolesAndChangesAreAudited() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 12);
+        String admin = createAccount("role-admin-" + suffix, "ADMIN");
+        String staff = createAccount("role-staff-" + suffix, "STAFF");
+        MockHttpSession adminSession = login(admin);
+        MockHttpSession staffSession = login(staff);
+        long adminId = id(admin);
+        long staffId = id(staff);
+
+        mvc.perform(patch("/api/admin/users/" + staffId + "/role").session(staffSession).with(csrf())
+                        .contentType("application/json").content("{\"roleCode\":\"CUSTOMER\"}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(patch("/api/admin/users/" + staffId + "/role").session(adminSession).with(csrf())
+                        .contentType("application/json").content("{\"roleCode\":\"CUSTOMER\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.roles[0]").value("CUSTOMER"));
+        assertEquals("CUSTOMER", jdbc.queryForObject("""
+                SELECT r.code FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=?
+                """, String.class, staffId));
+
+        mvc.perform(patch("/api/admin/users/" + staffId + "/role").session(adminSession).with(csrf())
+                        .contentType("application/json").content("{\"roleCode\":\"STAFF\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.roles[0]").value("STAFF"));
+        assertEquals(2, jdbc.queryForObject("""
+                SELECT COUNT(*) FROM audit_logs
+                WHERE entity_type='USER' AND entity_id=? AND action='USER_ROLE_CHANGED'
+                """, Integer.class, Long.toString(staffId)));
+
+        mvc.perform(patch("/api/admin/users/" + staffId + "/role").session(adminSession).with(csrf())
+                        .contentType("application/json").content("{\"roleCode\":\"ADMIN\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_ROLE"));
+        mvc.perform(patch("/api/admin/users/" + adminId + "/role").session(adminSession).with(csrf())
+                        .contentType("application/json").content("{\"roleCode\":\"CUSTOMER\"}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("ADMIN_ROLE_IMMUTABLE"));
+        assertEquals("ADMIN", jdbc.queryForObject("""
+                SELECT r.code FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=?
+                """, String.class, adminId));
+    }
+
     private String createAccount(String username, String role) {
         jdbc.update("INSERT INTO users(username,email,password_hash,full_name,status) VALUES(?,?,?,?, 'ACTIVE')",
                 username, username + "@example.invalid", passwords.encode(PASSWORD), username);

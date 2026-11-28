@@ -37,6 +37,7 @@ class CommerceSecurityTest {
         @GetMapping("/api/admin/coupons") Object admin() { return java.util.Map.of("ok",true); }
         @GetMapping("/api/admin/users") Object accountAdmin() { return java.util.Map.of("ok",true); }
         @PatchMapping("/api/admin/users/77/status") Object accountStatus() { return java.util.Map.of("ok",true); }
+        @PatchMapping("/api/admin/users/77/role") Object accountRole() { return java.util.Map.of("ok",true); }
         @GetMapping("/api/admin/future") Object futureAdmin() { return java.util.Map.of("ok",true); }
         @GetMapping("/api/catalog/public-probe") Object publicCatalog() { return java.util.Map.of("ok",true); }
         @GetMapping("/api/commerce/content/public-probe") Object publicContent() { return java.util.Map.of("ok",true); }
@@ -113,6 +114,10 @@ class CommerceSecurityTest {
                         .header(staffCsrf.header(), staffCsrf.value())
                         .contentType("application/json").content("{\"status\":\"LOCKED\"}"))
                 .andExpect(status().isForbidden());
+        mvc.perform(patch("/api/admin/users/77/role").session(staffCsrf.session())
+                        .header(staffCsrf.header(), staffCsrf.value())
+                        .contentType("application/json").content("{\"roleCode\":\"CUSTOMER\"}"))
+                .andExpect(status().isForbidden());
 
         var admin = new CommerceUserAccount(78L, "admin", "Admin", new BCryptPasswordEncoder().encode("admin-password"),
                 "ACTIVE", Set.of("ADMIN"));
@@ -129,6 +134,10 @@ class CommerceSecurityTest {
         mvc.perform(patch("/api/admin/users/77/status").session(adminCsrf.session())
                         .header(adminCsrf.header(), adminCsrf.value())
                         .contentType("application/json").content("{\"status\":\"LOCKED\"}"))
+                .andExpect(status().isOk());
+        mvc.perform(patch("/api/admin/users/77/role").session(adminCsrf.session())
+                        .header(adminCsrf.header(), adminCsrf.value())
+                        .contentType("application/json").content("{\"roleCode\":\"CUSTOMER\"}"))
                 .andExpect(status().isOk());
     }
     @Test void loginReturnsSafeSessionAndRolesAndStatusAreRevalidated() throws Exception {

@@ -21,6 +21,7 @@ public class AdminAccountController {
     }
 
     public record StatusRequest(String status) {}
+    public record RoleRequest(String roleCode) {}
 
     @GetMapping
     public AdminAccountService.AccountPage list(
@@ -38,5 +39,13 @@ public class AdminAccountController {
         Long actorId = currentActor.currentActor().userId();
         if (actorId == null) throw new IllegalStateException("Authenticated administrator id is unavailable.");
         return accounts.changeStatus(id, request == null ? null : request.status(), actorId);
+    }
+
+    @PatchMapping("/{id}/role")
+    public AdminAccountService.Account changeRole(@PathVariable long id,
+                                                   @RequestBody RoleRequest request) {
+        Long actorId = currentActor.currentActor().userId();
+        if (actorId == null) throw new IllegalStateException("Authenticated administrator id is unavailable.");
+        return accounts.changeRole(id, request == null ? null : request.roleCode(), actorId);
     }
 }

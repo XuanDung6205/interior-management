@@ -10,15 +10,18 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminAccountService {
+    private static final Set<String> SWITCHABLE_ROLES = Set.of("STAFF", "CUSTOMER");
     private static final String USER_SELECT = """
             SELECT u.id,u.username,u.full_name,u.email,u.phone,u.status,
                    GROUP_CONCAT(DISTINCT r.code ORDER BY r.code SEPARATOR ',') AS roles
@@ -146,6 +149,80 @@ public class AdminAccountService {
                                 "username", target.username(), "status", target.status())))
                         .addValue("afterData", mapper.writeValueAsString(Map.of(
                                 "username", target.username(), "status", desiredStatus)))
+                        .addValue("requestId", UUID.randomUUID().toString())
+                        .addValue("createdAt", now));
+        return find(targetId);
+    }
+
+    @Transactional
+    public Account changeRole(long targetId, String desiredRole, long actorId) {
+        String roleCode = desiredRole == null ? "" : desiredRole.trim().toUpperCase(Locale.ROOT);
+        if (!SWITCHABLE_ROLES.contains(roleCode)) {
+            throw CommerceException.badRequest("INVALID_ROLE", "Chỉ có thể chuyển vai trò STAFF hoặc CUSTOMER.");
+        }
+
+        List<LockedAccount> accounts = jdbc.query(
+                "SELECT id,username,full_name,status FROM users WHERE id=:id FOR UPDATE",
+                Map.of("id", targetId),
+                (rs, row) -> new LockedAccount(rs.getLong("id"), rs.getString("username"),
+                        rs.getString("full_name"), rs.getString("status")));
+        if (accounts.isEmpty()) throw CommerceException.notFound("Không tìm thấy tài khoản.");
+        LockedAccount target = accounts.get(0);
+
+        List<String> currentRoles = jdbc.queryForList("""
+                        SELECT r.code FROM user_roles ur JOIN roles r ON r.id=ur.role_id
+                        WHERE ur.user_id=:id ORDER BY r.code
+                        """, Map.of("id", targetId), String.class);
+        if (currentRoles.contains("ADMIN")) {
+            throw CommerceException.conflict("ADMIN_ROLE_IMMUTABLE",
+                    "Không thể đổi vai trò của tài khoản ADMIN bằng chức năng này.");
+        }
+        if (currentRoles.stream().noneMatch(SWITCHABLE_ROLES::contains)) {
+            throw CommerceException.conflict("ACCOUNT_ROLE_UNSUPPORTED",
+                    "Chỉ có thể chuyển tài khoản STAFF hoặc CUSTOMER.");
+        }
+        long switchableRoleCount = currentRoles.stream()
+                .filter(SWITCHABLE_ROLES::contains)
+                .count();
+        if (currentRoles.contains(roleCode) && switchableRoleCount == 1) return find(targetId);
+
+        Long roleId = jdbc.query("SELECT id FROM roles WHERE code=:code",
+                        Map.of("code", roleCode), (rs, row) -> rs.getLong("id"))
+                .stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException(roleCode + " role is unavailable."));
+        jdbc.update("""
+                DELETE FROM user_roles
+                WHERE user_id=:id AND role_id IN (
+                    SELECT id FROM roles WHERE code IN ('STAFF','CUSTOMER')
+                )
+                """, Map.of("id", targetId));
+        jdbc.update("INSERT INTO user_roles(user_id,role_id) VALUES(:userId,:roleId)",
+                Map.of("userId", targetId, "roleId", roleId));
+
+        List<String> updatedRoles = currentRoles.stream()
+                .filter(role -> !SWITCHABLE_ROLES.contains(role))
+                .collect(Collectors.toCollection(ArrayList::new));
+        updatedRoles.add(roleCode);
+        updatedRoles.sort(String::compareTo);
+
+        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
+        String actorName = jdbc.queryForObject(
+                "SELECT COALESCE(full_name,username) FROM users WHERE id=:id",
+                Map.of("id", actorId), String.class);
+        jdbc.update("""
+                        INSERT INTO audit_logs(actor_user_id,actor_name_snapshot,action,entity_type,entity_id,
+                                               before_data,after_data,request_id,created_at)
+                        VALUES(:actorId,:actorName,'USER_ROLE_CHANGED','USER',:entityId,
+                               :beforeData,:afterData,:requestId,:createdAt)
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("actorId", actorId)
+                        .addValue("actorName", actorName)
+                        .addValue("entityId", Long.toString(targetId))
+                        .addValue("beforeData", mapper.writeValueAsString(Map.of(
+                                "username", target.username(), "roles", currentRoles)))
+                        .addValue("afterData", mapper.writeValueAsString(Map.of(
+                                "username", target.username(), "roles", updatedRoles)))
                         .addValue("requestId", UUID.randomUUID().toString())
                         .addValue("createdAt", now));
         return find(targetId);

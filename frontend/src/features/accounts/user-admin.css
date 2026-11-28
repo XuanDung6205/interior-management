@@ -10,6 +10,8 @@
 .user-admin-table td small { margin-top: 3px; color: var(--muted); font-size: 10px; }
 .user-admin-roles { display: flex; flex-wrap: wrap; gap: 5px; }
 .user-admin-roles span { padding: 3px 7px; color: var(--teal); background: #eaf0e9; border-radius: 20px; font-size: 9px; }
+.user-admin-actions { display: grid; justify-items: start; gap: 2px; }
+.user-admin-actions .text-button { min-height: 36px; }
 .user-admin-confirm { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 18px; }
 .user-admin-confirm>div { margin-right: auto; }
 .user-admin-confirm p { font-size: 11px; }

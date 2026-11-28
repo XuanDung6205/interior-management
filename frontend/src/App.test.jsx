@@ -135,14 +135,19 @@ it('redirects an admin away from customer storefront routes', async () => {
 
 it('lets admins lock and unlock accounts from the admin navigation', async () => {
   let customerStatus = 'ACTIVE';
+  let customerRole = 'CUSTOMER';
   const handlers = {
     'GET /api/admin/users?query=&role=&status=&page=0&size=20': () => page([
       { id: 8, username: 'admin', fullName: 'Quản trị viên', email: 'admin@example.invalid', phone: null, status: 'ACTIVE', roles: ['ADMIN'] },
-      { id: 9, username: 'demo.customer', fullName: 'Khách thử', email: 'customer@example.invalid', phone: '0900000000', status: customerStatus, roles: ['CUSTOMER'] },
+      { id: 9, username: 'demo.customer', fullName: 'Khách thử', email: 'customer@example.invalid', phone: '0900000000', status: customerStatus, roles: [customerRole] },
     ]),
     'PATCH /api/admin/users/9/status': options => {
       customerStatus = JSON.parse(options.body).status;
-      return { status: 200, body: { id: 9, username: 'demo.customer', fullName: 'Khách thử', email: 'customer@example.invalid', phone: '0900000000', status: customerStatus, roles: ['CUSTOMER'] } };
+      return { status: 200, body: { id: 9, username: 'demo.customer', fullName: 'Khách thử', email: 'customer@example.invalid', phone: '0900000000', status: customerStatus, roles: [customerRole] } };
+    },
+    'PATCH /api/admin/users/9/role': options => {
+      customerRole = JSON.parse(options.body).roleCode;
+      return { status: 200, body: { id: 9, username: 'demo.customer', fullName: 'Khách thử', email: 'customer@example.invalid', phone: '0900000000', status: customerStatus, roles: [customerRole] } };
     },
   };
   const { user, calls } = mount('/admin/users', handlers, admin);
@@ -150,7 +155,19 @@ it('lets admins lock and unlock accounts from the admin navigation', async () =>
   await user.click(screen.getByRole('button', { name: 'Quản trị', exact: true }));
   expect(within(document.getElementById('store-menu-admin')).getByRole('link', { name: 'Quản lý tài khoản', exact: true })).toHaveAttribute('href', '/admin/users');
 
-  const customerRow = await screen.findByRole('row', { name: /demo\.customer/ });
+  let customerRow = await screen.findByRole('row', { name: /demo\.customer/ });
+  expect(within(customerRow).queryByRole('button', { name: 'Chuyển thành STAFF' })).toBeInTheDocument();
+  await user.click(within(customerRow).getByRole('button', { name: 'Chuyển thành STAFF' }));
+  await user.click(screen.getByRole('button', { name: 'Xác nhận đổi vai trò' }));
+  expect(await screen.findByText('Đã chuyển tài khoản demo.customer thành STAFF.')).toBeInTheDocument();
+  customerRow = await screen.findByRole('row', { name: /demo\.customer/ });
+  await user.click(within(customerRow).getByRole('button', { name: 'Chuyển thành CUSTOMER' }));
+  await user.click(screen.getByRole('button', { name: 'Xác nhận đổi vai trò' }));
+  expect(await screen.findByText('Đã chuyển tài khoản demo.customer thành CUSTOMER.')).toBeInTheDocument();
+  expect(calls.filter(call => call.url === '/api/admin/users/9/role' && call.method === 'PATCH')
+    .map(call => JSON.parse(call.body).roleCode)).toEqual(['STAFF', 'CUSTOMER']);
+
+  customerRow = await screen.findByRole('row', { name: /demo\.customer/ });
   await user.click(within(customerRow).getByRole('button', { name: 'Khóa' }));
   expect(screen.getByRole('alert')).toHaveTextContent('không thể đăng nhập');
   await user.click(screen.getByRole('button', { name: 'Xác nhận' }));

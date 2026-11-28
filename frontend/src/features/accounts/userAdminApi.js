@@ -7,4 +7,8 @@ export const userAdminApi = api => ({
     method: 'PATCH',
     body: { status },
   }),
+  setRole: (id, roleCode) => api.request(`/admin/users/${id}/role`, {
+    method: 'PATCH',
+    body: { roleCode },
+  }),
 });

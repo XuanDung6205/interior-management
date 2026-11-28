@@ -73,7 +73,7 @@ COD mới có hạn xác nhận24giờ. SePay mới có hạn thanh toán30phút
 Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy lần lượt `docs/database/V002__orders_request_fingerprint.sql`, `V003__shipments_idempotency.sql`, `V004__shipment_audit_index.sql`, `V005__orders_assembly_requested.sql`, `V006__payments_confirmation_note.sql`, `V007__refunds_verification_notes.sql`, sau đó V008–V012 theo [migration README](database/README.md). V003/V004 hỗ trợ xuất kho/vận đơn TV4; V005 backfill đơn cũ đã thu phí lắp thành có chọn dịch vụ và lưu lựa chọn mới kể cả phí0; V006/V007 bổ sung ghi chú đối soát riêng cho nhân viên. Không xóa lịch sử và không chạy lại V001 trên database đã tồn tại.
 
 ## Quản lý tài khoản
-Quản lý tài khoản nằm tại `/admin/users` và chỉ ADMIN được mở từ menu Quản trị. ADMIN có thể tìm/lọc theo tên, vai trò và trạng thái, khóa hoặc mở khóa tài khoản. Không thể tự khóa tài khoản đang đăng nhập; thay đổi trạng thái được ghi vào `audit_logs`. Khi tài khoản bị khóa, phiên hiện có bị từ chối ở request tiếp theo.
+Quản lý tài khoản nằm tại `/admin/users` và chỉ ADMIN được mở từ menu Quản trị. ADMIN có thể tìm/lọc theo tên, vai trò và trạng thái, khóa hoặc mở khóa tài khoản, và chuyển vai trò STAFF ↔ CUSTOMER. Không thể đổi vai trò tài khoản ADMIN hoặc gán ADMIN qua màn hình này. Đổi trạng thái/vai trò được ghi vào `audit_logs`; không thể tự khóa tài khoản đang đăng nhập. Khi tài khoản bị khóa, phiên hiện có bị từ chối ở request tiếp theo.
 
 Khách đã đăng nhập mở `/account` để sửa họ tên/email/số điện thoại và quản lý sổ địa chỉ: thêm, sửa, đặt mặc định hoặc xóa (có bước xác nhận). API hồ sơ dùng `/api/account/profile`; CRUD và đặt mặc định dùng `/api/account/addresses`. Server tự giới hạn dữ liệu theo tài khoản đang đăng nhập.
 

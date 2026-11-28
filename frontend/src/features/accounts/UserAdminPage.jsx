@@ -20,6 +20,7 @@ export default function UserAdminPage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [confirming, setConfirming] = useState(null);
+  const [roleConfirming, setRoleConfirming] = useState(null);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState('');
 
@@ -56,13 +57,30 @@ export default function UserAdminPage() {
     }
   }
 
+  async function changeRole(account) {
+    const roleCode = account.roles.includes('STAFF') ? 'CUSTOMER' : 'STAFF';
+    setBusyId(account.id);
+    setError(null);
+    setNotice('');
+    try {
+      await client.setRole(account.id, roleCode);
+      setNotice(`Đã chuyển tài khoản ${account.username} thành ${ROLE_LABELS[roleCode]}.`);
+      setRoleConfirming(null);
+      setRevision(value => value + 1);
+    } catch (value) {
+      setError(value);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return <>
     <div className="breadcrumb"><span>Quản trị</span><span>/</span><span>Tài khoản</span></div>
     <div className="page-heading">
       <div>
         <span className="eyebrow">CHỈ DÀNH CHO ADMIN</span>
         <h1>Quản lý tài khoản<span className="heading-dot">.</span></h1>
-        <p>Tìm tài khoản và kiểm soát quyền đăng nhập của khách hàng, nhân viên.</p>
+        <p>Khóa/mở tài khoản và chuyển vai trò STAFF ↔ CUSTOMER. Không thể thay đổi vai trò ADMIN.</p>
       </div>
     </div>
     <ErrorNotice error={error} onRetry={() => setRevision(value => value + 1)} />
@@ -106,15 +124,22 @@ export default function UserAdminPage() {
                 <td>{account.email}<small>{account.phone || 'Chưa có số điện thoại'}</small></td>
                 <td><div className="user-admin-roles">{account.roles.map(value => <span key={value}>{ROLE_LABELS[value] || value}</span>)}</div></td>
                 <td><span className={`status-pill ${account.status === 'ACTIVE' ? 'active' : 'inactive'}`}><span />{STATUS_LABELS[account.status] || account.status}</span></td>
-                <td>{isSelf
-                  ? <span className="muted small">Tài khoản của bạn</span>
-                  : account.status === 'ACTIVE' || account.status === 'LOCKED'
-                    ? <button className={`text-button ${lock ? 'destructive' : ''}`} disabled={busyId !== null}
-                        onClick={() => setConfirming(account)}>
-                        {lock ? 'Khóa' : 'Mở khóa'}
-                      </button>
-                    : <span className="muted small">Không thể đổi trạng thái</span>}
-              </td>
+                <td><div className="user-admin-actions">
+                  {isSelf
+                    ? <span className="muted small">Tài khoản của bạn</span>
+                    : account.status === 'ACTIVE' || account.status === 'LOCKED'
+                      ? <button className={`text-button ${lock ? 'destructive' : ''}`} disabled={busyId !== null}
+                          onClick={() => { setRoleConfirming(null); setConfirming(account); }}>
+                          {lock ? 'Khóa' : 'Mở khóa'}
+                        </button>
+                      : <span className="muted small">Không thể đổi trạng thái</span>}
+                  {!account.roles.includes('ADMIN')
+                    && account.roles.some(value => value === 'STAFF' || value === 'CUSTOMER')
+                    && <button className="text-button" disabled={busyId !== null}
+                      onClick={() => { setConfirming(null); setRoleConfirming(account); }}>
+                      Chuyển thành {account.roles.includes('STAFF') ? 'CUSTOMER' : 'STAFF'}
+                    </button>}
+                </div></td>
             </tr>;
             })}</tbody>
           </table>
@@ -131,6 +156,14 @@ export default function UserAdminPage() {
       <button className="button secondary" disabled={busyId !== null} onClick={() => setConfirming(null)}>Hủy</button>
       <button className={`button ${confirming.status === 'ACTIVE' ? 'danger' : ''}`} disabled={busyId !== null}
         onClick={() => changeStatus(confirming)}>{busyId === confirming.id ? 'Đang cập nhật…' : 'Xác nhận'}</button>
+    </div>}
+    {roleConfirming && <div className="notice warning user-admin-confirm" role="alert">
+      <div><strong>Chuyển vai trò tài khoản {roleConfirming.username}?</strong>
+        <p>{roleConfirming.roles.includes('STAFF') ? 'STAFF' : 'CUSTOMER'} sẽ được chuyển thành {roleConfirming.roles.includes('STAFF') ? 'CUSTOMER' : 'STAFF'}. Thay đổi được ghi vào nhật ký thao tác.</p>
+      </div>
+      <button className="button secondary" disabled={busyId !== null} onClick={() => setRoleConfirming(null)}>Hủy</button>
+      <button className="button" disabled={busyId !== null}
+        onClick={() => changeRole(roleConfirming)}>{busyId === roleConfirming.id ? 'Đang cập nhật…' : 'Xác nhận đổi vai trò'}</button>
     </div>}
   </>;
 }
