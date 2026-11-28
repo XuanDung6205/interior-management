@@ -75,6 +75,8 @@ Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy
 ## Quản lý tài khoản
 Quản lý tài khoản nằm tại `/admin/users` và chỉ ADMIN được mở từ menu Quản trị. ADMIN có thể tìm/lọc theo tên, vai trò và trạng thái, khóa hoặc mở khóa tài khoản. Không thể tự khóa tài khoản đang đăng nhập; thay đổi trạng thái được ghi vào `audit_logs`. Khi tài khoản bị khóa, phiên hiện có bị từ chối ở request tiếp theo.
 
+Khách đã đăng nhập mở `/account` để sửa họ tên/email/số điện thoại và quản lý sổ địa chỉ: thêm, sửa, đặt mặc định hoặc xóa (có bước xác nhận). API hồ sơ dùng `/api/account/profile`; CRUD và đặt mặc định dùng `/api/account/addresses`. Server tự giới hạn dữ liệu theo tài khoản đang đăng nhập.
+
 ## Quản trị đơn hàng TV3-07
 Đăng nhập tài khoản STAFF/ADMIN rồi mở `/admin/orders`. Tìm mã đơn, tên/email tài khoản hoặc tên/số điện thoại người nhận; lọc trạng thái và phân trang. Màn hình chi tiết hiển thị thanh toán, vận chuyển, lắp đặt, hoàn tiền và lịch sử riêng nhau.
 
@@ -104,7 +106,7 @@ Integration API/MariaDB thật (database riêng, test sẽ xóa fixture bên tro
 ```powershell
 python scripts/tv3_database.py create --database furniture_shop_test_tv3_policy_local
 $env:TV3_TEST_DB_URL = 'jdbc:mariadb://localhost:3306/furniture_shop_test_tv3_policy_local'
-.\mvnw.cmd '-Dtest=CommerceDatabaseTest,CheckoutTransactionTest,CheckoutAdaptersTest,InventoryReservationTest,OrderLifecycleTest,OrderCompletionPolicyTest,PaymentConfirmationTest,ManualRefundTest,OrderDispatchTest,AdminAccountIntegrationTest' test
+.\mvnw.cmd '-Dtest=CommerceDatabaseTest,CheckoutTransactionTest,CheckoutAdaptersTest,InventoryReservationTest,OrderLifecycleTest,OrderCompletionPolicyTest,PaymentConfirmationTest,ManualRefundTest,OrderDispatchTest,AdminAccountIntegrationTest,RegistrationIntegrationTest' test
 Remove-Item Env:TV3_TEST_DB_URL
 ```
 

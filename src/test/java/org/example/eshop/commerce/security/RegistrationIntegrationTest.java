@@ -22,6 +22,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -72,9 +74,22 @@ class RegistrationIntegrationTest {
         assertTrue(hash.startsWith("{bcrypt}"));
         List<String> roles = jdbc.queryForList("SELECT r.code FROM user_roles ur JOIN roles r ON r.id=ur.role_id JOIN users u ON u.id=ur.user_id WHERE u.username=?", String.class, username);
         assertEquals(List.of("CUSTOMER"), roles);
-        mvc.perform(post("/api/session/login").with(csrf()).param("username", username).param("password", "secret-pass-123"))
+        var login = mvc.perform(post("/api/session/login").with(csrf())
+                        .param("username", username).param("password", "secret-pass-123"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.authenticated").value(true))
-                .andExpect(jsonPath("$.user.roles[0]").value("CUSTOMER"));
+                .andExpect(jsonPath("$.user.roles[0]").value("CUSTOMER")).andReturn();
+        var session = (org.springframework.mock.web.MockHttpSession) login.getRequest().getSession();
+        mvc.perform(get("/api/account/profile").session(session))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.fullName").value("Nguyễn An"));
+        String updatedEmail = ("updated-" + email).toUpperCase();
+        mvc.perform(put("/api/account/profile").session(session).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"fullName\":\"Nguyễn Bình\",\"email\":\"" + updatedEmail + "\",\"phone\":\"+84901234567\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.fullName").value("Nguyễn Bình"))
+                .andExpect(jsonPath("$.email").value(updatedEmail.toLowerCase()))
+                .andExpect(jsonPath("$.phone").value("+84901234567"));
+        assertEquals(updatedEmail.toLowerCase(), jdbc.queryForObject("SELECT email FROM users WHERE username=?", String.class, username));
     }
 
     @Test void rejectsInvalidAndDuplicateAccountsWithFieldErrors() throws Exception {

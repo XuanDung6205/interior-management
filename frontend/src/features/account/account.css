@@ -4,12 +4,35 @@
 .account-profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 22px; }
 .account-profile-grid>div { display: flex; flex-direction: column; gap: 5px; overflow-wrap: anywhere; }
 .account-profile-grid .eyebrow { margin-bottom: 0; }
+.account-form { display: grid; gap: 24px; }
+.account-form .button { justify-self: start; }
+.account-readonly { display: grid !important; grid-template-columns: 1fr; align-content: start; gap: 5px !important; }
+.account-readonly .eyebrow:not(:first-child) { margin-top: 15px; }
 .account-address-list { display: grid; gap: 16px; }
 .account-address { border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
 .account-address-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .account-address p { font-size: 12px; margin-top: 9px; }
+.account-addresses-heading { flex-wrap: wrap; }
+.account-addresses-heading .button { min-height: 40px; padding: 8px 14px; }
+.account-address-editor { padding: 22px; margin-bottom: 20px; border: 1px solid var(--line); border-radius: 8px; background: #fcfbf7; }
+.account-address-editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.account-address-editor-heading .eyebrow { margin-bottom: 7px; }
+.account-address-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+.account-address-form-grid .form-field { display: grid; gap: 6px; }
+.account-address-form-grid .form-field:first-child,
+.account-address-form-grid .form-field:nth-child(4),
+.account-address-form-grid .form-field:nth-child(5) { grid-column: 1 / -1; }
+.account-address-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.account-address-actions .text-button { min-height: 36px; }
+.account-address-confirm { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+.account-address-confirm>span { margin-right: auto; font-size: 11px; }
+.account-address-confirm .button { min-height: 38px; padding: 8px 12px; }
 
 @media (max-width: 600px) {
   .account-panel-body { padding: 20px; }
   .account-address { padding: 17px; }
+  .account-address-editor { padding: 17px; }
+  .account-address-form-grid { grid-template-columns: 1fr; }
+  .account-address-form-grid .form-field { grid-column: 1 / -1; }
+  .account-address-confirm { align-items: stretch; flex-direction: column; }
 }

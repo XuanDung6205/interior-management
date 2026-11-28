@@ -572,6 +572,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RuntimeInfo'
+  /api/account/profile:
+    get:
+      operationId: getAccountProfile
+      summary: Read the signed-in account profile
+      tags:
+      - Account
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Profile of the signed-in account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountProfile'
+        '401': *id002
+        '403': *id003
+        '404': *id004
+    put:
+      operationId: updateAccountProfile
+      summary: Update editable fields of the signed-in account profile
+      description: The account ID is derived from the session, never from the request. Email must be unique.
+      tags:
+      - Account
+      security:
+      - cookieSession: []
+      parameters:
+      - *id006
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountProfileRequest'
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountProfile'
+        '400': *id001
+        '401': *id002
+        '403': *id003
+        '404': *id004
+        '409': *id005
   /api/account/addresses:
     get:
       operationId: listAccountAddresses
@@ -4397,6 +4443,52 @@ components:
       - addressLine1
       - countryCode
       - isDefault
+    AccountProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+          maxLength: 50
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+          nullable: true
+      required:
+      - id
+      - username
+      - fullName
+      - email
+      - phone
+    AccountProfileRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+          pattern: '^[+0-9 .()\-]*$'
+          nullable: true
+      required:
+      - fullName
+      - email
     AddressBookList:
       type: array
       items:
