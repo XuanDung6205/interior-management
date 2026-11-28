@@ -3,7 +3,7 @@ name: TV3 commerce CI
 on:
   pull_request:
   push:
-    branches: [main, 'feat/**']
+    branches: [main, Nhon, 'feat/**']
   workflow_dispatch:
 
 permissions:
@@ -42,6 +42,7 @@ jobs:
       TV3_DEMO_PASSWORD: demo-${{ github.run_id }}-${{ github.run_attempt }}-disposable
       TV3_TEST_DB_URL: jdbc:mariadb://127.0.0.1:3306/furniture_shop_test_tv3_policy_ci
       COMMERCE_JOBS_ENABLED: 'false'
+      CATALOG_CACHE_ENABLED: 'false'
       VECTOR_ENABLED: 'false'
       PAYMENT_BANK_MODE: DEMO
       SEPAY_ENABLED: 'true'

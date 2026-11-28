@@ -1,6 +1,6 @@
 # Database nội thất — furniture_shop
 
-Schema bootstrap có 33 bảng nghiệp vụ chính và 12 bảng mở rộng, tổng cộng **45 bảng**. Runtime hiện tại có **49 bảng**: V008 thêm hai bảng thông báo, V013 thêm hai bảng vector/outbox; V014 chỉ thêm cột/index/FK. Registry dùng chung ở `scripts/tv3_schema.py` quy định thứ tự V001–V014 và tập tên bảng chính xác cho create/migrate, CI, release và recovery. Database được sử dụng là `furniture_shop`; database `eshop` cũ và các script khởi tạo/seed cũ đã được dọn theo yêu cầu.
+Schema bootstrap có 33 bảng nghiệp vụ chính và 12 bảng mở rộng, tổng cộng **45 bảng**. Runtime hiện tại có **49 bảng**: V008 thêm hai bảng thông báo, V013 thêm hai bảng vector/outbox; V014 chỉ thêm cột/index/FK. Registry dùng chung ở `scripts/tv3_schema.py` quy định thứ tự V001–V015 và tập tên bảng chính xác cho create/migrate, CI, release và recovery. Database được sử dụng là `furniture_shop`; database `eshop` cũ và các script khởi tạo/seed cũ đã được dọn theo yêu cầu.
 
 ## Kết nối bằng HeidiSQL
 
@@ -20,13 +20,14 @@ Mật khẩu không được ghi trong repository, SQL hay tài liệu này. Kh�
 - `V009__commerce_read_indexes.sql`: ba index phục vụ danh sách đơn/khoản thu đã đo bằng EXPLAIN; không đổi số bảng.
 - V010/V011/V012: snapshot thanh toán SePay, đối soát/lease/retry và ý định hoàn; không thêm bảng hay lưu khóa provider.
 - `V013__tv5_vector_and_reindex_outbox.sql`: thêm `vector_store` (`VECTOR(768)`, cosine index) và `commerce_vector_reindex_outbox`; tổng49bảng. V001/V013 đã áp dụng được giữ nguyên.
-- `V014__commerce_vector_runtime.sql`: metadata catalog/fingerprint/model, FK cascade cho catalog vector và lease/retry cho outbox; không thêm bảng. Runtime cần đủ **V001–V014**, theo đúng registry.
+- `V014__commerce_vector_runtime.sql`: metadata catalog/fingerprint/model, FK cascade cho catalog vector và lease/retry cho outbox; không thêm bảng. Runtime cần đủ **V001–V015**, theo đúng registry.
+- `V015__catalog_management.sql`: thêm version chống mất cập nhật sản phẩm và các index truy vấn catalog; không thêm bảng, giữ nguyên ID sản phẩm/SKU và dữ liệu đơn/kho.
 - `verify_schema.py`: kiểm tra tích hợp bằng MariaDB CLI, chỉ chấp nhận tên `furniture_shop` hoặc `furniture_shop_test_*`.
 - `verification-fixture.sql`: dữ liệu kiểm thử bên trong transaction; script kiểm tra sẽ rollback, không phải dữ liệu mẫu để import.
 
 ## MariaDB và Redis cục bộ
 
-`docker-compose.yml` cung cấp MariaDB 12.2 và Redis 7 cho môi trường phát triển. Compose khởi tạo database mặc định `furniture_shop`, lưu dữ liệu MariaDB trong named volume và chỉ publish hai cổng trên loopback. Đặt `DB_PASSWORD` trong environment hoặc file `.env` cục bộ trước khi chạy `docker compose up -d mariadb redis`; không commit file `.env`. Compose chỉ khởi động service, **không** chạy migration hay seed dữ liệu.
+`docker-compose.yml` cung cấp MariaDB 12.2 và Redis 7 cho môi trường phát triển. Service `migrate` của Compose tạo database demo mặc định `furniture_shop_tv3_dev`; schema chuẩn vẫn tên `furniture_shop`. MariaDB lưu dữ liệu trong named volume; các cổng chỉ publish trên loopback. Đặt `DB_PASSWORD` trong environment hoặc file `.env` cục bộ trước khi chạy `docker compose up -d mariadb redis`; không commit file `.env`. Compose hiện có service `migrate`, `app` và profile `demo`/`test`; xem [hướng dẫn TV2](../TV2_CATALOG_HANDOFF.md) để chạy toàn bộ trong Docker. Migration cộng thêm được chạy trước app; seed là bước chủ động riêng trên DB demo cô lập.
 
 Commerce đọc Redis host/port từ `REDIS_HOST`/`REDIS_PORT` (mặc định `localhost:6379`, timeout `REDIS_TIMEOUT=1500ms`). `CommerceRedisCacheConfiguration` bật Spring Cache với `RedisCacheManager` và TTL mặc định 10 phút. `Tv5Cache` ưu tiên lưu JSON vào Redis (có invalidation theo generation key `tv5:gen:*`) và tự động chuyển sang bộ đệm RAM cục bộ trong 30 giây nếu Redis tạm ngừng kết nối.
 
@@ -36,7 +37,7 @@ Kiểm tra bằng PowerShell sau khi đặt `MYSQL_PWD` trong environment tạm 
 
 ```powershell
 python docs/database/verify_schema.py --database furniture_shop
-# Sau toàn bộ V001–V014, kiểm tra đúng49bảng:
+# Sau toàn bộ V001–V015, kiểm tra đúng49bảng:
 python docs/database/verify_schema.py --database furniture_shop --operations
 # Snapshot lịch sử V008–V012 dùng riêng --historical (đúng47bảng).
 ```
@@ -135,7 +136,7 @@ V001 là bootstrap ban đầu, chưa cấu hình Flyway/Liquibase trong project.
 
 ### V010 — SePay
 
-`V010__sepay_payment_snapshots.sql` thêm 5 cột snapshot nullable và unique index cho mã DH trong `payments`, giữ nguyên 47 bảng tại thời điểm V010 và các khoản COD/chuyển khoản cũ. Không lưu token/secret. Script TV3 create/migrate hiện áp dụng registry V001–V014 cho DB demo/test. Sao lưu DB đang dùng trước khi áp dụng migration.
+`V010__sepay_payment_snapshots.sql` thêm 5 cột snapshot nullable và unique index cho mã DH trong `payments`, giữ nguyên 47 bảng tại thời điểm V010 và các khoản COD/chuyển khoản cũ. Không lưu token/secret. Script TV3 create/migrate hiện áp dụng registry V001–V015 cho DB demo/test. Sao lưu DB đang dùng trước khi áp dụng migration.
 
 ### V011 — đối soát, hết hạn và duyệt sự kiện
 

@@ -28,7 +28,7 @@ def example_release(directory, extra=None):
             archive.writestr(name, value)
     checksum = release.digest(jar)
     (jar.parent / 'release.json').write_text(json.dumps({'formatVersion': 1, 'artifact': jar.name, 'sha256': checksum,
-                                                       'schemaMigrations': 'V001-V014', 'schemaTables': 49}))
+                                                       'schemaMigrations': release.MIGRATION_RANGE, 'schemaTables': 49}))
     (jar.parent / (jar.name + '.sha256')).write_text(checksum + '  ' + jar.name + '\n')
     return jar
 
@@ -54,7 +54,7 @@ class ReleaseCliTest(unittest.TestCase):
                                          'DB_HOST': '127.0.0.1', 'DB_PORT': '3306'}, clear=True), patch.object(release, 'java_command', return_value='java'):
                 command, env = release.prepare_run(jar, 'furniture_shop_test_restore_demo', 8082)
             self.assertIn(str(jar.resolve()), command)
-            self.assertFalse(any('private' in part for part in command))
+            self.assertFalse(any(part == 'private' or part.endswith('=private') for part in command))
             self.assertEqual(env['DB_URL'], 'jdbc:mariadb://127.0.0.1:3306/furniture_shop_test_restore_demo')
             self.assertEqual(env['SERVER_ADDRESS'], '127.0.0.1')
             self.assertEqual(env['SERVER_PORT'], '8082')

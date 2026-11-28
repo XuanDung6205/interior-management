@@ -19,15 +19,15 @@ class VectorCatalog {
 
     Document load(long id, boolean lock) {
         var products = jdbc.query("""
-                SELECT p.id,p.name,p.status,p.short_description,LEFT(p.description,8000) AS description,c.name AS category
+                SELECT p.id,p.name,p.status,p.short_description,LEFT(p.description,8000) AS description,c.name AS category,c.is_active AS category_active
                 FROM products p JOIN categories c ON c.id=p.category_id WHERE p.id=?
                 """ + (lock ? " FOR UPDATE" : ""), (rs, n) -> Map.of(
-                "name", rs.getString("name"), "status", rs.getString("status"), "category", rs.getString("category"),
+                "name", rs.getString("name"), "status", rs.getString("status"), "categoryActive", rs.getBoolean("category_active"), "category", rs.getString("category"),
                 "summary", Objects.toString(rs.getString("short_description"), ""),
                 "description", Objects.toString(rs.getString("description"), "")), id);
         if (products.isEmpty()) return null;
         var row = products.get(0);
-        boolean active = "ACTIVE".equals(row.get("status"));
+        boolean active = "ACTIVE".equals(row.get("status")) && Boolean.TRUE.equals(row.get("categoryActive"));
         StringBuilder text = new StringBuilder();
         if (active) {
             text.append(row.get("name")).append('\n').append(row.get("category")).append('\n')
@@ -52,7 +52,7 @@ class VectorCatalog {
             }
         }
         String bounded = text.length() > GeminiEmbeddingClient.MAX_TEXT_CHARS ? text.substring(0, GeminiEmbeddingClient.MAX_TEXT_CHARS) : text.toString();
-        return new Document(id, active, bounded, fingerprint(row.get("status") + "\n" + VectorSettings.MODEL + "\n" + bounded));
+        return new Document(id, active, bounded, fingerprint(row.get("status") + ":" + row.get("categoryActive") + "\n" + VectorSettings.MODEL + "\n" + bounded));
     }
 
     static String fingerprint(String value) {

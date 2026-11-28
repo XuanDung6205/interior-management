@@ -65,6 +65,10 @@ class DatabaseToolTests(unittest.TestCase):
             with self.subTest(action=action), self.assertRaisesRegex(RuntimeError, "V014"):
                 self.run_cli(action, columns="vector_store\tembedding\tvector(768)")
 
+    def test_v014_without_catalog_version_is_not_reported_as_current_runtime(self):
+        with self.assertRaisesRegex(RuntimeError, "V015"):
+            self.run_cli("verify", columns="\n".join(line for line in LATEST_COLUMNS.splitlines() if not line.startswith("products\tversion\t")))
+
     def test_incompatible_vector_dimension_is_rejected_without_changing_generic_vectors(self):
         for action in ["create", "migrate", "verify"]:
             statements = []

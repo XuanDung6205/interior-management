@@ -61,8 +61,9 @@ it.each(pages)('returns to the intended %s inventory route after login without l
   await waitFor(() => expect(document.title).toBe(`${title} · Nếp Nhà`));
   const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
   await user.click(screen.getByRole('button', { name: 'Quản trị' }));
-  expect(nav.querySelectorAll('#store-menu-admin a')).toHaveLength(13);
+  expect(nav.querySelectorAll('#store-menu-admin a')).toHaveLength(14);
   expect(screen.getByRole('link', { name: 'Tổng quan quản trị' })).toHaveAttribute('href', '/admin');
+  expect(screen.getByRole('link', { name: 'Sản phẩm & catalog' })).toHaveAttribute('href', '/admin/catalog');
   expect(screen.getByRole('link', { name: 'Quản lý đơn hàng' })).toHaveAttribute('href', '/admin/orders');
   expect(screen.getByRole('link', { name: 'Quản lý ưu đãi' })).toHaveAttribute('href', '/admin/coupons');
   await user.click(screen.getByRole('button', { name: 'Tài khoản' }));

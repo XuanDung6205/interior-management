@@ -98,7 +98,7 @@ it('submits manual address, coupon, assembly and bank transfer and invalidates t
   expect(body).toMatchObject({ addressId: null, shippingAddress: { recipientName: 'Trần Bình', phone: '0911111111', addressLine1: '25 Đường Sen', countryCode: 'VN' }, couponCode: 'NHA10', customerNote: 'Gọi trước', paymentMethod: 'BANK_TRANSFER', assemblyRequested: true });
   await user.type(screen.getByLabelText('Ghi chú cho cửa hàng'), ' khi đến');
   expect(screen.queryByRole('button', { name: 'Đặt hàng' })).not.toBeInTheDocument();
-}, 12000);
+});
 
 it('persists the exact uncertain order attempt and replays the same key/body after a reload even if the cart is now empty', async () => {
   const first = mount('/checkout', { 'POST /api/checkout/quote': quote, 'POST /api/checkout/orders': () => { throw new TypeError('connection lost'); } });

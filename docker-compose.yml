@@ -1,10 +1,11 @@
+# One development stack. Keep passwords in ignored .env, never in this file.
 services:
   mariadb:
     image: mariadb:12.2
     environment:
-      MARIADB_DATABASE: furniture_shop
-      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in your environment or .env file}
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
       MARIADB_ROOT_HOST: "%"
+      MARIADB_INITDB_SKIP_TZINFO: "1"
     ports:
       - "127.0.0.1:3306:3306"
     volumes:
@@ -13,19 +14,101 @@ services:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
       timeout: 5s
-      retries: 20
+      retries: 30
       start_period: 30s
 
   redis:
     image: redis:7-alpine
     ports:
-      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
-      start_period: 5s
+
+  migrate:
+    build:
+      context: .
+      target: tools
+    environment:
+      DB_HOST: mariadb
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      DB_NAME: ${DB_NAME:-furniture_shop_tv3_dev}
+    command: ["migrate"]
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      target: app
+    environment:
+      DB_URL: jdbc:mariadb://mariadb:3306/${DB_NAME:-furniture_shop_tv3_dev}
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_TIMEOUT: 500ms
+      CATALOG_CACHE_ENABLED: ${CATALOG_CACHE_ENABLED:-true}
+      TV5_REDIS_CACHE_ENABLED: ${TV5_REDIS_CACHE_ENABLED:-true}
+      VECTOR_ENABLED: ${VECTOR_ENABLED:-false}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      PAYMENT_BANK_MODE: ${PAYMENT_BANK_MODE:-UNCONFIGURED}
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  demo:
+    profiles: ["demo"]
+    build:
+      context: .
+      target: tools
+    command: ["seed"]
+    environment:
+      DB_HOST: mariadb
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      DB_NAME: ${DB_NAME:-furniture_shop_tv3_dev}
+      TV3_DEMO_PASSWORD: ${TV3_DEMO_PASSWORD:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  java-tests:
+    profiles: ["test"]
+    build:
+      context: .
+      target: java-tests
+    environment:
+      TV3_TEST_DB_URL: jdbc:mariadb://mariadb:3306/furniture_shop_test_tv2
+      DB_URL: jdbc:mariadb://mariadb:3306/furniture_shop_test_legacy
+      LEGACY_TEST_DB_URL: jdbc:mariadb://mariadb:3306/furniture_shop_test_legacy
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:-}
+      GEMINI_API_KEY: offline-test-placeholder
+      CATALOG_CACHE_ENABLED: "false"
+      TV5_REDIS_CACHE_ENABLED: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend-tests:
+    profiles: ["test"]
+    build:
+      context: .
+      target: frontend-tests
 
 volumes:
   mariadb_data:
