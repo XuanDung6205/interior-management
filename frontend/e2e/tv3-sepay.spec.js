@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { createHmac, randomUUID } from 'node:crypto';
 
+// ADMIN accounts land on /admin after login; customers and staff return to the cart.
+const landingAfterLogin = username => username === (process.env.TV3_ADMIN_USER || 'tv3.admin') ? /\/admin$/ : /\/cart$/;
 async function login(page,username){
   await page.goto('/login');await page.getByLabel('Tên đăng nhập',{exact:true}).fill(username);
   await page.getByLabel('Mật khẩu',{exact:true}).fill(process.env.TV3_DEMO_PASSWORD);
-  await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await expect(page).toHaveURL(/\/cart$/);
+  await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await expect(page).toHaveURL(landingAfterLogin(username));
 }
 
 test('SePay QR checkout verifies signed transfers once and permits manual refund proof after cancellation',async({page,request,browser,baseURL})=>{
