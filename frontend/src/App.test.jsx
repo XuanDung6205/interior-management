@@ -257,6 +257,19 @@ it('shows duplicate email on the registration form without losing entered detail
   expect(calls.filter(call => call.url === '/api/session/register')).toHaveLength(1);
 });
 
+it('reports wrong credentials on the login page without claiming the session expired', async () => {
+  const { user, calls } = mount('/login', { 'POST /api/session/login': { status: 401, body: { code: 'INVALID_CREDENTIALS', message: 'Invalid username or password.', fieldErrors: {} } } });
+  await screen.findByLabelText('Tên đăng nhập');
+  await user.type(screen.getByLabelText('Tên đăng nhập'), 'tv3.customer');
+  await user.type(screen.getByLabelText('Mật khẩu', { exact: true }), 'wrong-password');
+  await user.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+  const alert = await screen.findByRole('alert');
+  expect(alert).toHaveTextContent('Tên đăng nhập hoặc mật khẩu không đúng.');
+  expect(alert).not.toHaveTextContent('Phiên đăng nhập đã kết thúc');
+  expect(alert).not.toHaveTextContent('Invalid username or password');
+  expect(calls.some(call => call.url === '/api/cart/merge')).toBe(false);
+});
+
 it('shows a recoverable merge failure after successful login without losing the authenticated session', async () => {
   const { user } = mount('/login', { 'POST /api/session/login': staff, 'POST /api/cart/merge': { status: 409, body: { code: 'QUANTITY_OVERFLOW', message: 'Số lượng sau khi gộp quá lớn.', fieldErrors: {} } } });
   await screen.findByLabelText('Tên đăng nhập');
