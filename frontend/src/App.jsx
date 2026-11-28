@@ -9,6 +9,7 @@ import CartPage from './features/cart/CartPage';
 import HomePage from './features/home/HomePage';
 import SalePage from './features/catalog/SalePage';
 import ProductDetailPage from './features/catalog/ProductDetailPage';
+import CatalogAdminPage from './features/catalog/CatalogAdminPage';
 import LoginPage from './features/auth/LoginPage';
 import RegisterPage from './features/auth/RegisterPage';
 import AccountPage from './features/account/AccountPage';
@@ -66,7 +67,7 @@ export default function App() {
   useEffect(() => {
     if (location.hash && session) document.getElementById(location.hash.slice(1))?.scrollIntoView?.();
   }, [location.pathname, location.hash, session]);
-  useEffect(() => { document.title = `${location.pathname === '/' ? 'Trang chủ' : location.pathname === '/sale' ? ({ 'phong-khach': 'Phòng khách', 'phong-an': 'Phòng ăn', 'phong-ngu': 'Phòng ngủ' }[new URLSearchParams(location.search).get('room')] || 'Sale & sản phẩm') : location.pathname.startsWith('/products/') ? 'Chi tiết sản phẩm' : location.pathname.startsWith('/articles') ? 'Bài viết' : location.pathname === '/account' ? 'Tài khoản' : location.pathname === '/wishlist' ? 'Yêu thích' : location.pathname === '/reviews' ? 'Đánh giá' : location.pathname === '/admin' || location.pathname === '/admin/dashboard' ? 'Bảng điều khiển' : location.pathname === '/admin/content' ? 'Quản lý nội dung' : location.pathname === '/admin/reviews' ? 'Kiểm duyệt đánh giá' : /^\/(?:admin\/)?orders\/\d+\/print$/.test(location.pathname) ? 'Phiếu đơn hàng' : location.pathname === '/notifications' ? 'Thông báo' : location.pathname === '/admin/operations' ? 'Vận hành hệ thống' : /^\/admin\/orders\/\d+\/aftercare$/.test(location.pathname) ? 'Hậu mãi đơn hàng' : /^\/orders\/\d+\/returns$/.test(location.pathname) ? 'Trả hàng' : (location.pathname.startsWith('/admin/refunds') || /^\/admin\/orders\/\d+\/refunds$/.test(location.pathname)) ? 'Quản lý hoàn tiền' : location.pathname.startsWith('/admin/payments') ? 'Quản lý thanh toán' : location.pathname.startsWith('/admin/orders') ? 'Quản lý đơn hàng' : location.pathname.startsWith('/admin/inventory/shipments') ? 'Theo dõi vận đơn' : location.pathname.startsWith('/admin/inventory/dispatch') ? 'Xuất kho giao hàng' : location.pathname.startsWith('/admin/inventory/operations') ? 'Điều chỉnh và chuyển kho' : location.pathname.startsWith('/admin/inventory/receipts') ? 'Nhập kho' : location.pathname.startsWith('/admin/coupons') ? 'Quản lý ưu đãi' : location.pathname === '/register' ? 'Đăng ký' : location.pathname === '/login' ? 'Đăng nhập' : location.pathname === '/checkout' ? 'Đặt hàng' : /^\/orders\/\d+\/payments$/.test(location.pathname) ? 'Thanh toán đơn' : location.pathname.startsWith('/orders') ? 'Đơn hàng' : 'Giỏ hàng'} · Nếp Nhà`; }, [location.pathname, location.search]);
+  useEffect(() => { document.title = `${location.pathname === '/' ? 'Trang chủ' : location.pathname === '/sale' ? ({ 'phong-khach': 'Phòng khách', 'phong-an': 'Phòng ăn', 'phong-ngu': 'Phòng ngủ' }[new URLSearchParams(location.search).get('room')] || 'Sale & sản phẩm') : location.pathname === '/admin/catalog' ? 'Quản lý catalog' : location.pathname.startsWith('/collections/') ? 'Bộ sưu tập' : location.pathname.startsWith('/categories/') ? 'Danh mục' : location.pathname.startsWith('/products/') ? 'Chi tiết sản phẩm' : location.pathname.startsWith('/articles') ? 'Bài viết' : location.pathname === '/account' ? 'Tài khoản' : location.pathname === '/wishlist' ? 'Yêu thích' : location.pathname === '/reviews' ? 'Đánh giá' : location.pathname === '/admin' || location.pathname === '/admin/dashboard' ? 'Bảng điều khiển' : location.pathname === '/admin/content' ? 'Quản lý nội dung' : location.pathname === '/admin/reviews' ? 'Kiểm duyệt đánh giá' : /^\/(?:admin\/)?orders\/\d+\/print$/.test(location.pathname) ? 'Phiếu đơn hàng' : location.pathname === '/notifications' ? 'Thông báo' : location.pathname === '/admin/operations' ? 'Vận hành hệ thống' : /^\/admin\/orders\/\d+\/aftercare$/.test(location.pathname) ? 'Hậu mãi đơn hàng' : /^\/orders\/\d+\/returns$/.test(location.pathname) ? 'Trả hàng' : (location.pathname.startsWith('/admin/refunds') || /^\/admin\/orders\/\d+\/refunds$/.test(location.pathname)) ? 'Quản lý hoàn tiền' : location.pathname.startsWith('/admin/payments') ? 'Quản lý thanh toán' : location.pathname.startsWith('/admin/orders') ? 'Quản lý đơn hàng' : location.pathname.startsWith('/admin/inventory/shipments') ? 'Theo dõi vận đơn' : location.pathname.startsWith('/admin/inventory/dispatch') ? 'Xuất kho giao hàng' : location.pathname.startsWith('/admin/inventory/operations') ? 'Điều chỉnh và chuyển kho' : location.pathname.startsWith('/admin/inventory/receipts') ? 'Nhập kho' : location.pathname.startsWith('/admin/coupons') ? 'Quản lý ưu đãi' : location.pathname === '/register' ? 'Đăng ký' : location.pathname === '/login' ? 'Đăng nhập' : location.pathname === '/checkout' ? 'Đặt hàng' : /^\/orders\/\d+\/payments$/.test(location.pathname) ? 'Thanh toán đơn' : location.pathname.startsWith('/orders') ? 'Đơn hàng' : 'Giỏ hàng'} · Nếp Nhà`; }, [location.pathname, location.search]);
   const isStaff = session?.user?.roles?.some(role => role === 'STAFF' || role === 'ADMIN');
   async function logout() {
     setBusy(true); setError(null);
@@ -81,6 +82,9 @@ export default function App() {
       <ErrorNotice error={error} onRetry={() => setRevision(value => value + 1)} />
       {!session ? !error && <Loading text="Đang kết nối cửa hàng…" /> : <Routes>
         <Route path="/sale" element={<SalePage />} />
+        <Route path="/categories/:categorySlug" element={<SalePage />} />
+        <Route path="/collections/:collectionSlug" element={<SalePage />} />
+        <Route path="/admin/catalog" element={<StaffPage isStaff={isStaff}><CatalogAdminPage key={session.user?.id ?? 'guest'} /></StaffPage>} />
         <Route path="/products/:slug" element={<ProductDetailPage />} />
         <Route path="/cart" element={<CartPage key={`${session.user?.id ?? 'guest'}-${revision}`} />} />
         <Route path="/login" element={<LoginPage />} />
@@ -120,7 +124,7 @@ export default function App() {
         <Route path="*" element={<section className="access-state panel"><h1>Chưa tìm thấy trang này</h1><Link to="/cart" className="button">Về giỏ hàng</Link></section>} />
       </Routes>}
     </main>
-    {session && <ChatWidget />}
+    {session && !location.pathname.startsWith('/admin') && <ChatWidget />}
     <SiteFooter />
   </SessionContext.Provider>;
 }

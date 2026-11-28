@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 @ConditionalOnResource(resources = "classpath:/static/index.html")
 public class CommerceSpaController {
-    @GetMapping({"/", "/sale", "/products/{slug}", "/cart", "/login", "/register", "/account", "/checkout", "/orders", "/orders/{id:\\d+}",
+    @GetMapping({"/", "/sale", "/categories/{slug}", "/collections/{slug}", "/admin/catalog", "/products/{slug}", "/cart", "/login", "/register", "/account", "/checkout", "/orders", "/orders/{id:\\d+}",
             "/orders/{id:\\d+}/payments", "/orders/{id:\\d+}/returns", "/orders/{id:\\d+}/print", "/notifications",
             "/admin", "/admin/coupons", "/admin/orders", "/admin/orders/{id:\\d+}",
             "/admin/orders/{id:\\d+}/refunds", "/admin/orders/{id:\\d+}/aftercare", "/admin/orders/{id:\\d+}/print",

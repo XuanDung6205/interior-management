@@ -12,6 +12,7 @@ export const rooms = [
 const adminLinks = [
   ['/admin', 'Tổng quan quản trị'],
   ['/admin/dashboard', 'Thống kê'],
+  ['/admin/catalog', 'Sản phẩm & catalog'],
   ['/admin/content', 'Nội dung'],
   ['/admin/reviews', 'Duyệt đánh giá'],
   ['/admin/operations', 'Vận hành'],

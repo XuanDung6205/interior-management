@@ -1,8 +1,12 @@
 # Nếp Nhà — web bán nội thất
 
-Runtime commerce dùng **Spring Boot REST API + React + MariaDB**, main class `org.example.eshop.commerce.CommerceApplication`. Code MVC/AI legacy được giữ riêng, không nạp vào commerce. Schema runtime cần đủ migration V001–V014 với 49 bảng InnoDB (danh sách trong `scripts/tv3_schema.py`); không dùng `ddl-auto=update` để thay migration.
+Runtime commerce dùng **Spring Boot REST API + React + MariaDB**, main class `org.example.eshop.commerce.CommerceApplication`. Code MVC/AI legacy được giữ riêng, không nạp vào commerce. Schema runtime cần đủ migration V001–V015 với 49 bảng InnoDB (danh sách trong `scripts/tv3_schema.py`); không dùng `ddl-auto=update` để thay migration.
 
 ## Chạy và bàn giao
+
+- **[Thành viên 2: catalog và Docker](docs/TV2_CATALOG_HANDOFF.md)** — quản trị sản phẩm/SKU/phân loại, bộ lọc, gallery, demo và hợp đồng bàn giao cho TV3–TV5.
+- [SQL đồng bộ cho cả nhóm: 50 sản phẩm / 150 SKU](docs/database/demo/README.md) — có file full DB mới và file data cho DB đã có.
+- [Hợp đồng API catalog](docs/api/TV2_CATALOG_API.md), [bằng chứng kiểm thử TV2](docs/TV2_VERIFICATION.md).
 
 - [Build/chạy demo bằng một JAR](docs/TV3_RELEASE.md): React và API cùng origin, không cần mở Vite/Docker khi chạy gói.
 - [Hướng dẫn phát triển và demo](docs/TV3_HUONG_DAN_CHAY_VA_DEMO.md): chạy backend/frontend riêng.
@@ -21,7 +25,7 @@ Từ root repo, khi có JDK17+, Node theo `frontend/package.json` và Python3.11
 python scripts/tv3_release.py build
 ```
 
-Sau khi đã chuẩn bị DB demo V001–V014 và cấp `DB_PASSWORD` qua môi trường:
+Sau khi đã chuẩn bị DB demo V001–V015 và cấp `DB_PASSWORD` qua môi trường:
 
 ```powershell
 python scripts/tv3_release.py run --database furniture_shop_tv3_dev --port 8080
@@ -31,7 +35,7 @@ Mở `http://127.0.0.1:8080`. Startup không tự tạo schema/tài khoản; xem
 
 Thanh toán hỗ trợ COD, chuyển khoản có nhân viên đối soát chứng từ và **SePay Test mode** (mục dưới); nhóm đã chốt SePay thay VNPAY từ 25/11/2026. Hoàn tiền thủ công hoặc qua SePay Sandbox, không vượt số đã thu. Thông báo hiện giao vào hộp thư web (`/notifications`), chưa gửi email/SMS.
 
-`docker-compose.yml` có MariaDB và Redis cho môi trường phát triển; commerce đã có cấu hình Redis cache nhưng chưa dùng cho dữ liệu nào. Không cache giá, tồn, coupon, quyền hay trạng thái thu/hoàn tiền: checkout luôn đọc MariaDB.
+`docker-compose.yml` chạy ứng dụng, MariaDB, Redis và migration trong Docker; xem hướng dẫn TV2 để đặt biến môi trường và seed demo. Catalog dùng Redis JSON TTL 60 giây cho dữ liệu hiển thị; tồn khả dụng luôn đọc live. Checkout lấy giá, tồn, coupon và quyền trực tiếp từ MariaDB. Không cache quyết định thu/hoàn tiền.
 
 ## SePay Test mode (TV3)
 

@@ -10,7 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
-from tv3_schema import LATEST_TABLES, MIGRATION_RANGE, migration_paths, verify_vector_columns
+from tv3_schema import LATEST_TABLES, MIGRATION_RANGE, migration_paths, verify_runtime_columns
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -56,9 +56,9 @@ def main():
         if any(len(row)!=3 or row[1:]!=["BASE TABLE","InnoDB"] for row in entries) or {row[0] for row in entries}!=LATEST_TABLES:
             raise RuntimeError("Expected the exact 49-table InnoDB commerce inventory after "+MIGRATION_RANGE+".")
         columns=sql("SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE FROM information_schema.COLUMNS "
-                    f"WHERE TABLE_SCHEMA='{args.database}' AND TABLE_NAME IN ('vector_store','commerce_vector_reindex_outbox');")
-        verify_vector_columns(columns)
-        print("Verified "+args.database+": exact 49 InnoDB tables, VECTOR(768) and V014 runtime columns, schema "+MIGRATION_RANGE+".")
+                    f"WHERE TABLE_SCHEMA='{args.database}' AND TABLE_NAME IN ('vector_store','commerce_vector_reindex_outbox','products');")
+        verify_runtime_columns(columns)
+        print("Verified "+args.database+": exact 49 InnoDB tables, VECTOR(768) and V014 vector / V015 catalog columns, schema "+MIGRATION_RANGE+".")
         return
     if len(os.environ.get("TV3_DEMO_PASSWORD",""))<10:
         parser.error("Supply TV3_DEMO_PASSWORD with at least 10 characters; it is not printed.")

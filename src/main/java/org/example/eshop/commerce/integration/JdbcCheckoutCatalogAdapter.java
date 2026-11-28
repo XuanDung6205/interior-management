@@ -30,11 +30,11 @@ public class JdbcCheckoutCatalogAdapter implements CheckoutCatalogPort {
         jdbc.query("""
             SELECT v.id,v.product_id,v.sku,p.name AS product_name,v.name AS variant_name,v.color_name,
                    v.width_mm,v.depth_mm,v.height_mm,v.price,p.warranty_months,p.assembly_required,
-                   (v.status='ACTIVE' AND p.status='ACTIVE') AS active,
+                   (v.status='ACTIVE' AND p.status='ACTIVE' AND c.is_active=1) AS active,
                    (SELECT i.url FROM product_images i
                     WHERE i.product_id=p.id AND (i.variant_id=v.id OR i.variant_id IS NULL)
                     ORDER BY CASE WHEN i.variant_id=v.id THEN 0 ELSE 1 END,i.sort_order,i.id LIMIT 1) AS image_url
-            FROM product_variants v JOIN products p ON p.id=v.product_id WHERE v.id IN (:ids) ORDER BY v.id
+            FROM product_variants v JOIN products p ON p.id=v.product_id JOIN categories c ON c.id=p.category_id WHERE v.id IN (:ids) ORDER BY v.id
             """,Map.of("ids",ids),rs -> {
                 long id=rs.getLong("id");
                 var dimensions=new StringJoiner(" × ");

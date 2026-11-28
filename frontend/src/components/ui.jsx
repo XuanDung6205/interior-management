@@ -47,8 +47,9 @@ export function ErrorNotice({ error, onRetry }) {
   return <div className="notice error" role="alert"><strong>{error.status === 401 && error.code !== 'INVALID_CREDENTIALS' ? 'Phiên đăng nhập đã kết thúc. ' : ''}{error.message || error}</strong>{error.status === 403 && <p>Vui lòng kiểm tra quyền truy cập hoặc thử lại để làm mới phiên bảo mật.</p>}{onRetry && <button className="text-button" onClick={onRetry}>Thử lại</button>}</div>;
 }
 export function Loading({ text = 'Đang tải…' }) { return <div className="loading" role="status"><span className="spinner" />{text}</div>; }
-export function ProductImage({ src, name }) {
-  return <div className="product-image">{src ? <img src={src} alt={name} loading="lazy" onError={event => { event.currentTarget.hidden = true; }} /> : null}<span className="image-fallback" aria-hidden="true"><Icon name="chair" size={40} /><span>Ảnh sản phẩm</span></span></div>;
+export function ProductImage({ src, name, thumbnail = false, priority = false }) {
+  const small = thumbnail && /^\/images\/catalog\/[^/]+\.jpg$/.test(src || '') ? src.replace('/catalog/', '/catalog/thumbs/') : src;
+  return <div className="product-image">{src ? <img key={small} src={small} alt={name} width="600" height="600" decoding="async" loading={priority ? 'eager' : 'lazy'} fetchPriority={priority ? 'high' : undefined} onError={event => { if (event.currentTarget.getAttribute('src') !== src) event.currentTarget.src = src; else event.currentTarget.hidden = true; }} /> : null}<span className="image-fallback" aria-hidden="true"><Icon name="chair" size={40} /><span>Ảnh sản phẩm</span></span></div>;
 }
 export function Pager({ page, busy, onChange }) {
   if (!page || page.totalPages < 2) return null;

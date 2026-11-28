@@ -42,13 +42,13 @@ test('room menus show room products without cart and Home uses three different f
     const response = await request.get(`/api/catalog/products?room=${slug}&size=100`);
     expect(response.ok()).toBe(true);
     expect((await response.json()).totalElements).toBeGreaterThan(0);
-    await page.getByRole('button', { name: label }).click();
+    await page.getByRole('button', { name: label, exact: true }).click();
     await page.getByRole('link', { name: `Tất cả ${label.toLowerCase()}` }).click();
     await expect(page.getByRole('heading', { name: `${label}.` })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Giỏ hàng của bạn.' })).toHaveCount(0);
     await expect(page.locator('.sale-card').first()).toBeVisible();
   }
-  await page.getByRole('button', { name: 'Phòng ngủ' }).click();
+  await page.getByRole('button', { name: 'Phòng ngủ', exact: true }).click();
   await page.getByRole('link', { name: 'Tủ', exact: true }).click();
   await expect(page.locator('.sale-card')).toHaveCount(5);
 });

@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+!.env.example
+**/node_modules
+**/target
+frontend/dist
+frontend/test-results
+frontend/playwright-report
+backups
+.superpowers
+**/__pycache__

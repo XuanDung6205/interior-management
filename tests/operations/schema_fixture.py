@@ -10,7 +10,8 @@ warranty_requests tracking_events audit_logs chat_conversations chat_messages ba
 articles commerce_notification_outbox commerce_notifications
 """.split())
 LATEST_TABLES = HISTORICAL_TABLES | {"vector_store", "commerce_vector_reindex_outbox"}
-LATEST_COLUMNS = """vector_store\tembedding\tvector(768)
+LATEST_COLUMNS = """products\tversion\tbigint(20)
+vector_store\tembedding\tvector(768)
 vector_store\tcatalog_product_id\tbigint(20)
 vector_store\tcatalog_fingerprint\tchar(64)
 vector_store\tembedding_model\tvarchar(80)

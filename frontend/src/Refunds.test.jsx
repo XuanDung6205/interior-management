@@ -57,7 +57,8 @@ it.each(['/admin/refunds', '/admin/refunds/81', '/admin/orders/101/refunds'])('g
   await screen.findByRole('heading', { name: path === '/admin/refunds' ? 'Quản lý hoàn tiền.' : path.endsWith('/81') ? 'Đối chiếu hoàn #81' : 'Hoàn tiền đơn NN-101' });
   await waitFor(() => expect(document.title).toBe('Quản lý hoàn tiền · Nếp Nhà'));
   await user.click(screen.getByRole('button', { name: 'Quản trị' }));
-  expect(within(screen.getByRole('navigation', { name: 'Điều hướng chính' })).getAllByRole('link')).toHaveLength(17);
+  expect(within(screen.getByRole('navigation', { name: 'Điều hướng chính' })).getAllByRole('link')).toHaveLength(18);
+  expect(screen.getByRole('link', { name: 'Sản phẩm & catalog' })).toHaveAttribute('href', '/admin/catalog');
 });
 it('filters literal refund search, status and pages, ignoring obsolete read failures', async () => {
   let rejectOld;

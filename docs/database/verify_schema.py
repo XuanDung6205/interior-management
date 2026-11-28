@@ -11,7 +11,7 @@ import re
 import subprocess
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
-from tv3_schema import BASE_TABLES, HISTORICAL_TABLES, LATEST_TABLES, verify_vector_columns
+from tv3_schema import BASE_TABLES, HISTORICAL_TABLES, LATEST_TABLES, verify_runtime_columns
 
 TABLES = BASE_TABLES
 
@@ -53,8 +53,8 @@ def main():
     if actual != expected:
         raise AssertionError(f"Missing: {sorted(expected-actual)}; unexpected: {sorted(actual-expected)}")
     if args.operations:
-        verify_vector_columns(sql("SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE FROM information_schema.COLUMNS "
-                                  "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('vector_store','commerce_vector_reindex_outbox');"))
+        verify_runtime_columns(sql("SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE FROM information_schema.COLUMNS "
+                                  "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('vector_store','commerce_vector_reindex_outbox','products');"))
     assert sql("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() "
                "AND (ENGINE <> 'InnoDB' OR TABLE_COLLATION NOT LIKE 'utf8mb4%');") == "0"
     assert sql("SELECT GROUP_CONCAT(code ORDER BY code) FROM roles;") == "ADMIN,CUSTOMER,STAFF"

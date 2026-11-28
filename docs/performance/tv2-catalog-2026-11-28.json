@@ -1,0 +1,78 @@
+{
+  "redisOnline": {
+    "verifiedAtUtc": "2026-11-28T10:26:15.534340+00:00",
+    "environment": "local Docker Compose, 50 demo products / 62 demo SKUs",
+    "checks": [
+      "public facets and collections",
+      "50 demo products, multi-SKU detail and gallery",
+      "combined filters, ranges and hierarchy",
+      "admin create, publish, cache invalidation, price update, SKU identity, stale version, archive"
+    ],
+    "readTimings": {
+      "list": {
+        "requests": 20,
+        "medianMs": 90.13,
+        "p95Ms": 207.56
+      },
+      "detail": {
+        "requests": 20,
+        "medianMs": 73.89,
+        "p95Ms": 146.27
+      }
+    },
+    "scope": "Catalog only; not a load test or live AI/payment-provider verification."
+  },
+  "redisOffline": {
+    "verifiedAtUtc": "2026-11-28T10:26:50.467097+00:00",
+    "environment": "local Docker Compose, 50 demo products / 62 demo SKUs",
+    "checks": [
+      "public facets and collections",
+      "50 demo products, multi-SKU detail and gallery",
+      "combined filters, ranges and hierarchy",
+      "admin create, publish, cache invalidation, price update, SKU identity, stale version, archive"
+    ],
+    "readTimings": {
+      "list": {
+        "requests": 20,
+        "medianMs": 61.24,
+        "p95Ms": 189.37
+      },
+      "detail": {
+        "requests": 20,
+        "medianMs": 72.51,
+        "p95Ms": 218.81
+      }
+    },
+    "scope": "Catalog only; not a load test or live AI/payment-provider verification."
+  },
+  "redisRecovered": {
+    "verifiedAtUtc": "2026-11-28T10:27:39.895613+00:00",
+    "environment": "local Docker Compose, 50 demo products / 62 demo SKUs",
+    "checks": [
+      "public facets and collections",
+      "50 demo products, multi-SKU detail and gallery",
+      "combined filters, ranges and hierarchy",
+      "admin create, publish, cache invalidation, price update, SKU identity, stale version, archive"
+    ],
+    "readTimings": {
+      "list": {
+        "requests": 20,
+        "medianMs": 50.24,
+        "p95Ms": 106.24
+      },
+      "detail": {
+        "requests": 20,
+        "medianMs": 43.7,
+        "p95Ms": 61.93
+      }
+    },
+    "scope": "Catalog only; not a load test or live AI/payment-provider verification."
+  },
+  "images": {
+    "originalBytes": 13928382,
+    "thumbnailBytes": 1925215,
+    "count": 50,
+    "reductionPercent": 86.18
+  },
+  "limitations": "20 requests per route, local Docker under concurrent build/test load. These timings are not a controlled cache speedup comparison or a group load test."
+}
