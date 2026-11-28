@@ -108,6 +108,31 @@ it('preserves TV5 content and customer links in the redesigned header', async ()
   expect(admin.queryByRole('link', { name: 'Quản lý tài khoản', exact: true })).not.toBeInTheDocument();
 });
 
+it('lands an admin on the management overview and hides storefront controls', async () => {
+  const { user, calls } = mount('/login', {
+    'POST /api/session/login': admin,
+  });
+  await user.type(await screen.findByLabelText('Tên đăng nhập'), 'admin');
+  await user.type(screen.getByLabelText('Mật khẩu', { exact: true }), 'secret');
+  await user.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+
+  expect(await screen.findByRole('heading', { name: 'Tổng quan quản trị.' })).toBeInTheDocument();
+  expect(document.title).toBe('Tổng quan quản trị · Nếp Nhà');
+  expect(screen.queryByRole('link', { name: 'Trang chủ', exact: true })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Tìm kiếm sản phẩm' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Giỏ hàng' })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Quản trị', exact: true }));
+  expect(within(document.getElementById('store-menu-admin')).getByRole('link', { name: 'Quản lý tài khoản' })).toHaveAttribute('href', '/admin/users');
+  expect(calls.some(call => call.url === '/api/cart')).toBe(false);
+  expect(calls.some(call => call.url === '/api/cart/merge')).toBe(false);
+});
+
+it('redirects an admin away from customer storefront routes', async () => {
+  const { calls } = mount('/cart', {}, admin);
+  expect(await screen.findByRole('heading', { name: 'Tổng quan quản trị.' })).toBeInTheDocument();
+  expect(calls.some(call => call.url === '/api/cart')).toBe(false);
+});
+
 it('lets admins lock and unlock accounts from the admin navigation', async () => {
   let customerStatus = 'ACTIVE';
   const handlers = {

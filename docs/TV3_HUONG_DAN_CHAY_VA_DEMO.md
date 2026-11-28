@@ -77,6 +77,8 @@ Quản lý tài khoản nằm tại `/admin/users` và chỉ ADMIN được mở
 
 Khách đã đăng nhập mở `/account` để sửa họ tên/email/số điện thoại và quản lý sổ địa chỉ: thêm, sửa, đặt mặc định hoặc xóa (có bước xác nhận). API hồ sơ dùng `/api/account/profile`; CRUD và đặt mặc định dùng `/api/account/addresses`. Server tự giới hạn dữ liệu theo tài khoản đang đăng nhập.
 
+Sau khi đăng nhập, ADMIN mặc định vào `/admin` — trang **Tổng quan quản trị** — và chỉ thấy menu/chức năng quản trị; các URL cửa hàng như `/cart`, `/account` hoặc `/` sẽ đưa ADMIN về tổng quan. Phiên ADMIN không gộp giỏ khách. STAFF tiếp tục thấy cả cửa hàng và menu quản trị, còn CUSTOMER chỉ thấy các chức năng cửa hàng. Đăng xuất vẫn có trong menu tài khoản quản trị.
+
 ## Quản trị đơn hàng TV3-07
 Đăng nhập tài khoản STAFF/ADMIN rồi mở `/admin/orders`. Tìm mã đơn, tên/email tài khoản hoặc tên/số điện thoại người nhận; lọc trạng thái và phân trang. Màn hình chi tiết hiển thị thanh toán, vận chuyển, lắp đặt, hoàn tiền và lịch sử riêng nhau.
 
