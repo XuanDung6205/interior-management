@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { ErrorNotice, Icon, Loading } from '../../components/ui';
+import { ErrorNotice, Icon, Loading, OrderCode } from '../../components/ui';
 import { useCommerce } from '../../lib/session';
 import { formatDate, formatMoney } from '../../lib/format';
 import { orderApi } from './orderApi';
@@ -39,7 +39,7 @@ export default function OrderDetailPage() {
     <div className="breadcrumb"><Link to="/orders">Đơn hàng</Link><span>/</span><span>Chi tiết</span></div>
     <ErrorNotice error={error} onRetry={() => setRevision(value => value + 1)} />
     {loading ? <Loading text="Đang tải chi tiết đơn hàng…" /> : order && <>
-      <div className="page-heading order-detail-heading"><div><span className="eyebrow">ĐƠN HÀNG CỦA BẠN</span><h1>{order.orderNumber}</h1><p>Đặt lúc {formatDate(order.placedAt)}</p></div><Status value={order.status} /></div><Link className="button secondary" to={`/orders/${order.id}/print`}>In phiếu đơn hàng</Link><Link className="button secondary" to={`/orders/${order.id}/returns`}>Yêu cầu trả hàng & lịch sử</Link>{(order.status === 'COMPLETED' || order.shipments?.some(s => s.status === 'DELIVERED')) && <Link className="button secondary" to="/reviews">Đánh giá sản phẩm</Link>}{order.confirmationExpiresAt && order.status === 'PENDING_CONFIRMATION' && <div className="notice">Hạn xác nhận COD: {formatDate(order.confirmationExpiresAt)}. Máy chủ sẽ kiểm tra điều kiện hết hạn; trình duyệt không tự hủy đơn.</div>}
+      <div className="page-heading order-detail-heading"><div><span className="eyebrow">ĐƠN HÀNG CỦA BẠN</span><h1><OrderCode value={order.orderNumber} /></h1><p>Đặt lúc {formatDate(order.placedAt)}</p></div><Status value={order.status} /></div><Link className="button secondary" to={`/orders/${order.id}/print`}>In phiếu đơn hàng</Link><Link className="button secondary" to={`/orders/${order.id}/returns`}>Yêu cầu trả hàng & lịch sử</Link>{(order.status === 'COMPLETED' || order.shipments?.some(s => s.status === 'DELIVERED')) && <Link className="button secondary" to="/reviews">Đánh giá sản phẩm</Link>}{order.confirmationExpiresAt && order.status === 'PENDING_CONFIRMATION' && <div className="notice">Hạn xác nhận COD: {formatDate(order.confirmationExpiresAt)}. Máy chủ sẽ kiểm tra điều kiện hết hạn; trình duyệt không tự hủy đơn.</div>}
       {location.state?.placed && !cancelled && <div className="notice success" role="status"><strong>Đã tiếp nhận đơn hàng.</strong><p>Cửa hàng sẽ xác nhận và chuẩn bị những món đồ bạn chọn. Trạng thái thanh toán được theo dõi riêng bên dưới.</p></div>}
       {cancelled && <div className="notice success" role="status">Đã hủy đơn hàng. Xem thông tin thanh toán và yêu cầu hoàn tiền bên dưới.</div>}
       <div className="order-detail-layout"><div className="order-detail-main"><section className="panel"><div className="panel-heading"><h2>Sản phẩm trong đơn</h2><span className="muted small">Thông tin tại thời điểm đặt</span></div><OrderItems items={order.items} snapshots /></section>

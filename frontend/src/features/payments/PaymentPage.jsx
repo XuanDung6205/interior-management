@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ErrorNotice, Loading } from '../../components/ui';
+import { ErrorNotice, Loading, OrderCode } from '../../components/ui';
 import { useCommerce } from '../../lib/session';
 import { paymentMethods } from '../orders/OrderParts';
 import { BankGuidance, createBlockMessage, PaymentAmounts, PaymentHistory, PaymentNotice } from './PaymentParts';
 import { SePayGuidance, useSePayPolling } from './SePayParts';
 import { clearPaymentRequest, creationRejections, paymentApi, readPaymentRequest, savePaymentRequest } from './paymentApi';
+import CheckoutSteps from '../../components/CheckoutSteps';
 
 export default function PaymentPage() {
   const { id } = useParams(); const { api, session } = useCommerce(); const userId = session.user.id;
@@ -38,7 +39,8 @@ export default function PaymentPage() {
   }
   return <>
     <div className="breadcrumb"><Link to={`/orders/${id}`}>Đơn hàng</Link><span>/</span><span>Thanh toán</span></div>
-    <div className="page-heading payment-page-heading"><div><span className="eyebrow">THEO DÕI KHOẢN THU</span><h1>{summary ? `Thanh toán đơn ${summary.orderNumber}` : 'Thanh toán đơn hàng'}</h1><p>Khoản phải thu, chứng từ và hoàn tiền được theo dõi riêng.</p></div><button className="button secondary" disabled={busy || loading} onClick={refresh}>Làm mới thanh toán</button></div>
+    <div className="page-heading payment-page-heading"><div><span className="eyebrow">THEO DÕI KHOẢN THU</span><h1>{summary ? <>Thanh toán đơn <OrderCode value={summary.orderNumber} /></> : 'Thanh toán đơn hàng'}</h1><p>Khoản phải thu, chứng từ và hoàn tiền được theo dõi riêng.</p></div><button className="button secondary" disabled={busy || loading} onClick={refresh}>Làm mới thanh toán</button></div>
+    <CheckoutSteps current={2} />
     <PaymentNotice bank={summary?.bankTransfer} sepay={summary?.items.some(p => p.provider === 'SEPAY_SANDBOX')} />{pollingWarning && <p className="notice warning" role="status">{pollingWarning}</p>}
     <div ref={errorRef} tabIndex="-1"><ErrorNotice error={error} />{error?.status === 401 && <Link className="inline-link" to="/login" state={{ returnTo: `/orders/${id}/payments` }}>Đăng nhập lại để kiểm tra yêu cầu</Link>}</div>
     {notice && <div className="notice success" role="status">{notice}</div>}

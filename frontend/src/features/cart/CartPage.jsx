@@ -4,7 +4,11 @@ import { useCommerce } from '../../lib/session';
 import { formatMoney } from '../../lib/format';
 import { ErrorNotice, Icon, Loading, Pager, ProductImage } from '../../components/ui';
 import { cartApi } from './cartApi';
+import './cart.css';
+import CheckoutSteps from '../../components/CheckoutSteps';
 
+// Mirrors the checkout service policy and the home page promises.
+const cartPerks = [['truck', 'Giao miễn phí cho đơn từ 10 triệu'], ['tools', 'Lắp đặt tận nhà khi bạn chọn'], ['returns', 'Hỗ trợ đổi trả sau khi nhận hàng']];
 const issueLabels = { OUT_OF_STOCK: 'Tạm hết hàng', INSUFFICIENT_STOCK: 'Số lượng vượt tồn kho', UNAVAILABLE_VARIANT: 'Sản phẩm ngừng bán' };
 
 function CartLine({ item, busy, onUpdate, onRemove }) {
@@ -22,7 +26,7 @@ function CartLine({ item, busy, onUpdate, onRemove }) {
   }
   return <article className="cart-line">
     <ProductImage src={item.imageUrl} name={`${item.productName} — ${item.variantName}`} />
-    <div className="line-details"><span className="sku">{item.sku}</span><h2>{item.productName}</h2><p className="muted">{item.variantName}</p><p className="unit-price">{formatMoney(item.unitPrice)} <span>/ sản phẩm</span></p><div className="line-stock">{item.active ? `Có sẵn: ${item.availableQuantity}` : 'Sản phẩm ngừng bán'}</div>{item.issues?.length > 0 && <ul className="line-issues">{item.issues.map(issue => <li key={issue}>{issueLabels[issue] || issue}</li>)}</ul>}</div>
+    <div className="line-details"><span className="sku">{item.sku}</span><h2>{item.productName}</h2><p className="muted">{item.variantName}</p><p className="unit-price">{formatMoney(item.unitPrice)} <span>/ sản phẩm</span></p><div className={`line-stock${item.active && item.availableQuantity > 0 ? ' in-stock' : ' no-stock'}`}><span className="stock-dot" aria-hidden="true" />{item.active ? `Có sẵn: ${item.availableQuantity}` : 'Sản phẩm ngừng bán'}</div>{item.issues?.length > 0 && <ul className="line-issues">{item.issues.map(issue => <li key={issue}>{issueLabels[issue] || issue}</li>)}</ul>}</div>
     <div className="line-controls"><strong className="line-total">{formatMoney(item.lineTotal)}</strong><form className="quantity-form" onSubmit={submit}><div className="quantity-stepper"><button type="button" aria-label={`Giảm số lượng ${item.productName}`} disabled={busy || item.quantity <= 1} onClick={() => onUpdate(item.id, item.quantity - 1)}><Icon name="minus" size={16} /></button><input aria-label={`Số lượng ${item.productName}`} inputMode="numeric" value={quantity} onChange={event => setQuantity(event.target.value)} disabled={busy} aria-describedby={error ? `quantity-error-${item.id}` : undefined} /><button type="button" aria-label={`Tăng số lượng ${item.productName}`} disabled={busy || !canIncrease} onClick={() => onUpdate(item.id, item.quantity + 1)}><Icon name="plus" size={16} /></button></div>{quantity !== String(item.quantity) && <button className="text-button" disabled={busy}>Cập nhật</button>}</form>{error && <span className="field-error" id={`quantity-error-${item.id}`} role="alert">{error}</span>}<button className="text-button remove-button" disabled={busy} onClick={() => onRemove(item.id)} aria-label={`Xóa ${item.productName}`}><Icon name="trash" size={16} />Xóa</button></div>
   </article>;
 }
@@ -65,18 +69,19 @@ export default function CartPage() {
     catch (value) { setError(value); }
     finally { setBusy(false); }
   }
-  return <>
+  return <div className="cart-page">
     <div className="breadcrumb"><span>Nếp Nhà</span><span>/</span><span>Giỏ hàng</span></div>
     <div className="page-heading"><div><span className="eyebrow">NHỮNG LỰA CHỌN CHO TỔ ẤM</span><h1>Giỏ hàng của bạn<span className="heading-dot">.</span></h1><p>Mỗi món đồ, một chút gần hơn với không gian bạn yêu.</p></div><a className="inline-link" href="#catalog">Tiếp tục khám phá<Icon name="arrow" size={18} /></a></div>
+    <CheckoutSteps current={0} />
     <ErrorNotice error={error} onRetry={() => setRevision(value => value + 1)} />
     <div className="sr-only" role="status">{notice}</div>
     {loading ? <Loading text="Đang tải giỏ hàng…" /> : cart && <div className="cart-layout">
       <section className="panel cart-panel" aria-label="Sản phẩm trong giỏ"><div className="panel-heading"><h2>Sản phẩm <span className="count-badge">{cart.itemCount}</span></h2>{cart.items.length > 0 && <button className="text-button" disabled={busy} onClick={() => setClearConfirm(value => !value)}>Xóa tất cả</button>}</div>
         {clearConfirm && <div className="notice clear-confirm"><span>Bỏ tất cả sản phẩm khỏi giỏ?</span><button className="text-button" disabled={busy} onClick={() => mutate(client.clear, 'Đã xóa tất cả sản phẩm.')}>Đồng ý xóa hết</button><button className="text-button" onClick={() => setClearConfirm(false)} disabled={busy}>Giữ lại</button></div>}
-        {cart.items.length ? cart.items.map(item => <CartLine key={item.id} item={item} busy={busy} onUpdate={(id, quantity) => mutate(() => client.update(id, quantity), 'Đã cập nhật số lượng.')} onRemove={id => mutate(() => client.remove(id), 'Đã xóa sản phẩm.')} />) : <div className="empty-state"><div className="empty-icon"><Icon name="bag" size={34} /></div><h2>Giỏ hàng đang chờ bạn</h2><p>Khám phá những món nội thất phù hợp với tổ ấm của bạn.</p><a href="#catalog" className="button">Khám phá sản phẩm<Icon name="arrow" size={18} /></a></div>}
+        {cart.items.length ? cart.items.map(item => <CartLine key={item.id} item={item} busy={busy} onUpdate={(id, quantity) => mutate(() => client.update(id, quantity), 'Đã cập nhật số lượng.')} onRemove={id => mutate(() => client.remove(id), 'Đã xóa sản phẩm.')} />) : <div className="empty-state"><div className="empty-icon"><Icon name="sofa" size={38} /></div><h2>Giỏ hàng đang chờ bạn</h2><p>Khám phá những món nội thất phù hợp với tổ ấm của bạn.</p><a href="#catalog" className="button">Khám phá sản phẩm<Icon name="arrow" size={18} /></a></div>}
         <div className="cart-note"><Icon name="shield" size={18} /><span>Giỏ hàng được lưu lại. Tồn kho chưa được giữ trước.</span></div>
       </section>
-      <aside className="summary-column"><section className="panel summary-panel"><span className="eyebrow">LỰA CHỌN CỦA BẠN</span><h2>Tóm tắt giỏ hàng</h2><dl><div><dt>Số lượng sản phẩm</dt><dd>{cart.itemCount}</dd></div><div className="summary-total"><dt>Tạm tính</dt><dd data-testid="cart-subtotal">{formatMoney(cart.subtotal)}</dd></div></dl><p className="muted small">Tiền hàng hiện tại. Chưa bao gồm phí giao hàng, lắp đặt và ưu đãi.</p>{cart.items.length > 0 && <Link to="/checkout" className="button full cart-checkout-button">Tiếp tục đặt hàng<Icon name="arrow" size={18} /></Link>}</section>
+      <aside className="summary-column"><section className="panel summary-panel"><span className="eyebrow">LỰA CHỌN CỦA BẠN</span><h2>Tóm tắt giỏ hàng</h2><dl><div><dt>Số lượng sản phẩm</dt><dd>{cart.itemCount}</dd></div><div className="summary-total"><dt>Tạm tính</dt><dd data-testid="cart-subtotal">{formatMoney(cart.subtotal)}</dd></div></dl><p className="muted small">Tiền hàng hiện tại. Chưa bao gồm phí giao hàng, lắp đặt và ưu đãi.</p>{cart.items.length > 0 && <Link to="/checkout" className="button full cart-checkout-button">Tiếp tục đặt hàng<Icon name="arrow" size={18} /></Link>}<ul className="cart-perks">{cartPerks.map(([icon, text]) => <li key={icon}><Icon name={icon} size={18} />{text}</li>)}</ul></section>
         {!session.authenticated && <div className="guest-card"><Icon name="user" size={25} /><h3>Mang giỏ hàng theo bạn</h3><p>Đăng nhập để gộp giỏ khách vào tài khoản của bạn.</p><Link to="/login" className="inline-link">Đăng nhập<Icon name="arrow" size={18} /></Link></div>}
       </aside>
     </div>}
@@ -85,5 +90,5 @@ export default function CartPage() {
       <ErrorNotice error={catalogError} onRetry={() => setRevision(value => value + 1)} />
       {catalogLoading ? <Loading text="Đang tìm sản phẩm…" /> : catalog && <><div className="product-grid">{catalog.items.map(item => <article className="product-card" key={item.id}><ProductImage src={item.imageUrl} name={`${item.productName} — ${item.variantName}`} /><div className="product-card-content"><span className="sku">{item.sku}</span><h3>{item.productName}</h3><p className="muted">{item.variantName}</p><strong>{formatMoney(item.price)}</strong><div className="product-card-bottom"><span>{!item.active ? 'Ngừng bán' : item.availableQuantity > 0 ? `Có sẵn: ${item.availableQuantity}` : 'Tạm hết hàng'}</span><button className="add-button" aria-label={`Thêm ${item.productName} vào giỏ`} disabled={busy || !item.active || item.availableQuantity < 1 || !cart} onClick={() => mutate(() => client.add(item.id), 'Đã thêm sản phẩm vào giỏ.')}><Icon name="plus" /></button></div></div></article>)}</div>{!catalog.items.length && <div className="empty-state"><Icon name="search" size={32} /><h3>Chưa tìm thấy sản phẩm</h3><p>Thử tên khác hoặc tìm theo mã SKU.</p></div>}<Pager page={catalog} busy={catalogLoading} onChange={setPage} /></>}
     </section>
-  </>;
+  </div>;
 }

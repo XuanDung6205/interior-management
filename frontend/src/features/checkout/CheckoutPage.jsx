@@ -5,6 +5,7 @@ import { useCommerce } from '../../lib/session';
 import { trackEvent } from '../../lib/tracking';
 import { AddressSnapshot, MoneyBreakdown, OrderItems, OrderNote, paymentMethods } from '../orders/OrderParts';
 import { checkoutApi, clearAttempt, readAttempt, saveAttempt } from './checkoutApi';
+import CheckoutSteps from '../../components/CheckoutSteps';
 
 const emptyAddress = () => ({ recipientName: '', phone: '', email: '', addressLine1: '', addressLine2: '', wardName: '', districtName: '', provinceName: '', postalCode: '', countryCode: 'VN', companyName: '', taxCode: '' });
 // These typed business failures are emitted only after the server checked the
@@ -102,6 +103,7 @@ export default function CheckoutPage() {
   return <>
     <div className="breadcrumb"><Link to="/cart">Giỏ hàng</Link><span>/</span><span>Đặt hàng</span></div>
     <div className="page-heading"><div><span className="eyebrow">THÊM MỘT BƯỚC ĐẾN TỔ ẤM</span><h1>Hoàn thiện đơn hàng<span className="heading-dot">.</span></h1><p>Xem lại địa chỉ, lựa chọn dịch vụ và tổng tiền trước khi đặt.</p></div><Link to="/cart" className="inline-link">Trở về giỏ hàng</Link></div>
+    <CheckoutSteps current={1} />
     <div ref={errorRef} tabIndex="-1" className="error-summary"><ErrorNotice error={error} onRetry={loading || !cart ? () => setRevision(value => value + 1) : undefined} />{!!Object.keys(error?.fieldErrors || {}).length && <ul>{Object.entries(error.fieldErrors).map(([key, value]) => <li key={key}><a href={`#checkout-${key.replace('shippingAddress.', '')}`}>{value}</a></li>)}</ul>}{error?.status === 401 && <Link to="/login" state={{ returnTo: '/checkout' }} className="inline-link">Đăng nhập lại</Link>}</div>
     {pending && <div className="notice warning" role="status"><strong>Đang chờ xác nhận kết quả đặt hàng</strong><p>Thông tin yêu cầu được giữ trong phiên trình duyệt. Hãy thử lại đúng yêu cầu này để nhận kết quả; hệ thống sẽ trả cùng đơn nếu đã tạo. Bạn cũng có thể <Link to="/orders" className="inline-link">kiểm tra đơn hàng</Link>. Chưa thay đổi thông tin khi kết quả còn chưa rõ.</p></div>}
     {loading ? <Loading text="Đang chuẩn bị thông tin đặt hàng…" /> : !pending && cart?.items.length === 0 ? <section className="panel empty-state"><Icon name="bag" size={38} /><h2>Giỏ hàng đang trống</h2><p>Chọn sản phẩm trước khi xem trước đơn hàng.</p><Link to="/cart" className="button">Khám phá sản phẩm</Link></section> : (cart || pending) && <div className="checkout-layout">

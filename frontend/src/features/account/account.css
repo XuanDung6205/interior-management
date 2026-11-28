@@ -13,3 +13,20 @@
   .account-panel-body { padding: 20px; }
   .account-address { padding: 17px; }
 }
+
+/* Account overview: identity card and icon shortcuts */
+.account-overview { display: grid; grid-template-columns: minmax(240px, 320px) minmax(0, 1fr); gap: 18px; margin-bottom: 24px; }
+.account-overview .account-identity { display: flex; align-items: center; gap: 16px; padding: 22px; border-radius: 16px; background: linear-gradient(135deg, #1f3a35, #174e47); color: #fffefa; border: 0; }
+.account-avatar { flex: 0 0 auto; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: #f4ecdd; color: #174e47; font-family: 'Lora', Georgia, serif; font-size: 26px; }
+.account-identity strong { display: block; font-family: 'Lora', Georgia, serif; font-size: 20px; font-weight: 500; }
+.account-identity span:not(.account-avatar) { display: block; margin-top: 4px; font-size: 11px; color: #c9d7d0; }
+.account-shortcuts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.account-shortcut { display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: 16px; transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
+.account-shortcut strong { display: block; font-size: 13px; font-weight: 600; }
+.account-shortcut small { display: block; margin-top: 3px; font-size: 10px; color: var(--muted); }
+.account-shortcut-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: #f1efe8; color: var(--wood); transition: background .2s ease, color .2s ease; }
+.account-shortcut:hover { border-color: var(--teal); transform: translateY(-2px); box-shadow: 0 10px 24px rgba(23, 78, 71, .08); }
+.account-shortcut:hover .account-shortcut-icon { background: var(--teal); color: #fffefa; }
+@media (max-width: 1000px) { .account-overview { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .account-shortcuts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .account-shortcut, .account-shortcut-icon { transition: none; } .account-shortcut:hover { transform: none; } }
