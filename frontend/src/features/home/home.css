@@ -113,3 +113,36 @@
 }
 @media (max-width: 390px) { .home-product-grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .home-inspiration-image img, .home-product-card .product-image img, .home-gallery-progress span, .home-gallery-ring { transition: none; } }
+
+/* Service promises under the hero */
+.home-services { background: #fffefa; border-bottom: 1px solid #e7e3d8; }
+.home-services-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.home-service { display: flex; align-items: center; gap: 14px; padding: 26px 22px; }
+.home-service + .home-service { border-left: 1px solid #ece8de; }
+.home-service-icon { flex: 0 0 auto; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: #f0e9dd; color: #174e47; }
+.home-service strong { display: block; font-size: 13px; font-weight: 600; color: #2e332c; }
+.home-service span:not(.home-service-icon) { display: block; margin-top: 3px; font-size: 11px; color: #73776f; line-height: 1.5; }
+
+/* Shop by furniture item */
+.home-shop-by { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 14px; padding-bottom: 72px; }
+.home-shop-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 8px 18px; border: 1px solid #e7e3d8; border-radius: 16px; background: #fffefa; text-align: center; transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
+.home-shop-icon { display: grid; place-items: center; width: 62px; height: 62px; margin-bottom: 8px; border-radius: 50%; background: #eef1ec; color: #174e47; transition: background .2s ease, color .2s ease; }
+.home-shop-item strong { font-size: 13px; font-weight: 600; color: #2e332c; }
+.home-shop-item small { font-size: 10px; letter-spacing: .04em; color: #91765c; }
+.home-shop-item:hover { border-color: #174e47; transform: translateY(-2px); box-shadow: 0 10px 24px rgba(23, 78, 71, .08); }
+.home-shop-item:hover .home-shop-icon { background: #174e47; color: #fffefa; }
+.home-shop-item:focus-visible { outline: 2px solid #174e47; outline-offset: 3px; }
+
+@media (max-width: 1000px) {
+  .home-services-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-service:nth-child(3) { border-left: 0; }
+  .home-service:nth-child(n + 3) { border-top: 1px solid #ece8de; }
+  .home-shop-by { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .home-service { padding: 18px 12px; gap: 10px; }
+  .home-service-icon { width: 38px; height: 38px; }
+  .home-shop-by { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 48px; gap: 10px; }
+  .home-shop-item { flex: 0 0 112px; scroll-snap-align: start; }
+}
+@media (prefers-reduced-motion: reduce) { .home-shop-item, .home-shop-icon { transition: none; } .home-shop-item:hover { transform: none; } }

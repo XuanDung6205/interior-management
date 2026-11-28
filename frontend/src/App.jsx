@@ -3,6 +3,7 @@ import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-r
 import { createApiClient } from './lib/apiClient';
 import { SessionContext } from './lib/session';
 import { ErrorNotice, Icon, Loading } from './components/ui';
+import SiteFooter from './components/SiteFooter';
 import StoreHeader from './components/StoreHeader';
 import CartPage from './features/cart/CartPage';
 import HomePage from './features/home/HomePage';
@@ -120,6 +121,6 @@ export default function App() {
       </Routes>}
     </main>
     {session && <ChatWidget />}
-    <footer className="site-footer"><Link to="/" className="footer-brand">Nếp Nhà.</Link><span>Chọn điều giản dị, sống thật an yên.</span><span>Nội thất cho tổ ấm của bạn</span></footer>
+    <SiteFooter />
   </SessionContext.Provider>;
 }

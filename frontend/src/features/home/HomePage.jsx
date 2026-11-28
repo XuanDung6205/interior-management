@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ErrorNotice, Icon, Loading, ProductImage } from '../../components/ui';
+import { roomHref, rooms } from '../../components/StoreHeader';
 import { formatDate, formatMoney } from '../../lib/format';
 import { useCommerce } from '../../lib/session';
 import { trackEvent } from '../../lib/tracking';
@@ -12,6 +13,14 @@ const inspirations = [
   { title: 'Khoảng thảnh thơi', detail: 'Bàn trà mộc mạc, vừa đủ tinh tế', image: '/images/ban-tra-oslo.jpg', alt: 'Bàn trà gỗ sồi trong không gian tối giản', href: '/sale?category=demo-ban-tra' },
   { title: 'Một chỗ riêng', detail: 'Ghế thư giãn cho phút nghỉ ngơi', image: '/images/ghe-aalto.jpg', alt: 'Ghế thư giãn màu beige bên cửa sổ', href: '/sale?category=demo-ghe-thu-gian' },
 ];
+// Service promises mirror the server checkout policy (free shipping from 10M, per-item assembly fee).
+const services = [
+  { icon: 'truck', title: 'Giao miễn phí', detail: 'Cho đơn từ 10 triệu đồng' },
+  { icon: 'tools', title: 'Lắp đặt tận nhà', detail: 'Chọn khi đặt hàng, báo phí trước' },
+  { icon: 'shield', title: 'Bảo hành rõ ràng', detail: 'Thời hạn ghi trên từng sản phẩm' },
+  { icon: 'returns', title: 'Hỗ trợ đổi trả', detail: 'Gửi yêu cầu ngay trong đơn hàng' },
+];
+const shopByItem = rooms.flatMap(room => room.links.map(([label, category, icon]) => ({ label, icon, room: room.label, href: roomHref(room.slug, category) })));
 const featuredSkus = ['NN-DEMO-01-04', 'NN-DEMO-03-05', 'NN-DEMO-04-04'];
 const inspirationImages = new Set(inspirations.map(item => item.image));
 const homeCatalogCache = new WeakMap();
@@ -85,10 +94,18 @@ export default function HomePage() {
       <div className="home-hero-caption">SỐNG CHẬM · SỐNG ĐẸP · SỐNG CÙNG NẾP NHÀ</div>
     </section>
 
+    <section className="home-services" aria-label="Cam kết dịch vụ"><div className="home-container home-services-grid">
+      {services.map(item => <div className="home-service" key={item.title}><span className="home-service-icon"><Icon name={item.icon} size={24} /></span><div><strong>{item.title}</strong><span>{item.detail}</span></div></div>)}
+    </div></section>
+
     <section className="home-intro home-container" id="home-inspiration">
       <span className="home-kicker">CẢM HỨNG TỪ NHỮNG ĐIỀU GẦN GŨI</span>
       <div className="home-intro-row"><h2>Nhà đẹp theo<br /><em>cách của bạn.</em></h2><p>Đường nét giản dị, chất liệu ấm áp và những góc nhỏ có thể ở lại cùng bạn thật lâu. Bắt đầu từ món đồ bạn yêu, rồi để không gian tự kể câu chuyện của mình.</p></div>
     </section>
+
+    <nav className="home-shop-by home-container" aria-label="Mua theo món đồ">
+      {shopByItem.map(item => <Link to={item.href} className="home-shop-item" key={item.href}><span className="home-shop-icon"><Icon name={item.icon} size={30} /></span><strong>{item.label}</strong><small>{item.room}</small></Link>)}
+    </nav>
 
     <section className="home-inspiration home-container" aria-label="Ý tưởng cho không gian sống">
       {inspirations.map((item, index) => <Link to={item.href} className="home-inspiration-card" key={item.title}>
