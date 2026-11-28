@@ -43,6 +43,7 @@ public class CommerceSecurityConfiguration {
         http.authenticationProvider(provider)
             .csrf(csrf -> csrf.ignoringRequestMatchers(request -> "POST".equals(request.getMethod()) && (request.getContextPath()+"/api/payments/sepay/webhook").equals(request.getRequestURI())).csrfTokenRepository(new HttpSessionCsrfTokenRepository()).csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/admin/users","/api/admin/users/**").hasRole("ADMIN")
                 .requestMatchers("/api/admin","/api/admin/**").hasAnyRole("ADMIN","STAFF")
                 .requestMatchers("/api/cart/merge","/api/checkout","/api/checkout/**","/api/orders","/api/orders/**","/api/notifications","/api/notifications/**","/api/wishlist","/api/wishlist/**","/api/reviews","/api/reviews/**","/api/account","/api/account/**").authenticated()
                 .anyRequest().permitAll())

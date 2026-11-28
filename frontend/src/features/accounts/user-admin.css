@@ -1,0 +1,30 @@
+.user-admin-panel { overflow: hidden; }
+.user-admin-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 22px 26px; border-bottom: 1px solid var(--line); }
+.user-admin-toolbar h2 { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.user-admin-toolbar p { margin-top: 6px; }
+.user-admin-filters { display: flex; align-items: center; gap: 8px; }
+.user-admin-filters input { width: 220px; }
+.user-admin-filters select { min-width: 145px; }
+.user-admin-filters .button { min-height: 44px; padding: 9px 13px; white-space: nowrap; }
+.user-admin-table td:first-child strong, .user-admin-table td small { display: block; }
+.user-admin-table td small { margin-top: 3px; color: var(--muted); font-size: 10px; }
+.user-admin-roles { display: flex; flex-wrap: wrap; gap: 5px; }
+.user-admin-roles span { padding: 3px 7px; color: var(--teal); background: #eaf0e9; border-radius: 20px; font-size: 9px; }
+.user-admin-actions { display: grid; justify-items: start; gap: 2px; }
+.user-admin-actions .text-button { min-height: 36px; }
+.user-admin-confirm { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 18px; }
+.user-admin-confirm>div { margin-right: auto; }
+.user-admin-confirm p { font-size: 11px; }
+
+@media (max-width: 900px) {
+  .user-admin-toolbar { align-items: stretch; flex-direction: column; }
+  .user-admin-filters { flex-wrap: wrap; }
+  .user-admin-filters input { flex: 1 1 220px; }
+}
+@media (max-width: 600px) {
+  .user-admin-toolbar { padding: 19px; }
+  .user-admin-filters { display: grid; grid-template-columns: 1fr 1fr; }
+  .user-admin-filters input { width: 100%; grid-column: 1 / -1; }
+  .user-admin-filters .button { grid-column: 1 / -1; }
+  .user-admin-confirm { align-items: stretch; flex-direction: column; }
+}

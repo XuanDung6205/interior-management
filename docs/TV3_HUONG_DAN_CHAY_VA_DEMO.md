@@ -72,8 +72,16 @@ COD mới có hạn xác nhận24giờ. SePay mới có hạn thanh toán30phút
 
 Triển khai với DB chính: chọn đúng database trong HeidiSQL rồi chạy lần lượt `docs/database/V002__orders_request_fingerprint.sql`, `V003__shipments_idempotency.sql`, `V004__shipment_audit_index.sql`, `V005__orders_assembly_requested.sql`, `V006__payments_confirmation_note.sql`, `V007__refunds_verification_notes.sql`, sau đó V008–V012 theo [migration README](database/README.md). V003/V004 hỗ trợ xuất kho/vận đơn TV4; V005 backfill đơn cũ đã thu phí lắp thành có chọn dịch vụ và lưu lựa chọn mới kể cả phí0; V006/V007 bổ sung ghi chú đối soát riêng cho nhân viên. Không xóa lịch sử và không chạy lại V001 trên database đã tồn tại.
 
-## Quản trị đơn hàng TV3-07
+## Quản lý tài khoản
+Quản lý tài khoản nằm tại `/admin/users` và chỉ ADMIN được mở từ menu Quản trị. ADMIN có thể tìm/lọc theo tên, vai trò và trạng thái, khóa hoặc mở khóa tài khoản, và chuyển vai trò STAFF ↔ CUSTOMER. Không thể đổi vai trò tài khoản ADMIN hoặc gán ADMIN qua màn hình này. Đổi trạng thái/vai trò được ghi vào `audit_logs`; không thể tự khóa tài khoản đang đăng nhập. Khi tài khoản bị khóa, phiên hiện có bị từ chối ở request tiếp theo.
 
+Khách đã đăng nhập mở `/account` để sửa họ tên/email/số điện thoại và quản lý sổ địa chỉ: thêm, sửa, đặt mặc định hoặc xóa (có bước xác nhận). API hồ sơ dùng `/api/account/profile`; CRUD và đặt mặc định dùng `/api/account/addresses`. Server tự giới hạn dữ liệu theo tài khoản đang đăng nhập.
+
+Người dùng đã đăng nhập chọn **Đổi mật khẩu** trong menu tài khoản (ADMIN cũng có thể dùng) để xác nhận mật khẩu hiện tại và đặt mật khẩu mới. Mật khẩu mới cần ít nhất 8 ký tự, tối đa 72 byte UTF-8 và phải nhập xác nhận khớp. API `POST /api/account/password` chỉ đổi mật khẩu của phiên hiện tại, yêu cầu CSRF, không ghi mật khẩu vào nhật ký và không đăng xuất phiên hiện tại; quên mật khẩu/email xác nhận chưa thuộc phạm vi này.
+
+Sau khi đăng nhập, ADMIN mặc định vào `/admin` — trang **Tổng quan quản trị** — và chỉ thấy menu/chức năng quản trị; các URL cửa hàng như `/cart`, `/account` hoặc `/` sẽ đưa ADMIN về tổng quan. Phiên ADMIN không gộp giỏ khách. STAFF tiếp tục thấy cả cửa hàng và menu quản trị, còn CUSTOMER chỉ thấy các chức năng cửa hàng. Đăng xuất vẫn có trong menu tài khoản quản trị.
+
+## Quản trị đơn hàng TV3-07
 Đăng nhập tài khoản STAFF/ADMIN rồi mở `/admin/orders`. Tìm mã đơn, tên/email tài khoản hoặc tên/số điện thoại người nhận; lọc trạng thái và phân trang. Màn hình chi tiết hiển thị thanh toán, vận chuyển, lắp đặt, hoàn tiền và lịch sử riêng nhau.
 
 Luồng trạng thái: Chờ xác nhận → Đã xác nhận → Đang xử lý → Hoàn thành. Có thể hủy ở ba trạng thái đầu nếu chưa xuất giao; hủy khi Đang xử lý chỉ dành cho nhân viên. Bấm lặp một chuyển trạng thái đã áp dụng không ghi lịch sử/audit thêm. Nếu người khác đổi trạng thái, tải lại trước khi thao tác tiếp.
@@ -102,7 +110,7 @@ Integration API/MariaDB thật (database riêng, test sẽ xóa fixture bên tro
 ```powershell
 python scripts/tv3_database.py create --database furniture_shop_test_tv3_policy_local
 $env:TV3_TEST_DB_URL = 'jdbc:mariadb://localhost:3306/furniture_shop_test_tv3_policy_local'
-.\mvnw.cmd '-Dtest=CommerceDatabaseTest,CheckoutTransactionTest,CheckoutAdaptersTest,InventoryReservationTest,OrderLifecycleTest,OrderCompletionPolicyTest,PaymentConfirmationTest,ManualRefundTest,OrderDispatchTest' test
+.\mvnw.cmd '-Dtest=CommerceDatabaseTest,CheckoutTransactionTest,CheckoutAdaptersTest,InventoryReservationTest,OrderLifecycleTest,OrderCompletionPolicyTest,PaymentConfirmationTest,ManualRefundTest,OrderDispatchTest,AdminAccountIntegrationTest,RegistrationIntegrationTest' test
 Remove-Item Env:TV3_TEST_DB_URL
 ```
 

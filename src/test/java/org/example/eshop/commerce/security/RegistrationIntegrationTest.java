@@ -22,6 +22,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -72,9 +74,68 @@ class RegistrationIntegrationTest {
         assertTrue(hash.startsWith("{bcrypt}"));
         List<String> roles = jdbc.queryForList("SELECT r.code FROM user_roles ur JOIN roles r ON r.id=ur.role_id JOIN users u ON u.id=ur.user_id WHERE u.username=?", String.class, username);
         assertEquals(List.of("CUSTOMER"), roles);
-        mvc.perform(post("/api/session/login").with(csrf()).param("username", username).param("password", "secret-pass-123"))
+        var login = mvc.perform(post("/api/session/login").with(csrf())
+                        .param("username", username).param("password", "secret-pass-123"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.authenticated").value(true))
-                .andExpect(jsonPath("$.user.roles[0]").value("CUSTOMER"));
+                .andExpect(jsonPath("$.user.roles[0]").value("CUSTOMER")).andReturn();
+        var session = (org.springframework.mock.web.MockHttpSession) login.getRequest().getSession();
+        mvc.perform(get("/api/account/profile").session(session))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.fullName").value("Nguyễn An"));
+        String updatedEmail = ("updated-" + email).toUpperCase();
+        mvc.perform(put("/api/account/profile").session(session).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"fullName\":\"Nguyễn Bình\",\"email\":\"" + updatedEmail + "\",\"phone\":\"+84901234567\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.fullName").value("Nguyễn Bình"))
+                .andExpect(jsonPath("$.email").value(updatedEmail.toLowerCase()))
+                .andExpect(jsonPath("$.phone").value("+84901234567"));
+        assertEquals(updatedEmail.toLowerCase(), jdbc.queryForObject("SELECT email FROM users WHERE username=?", String.class, username));
+    }
+
+    @Test void signedInCustomerCanChangePasswordAndTheOldPasswordStopsAuthenticating() throws Exception {
+        String username = username();
+        String email = username + "@example.invalid";
+        mvc.perform(post("/api/session/register").with(csrf()).contentType("application/json")
+                        .content(body(username, email, "secret-pass-123", "secret-pass-123")))
+                .andExpect(status().isCreated());
+        var login = mvc.perform(post("/api/session/login").with(csrf())
+                        .param("username", username).param("password", "secret-pass-123"))
+                .andExpect(status().isOk()).andReturn();
+        var session = (org.springframework.mock.web.MockHttpSession) login.getRequest().getSession();
+
+        mvc.perform(post("/api/account/password").session(session).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"currentPassword\":\"wrong-pass-123\",\"newPassword\":\"new-secret-123\",\"confirmPassword\":\"new-secret-123\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.currentPassword").exists());
+        mvc.perform(post("/api/account/password").session(session).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"currentPassword\":\"secret-pass-123\",\"newPassword\":\"secret-pass-123\",\"confirmPassword\":\"secret-pass-123\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.newPassword").exists());
+        mvc.perform(post("/api/account/password").session(session).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"currentPassword\":\"secret-pass-123\",\"newPassword\":\"new-secret-123\",\"confirmPassword\":\"different-pass-123\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.confirmPassword").exists());
+        mvc.perform(post("/api/account/password").session(session).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"currentPassword\":\"secret-pass-123\",\"newPassword\":\"new-secret-123\",\"confirmPassword\":\"new-secret-123\"}"))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(post("/api/session/login").with(csrf())
+                        .param("username", username).param("password", "secret-pass-123"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/session/login").with(csrf())
+                        .param("username", username).param("password", "new-secret-123"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.authenticated").value(true));
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT COUNT(*) FROM audit_logs WHERE entity_type='USER'
+                  AND entity_id=(SELECT CAST(id AS CHAR) FROM users WHERE username=?)
+                  AND action='USER_PASSWORD_CHANGED'
+                """, Integer.class, username));
+        assertEquals(0, jdbc.queryForObject("""
+                SELECT COUNT(*) FROM audit_logs WHERE entity_type='USER'
+                  AND entity_id=(SELECT CAST(id AS CHAR) FROM users WHERE username=?)
+                  AND (before_data LIKE '%secret-pass-123%' OR after_data LIKE '%new-secret-123%')
+                """, Integer.class, username));
     }
 
     @Test void rejectsInvalidAndDuplicateAccountsWithFieldErrors() throws Exception {
