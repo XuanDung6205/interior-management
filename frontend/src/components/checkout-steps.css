@@ -1,0 +1,21 @@
+/* Checkout steps */
+.checkout-steps { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 28px; padding: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); overflow: hidden; }
+.checkout-steps li { position: relative; display: flex; align-items: center; gap: 12px; padding: 14px 20px; color: var(--muted); font-size: 12px; font-weight: 500; }
+.checkout-steps li + li { border-left: 1px solid var(--line); }
+.checkout-steps small { display: block; font-size: 9px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #a4a497; margin-bottom: 2px; }
+.checkout-step-icon { flex: 0 0 auto; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #f1efe8; color: #8d8f83; }
+.checkout-steps li.is-current { color: var(--ink); background: linear-gradient(180deg, #fffefa, #f6f3ea); }
+.checkout-steps li.is-current::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--teal); }
+.checkout-steps li.is-current small { color: var(--wood); }
+.checkout-steps li.is-current .cart-step-icon { background: var(--teal); color: #fffefa; }
+
+.checkout-steps li.is-done { color: var(--ink); }
+.checkout-steps li.is-done .checkout-step-icon { background: #e6efe9; color: var(--teal); }
+@media (max-width: 800px) {
+  .checkout-steps li { padding: 12px; gap: 8px; font-size: 11px; }
+  .checkout-step-icon { width: 30px; height: 30px; }
+}
+@media (max-width: 600px) {
+  .checkout-steps small { display: none; }
+  .checkout-steps li { flex-direction: column; text-align: center; gap: 6px; font-size: 10px; }
+}

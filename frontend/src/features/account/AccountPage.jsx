@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ErrorNotice, Loading } from '../../components/ui';
+import { Link } from 'react-router-dom';
+import { ErrorNotice, Icon, Loading } from '../../components/ui';
 import { useCommerce } from '../../lib/session';
 import './account.css';
+
+const accountShortcuts = [['/orders', 'orders', 'Đơn hàng', 'Theo dõi, thanh toán, đổi trả'], ['/notifications', 'bell', 'Hộp thư', 'Cập nhật từ cửa hàng'], ['/wishlist', 'heart', 'Món đã lưu', 'Những món bạn yêu thích'], ['/cart', 'cart', 'Giỏ đang chọn', 'Tiếp tục mua sắm']];
 
 export default function AccountPage() {
   const { api, session } = useCommerce();
@@ -54,6 +57,15 @@ export default function AccountPage() {
         <p>Quản lý thông tin cá nhân và địa chỉ nhận hàng.</p>
       </div>
     </header>
+    <div className="account-overview">
+      <div className="account-identity panel">
+        <span className="account-avatar" aria-hidden="true">{(user.fullName || user.username || '?').trim().charAt(0).toUpperCase()}</span>
+        <div><strong>{user.fullName || user.username}</strong><span>@{user.username} · {roleNames}</span></div>
+      </div>
+      <nav className="account-shortcuts" aria-label="Lối tắt tài khoản">
+        {accountShortcuts.map(([to, icon, title, detail]) => <Link key={to} to={to} className="account-shortcut panel"><span className="account-shortcut-icon"><Icon name={icon} size={22} /></span><span><strong>{title}</strong><small>{detail}</small></span></Link>)}
+      </nav>
+    </div>
     <div className="account-tabs" role="tablist" aria-label="Khu vực tài khoản">
       <button id="account-profile-tab" type="button" role="tab" aria-selected={activeTab === 'profile'} aria-controls="account-profile-panel" className={`button ${activeTab === 'profile' ? '' : 'secondary'}`} onClick={() => setActiveTab('profile')}>Hồ sơ</button>
       <button id="account-addresses-tab" type="button" role="tab" aria-selected={activeTab === 'addresses'} aria-controls="account-addresses-panel" className={`button ${activeTab === 'addresses' ? '' : 'secondary'}`} onClick={() => setActiveTab('addresses')}>Sổ địa chỉ</button>

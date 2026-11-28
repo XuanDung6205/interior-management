@@ -1,0 +1,61 @@
+/* Cart page polish. Every rule is scoped to .cart-page so shared classes keep their look elsewhere. */
+
+/* Panels */
+.cart-page .cart-panel, .cart-page .summary-panel { border-radius: 16px; box-shadow: 0 1px 2px rgba(31, 33, 27, .04), 0 12px 32px rgba(31, 33, 27, .05); }
+.cart-page .summary-column { position: sticky; top: 24px; }
+
+/* Cart lines */
+.cart-page .cart-line { transition: background .2s ease; }
+.cart-page .cart-line:hover { background: #fcfbf6; }
+.cart-page .cart-line .product-image { border-radius: 12px; }
+@media (min-width: 1101px) {
+  .cart-page .cart-line { grid-template-columns: 132px minmax(0, 1fr) 160px; align-items: start; }
+  .cart-page .cart-line .product-image { height: 132px; }
+}
+.cart-page .line-details .sku { display: inline-block; padding: 3px 8px; border-radius: 999px; background: #f1efe8; font-size: 9px; letter-spacing: .08em; }
+.cart-page .line-details h2 { font-family: 'Lora', Georgia, serif; font-size: 19px; font-weight: 500; letter-spacing: -.01em; margin: 9px 0 4px; }
+.cart-page .unit-price { font-weight: 600; color: var(--ink); }
+.cart-page .unit-price span { font-weight: 400; color: var(--muted); }
+.cart-page .line-stock { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 4px 10px 4px 8px; border-radius: 999px; font-size: 10px; font-weight: 500; }
+.cart-page .line-stock.in-stock { background: #e9f2ec; color: #24644f; }
+.cart-page .line-stock.no-stock { background: #f8e9e6; color: var(--error); }
+.cart-page .stock-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.cart-page .line-total { font-size: 17px; color: var(--teal); }
+.cart-page .quantity-stepper { border-radius: 999px; border-color: #d3d3c8; background: var(--paper); }
+.cart-page .quantity-stepper button:hover:not(:disabled) { background: #eef1ec; color: var(--teal); }
+.cart-page .cart-note { background: #f7f6f0; border-radius: 0 0 16px 16px; }
+.cart-page .cart-note svg { color: var(--teal); }
+
+/* Summary */
+.cart-page .summary-panel { border-top: 3px solid var(--teal); }
+.cart-page .cart-checkout-button { min-height: 52px; border-radius: 999px; font-size: 13px; }
+.cart-page .cart-perks { list-style: none; margin: 22px 0 0; padding: 18px 0 0; border-top: 1px dashed var(--line); display: grid; gap: 11px; }
+.cart-page .cart-perks li { display: flex; align-items: center; gap: 10px; font-size: 11px; color: #55574d; }
+.cart-page .cart-perks svg { flex: 0 0 auto; color: var(--wood); }
+.cart-page .guest-card { border: 1px dashed #d8d2c2; }
+
+/* Empty cart */
+.cart-page .empty-state { padding: 72px 24px; }
+.cart-page .empty-icon { width: 96px; height: 96px; background: radial-gradient(circle at 50% 40%, #fffefa, #e9eee8); box-shadow: inset 0 0 0 1px #dfe6de; }
+
+/* Suggestions */
+.cart-page .catalog-section .product-card { border-radius: 16px; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.cart-page .catalog-section .product-card:hover { transform: translateY(-3px); border-color: #cfd8cf; box-shadow: 0 14px 30px rgba(23, 78, 71, .09); }
+.cart-page .catalog-section .product-card .product-image img { transition: transform .5s ease; }
+.cart-page .catalog-section .product-card:hover .product-image img { transform: scale(1.04); }
+.cart-page .catalog-section .product-card h3 { font-family: 'Lora', Georgia, serif; font-size: 17px; }
+.cart-page .catalog-section .product-card strong { font-size: 15px; }
+.cart-page .search-form { border-radius: 999px; }
+.cart-page .search-form .button { border-radius: 999px; }
+
+@media (max-width: 800px) {
+  .cart-page .summary-column { position: static; }
+}
+@media (max-width: 600px) {
+  .cart-page .line-details h2 { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cart-page .cart-line, .cart-page .catalog-section .product-card, .cart-page .catalog-section .product-card .product-image img { transition: none; }
+  .cart-page .catalog-section .product-card:hover { transform: none; }
+  .cart-page .catalog-section .product-card:hover .product-image img { transform: none; }
+}

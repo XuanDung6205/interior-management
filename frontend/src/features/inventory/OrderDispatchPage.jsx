@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCommerce } from '../../lib/session';
-import { ErrorNotice, Loading, Pager } from '../../components/ui';
+import { ErrorNotice, Loading, OrderCode, Pager } from '../../components/ui';
 import { inventoryApi } from './inventoryApi';
 
 const emptyForm = () => ({ warehouseId: '', carrier: '', trackingNumber: '', note: '' });
@@ -83,10 +83,10 @@ export default function OrderDispatchPage() {
     {pending && <div className="notice warning" role="status"><strong>Yêu cầu xuất kho đang chờ kết quả.</strong><p>Đơn #{pending.orderId}, kho #{pending.body.warehouseId}, vận đơn {pending.body.trackingNumber}. Giữ nguyên yêu cầu khi thử lại để tránh xuất hai lần.</p><button className="button secondary" disabled={busy} onClick={() => send(pending)}>{busy ? 'Đang kiểm tra…' : 'Kiểm tra và gửi lại'}</button></div>}
     {notice && <div className="notice success" role="status">{notice.replayed ? 'Phiếu xuất đã được ghi nhận trước đó.' : 'Đã xuất kho.'} Vận đơn {notice.trackingNumber}, {notice.items.reduce((total, item) => total + item.quantity, 0)} sản phẩm, trạng thái {notice.status}.</div>}
     <section className="panel inventory-history" aria-label="Đơn chờ xuất kho"><div className="panel-heading"><div><span className="eyebrow">ĐƠN CẦN XỬ LÝ</span><h2>Hàng đang giữ</h2></div></div>
-      {loading ? <Loading text="Đang tải đơn chờ xuất…" /> : queue?.items.length ? <div className="inventory-receipt-list">{queue.items.map(item => <article key={item.orderId} className="dispatch-queue-row"><div><strong>{item.orderNumber}</strong><span>{item.status} · {item.remainingQuantity} sản phẩm còn giữ</span></div><button type="button" className="button secondary" disabled={busy || !!pending} onClick={() => selectOrder(item.orderId)}>Xem hàng giữ</button></article>)}</div> : !error && <p className="muted">Không có đơn đang giữ hàng.</p>}
+      {loading ? <Loading text="Đang tải đơn chờ xuất…" /> : queue?.items.length ? <div className="inventory-receipt-list">{queue.items.map(item => <article key={item.orderId} className="dispatch-queue-row"><div><strong><OrderCode value={item.orderNumber} /></strong><span>{item.status} · {item.remainingQuantity} sản phẩm còn giữ</span></div><button type="button" className="button secondary" disabled={busy || !!pending} onClick={() => selectOrder(item.orderId)}>Xem hàng giữ</button></article>)}</div> : !error && <p className="muted">Không có đơn đang giữ hàng.</p>}
       <Pager page={queue} busy={loading || busy} onChange={setPage} />
     </section>
-    {preview && !pending && <section className="panel inventory-receipt-panel" aria-label="Xuất kho cho đơn"><div className="panel-heading"><div><span className="eyebrow">VẬN ĐƠN MỚI</span><h2>{preview.orderNumber}</h2></div></div>
+    {preview && !pending && <section className="panel inventory-receipt-panel" aria-label="Xuất kho cho đơn"><div className="panel-heading"><div><span className="eyebrow">VẬN ĐƠN MỚI</span><h2><OrderCode value={preview.orderNumber} /></h2></div></div>
       <div className="dispatch-holds">{preview.holds.map(item => <div key={item.reservationId}><strong>{item.sku}</strong><span>{item.warehouseCode}: {item.remainingQuantity} còn giữ / {item.quantity} đặt</span></div>)}</div>
       <form className="form-grid" onSubmit={submit}>
         <div className="form-field"><label htmlFor="dispatch-warehouse">Kho xuất</label><select id="dispatch-warehouse" required value={form.warehouseId} disabled={busy} onChange={event => setForm(current => ({ ...current, warehouseId: event.target.value }))}><option value="">Chọn kho</option>{locations.map(item => <option key={item.id} value={item.id}>{item.code}</option>)}</select></div>
