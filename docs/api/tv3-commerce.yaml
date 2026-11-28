@@ -409,6 +409,42 @@ paths:
           minimum: 1
           maximum: 100
           default: 20
+  /api/admin/users/{id}/role:
+    patch:
+      operationId: changeAdminManagedUserRole
+      summary: 'ADMIN: switch a STAFF account to CUSTOMER or a CUSTOMER account to STAFF'
+      description: ADMIN accounts cannot be changed through this endpoint. The role transition and USER_ROLE_CHANGED audit record are committed together.
+      tags:
+      - Account
+      security:
+      - cookieSession: []
+      parameters:
+      - *id006
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminAccountRoleRequest'
+      responses:
+        '200':
+          description: Updated account with its new role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAccount'
+        '400': *id001
+        '401': *id002
+        '403': *id003
+        '404': *id004
+        '409': *id005
   /api/admin/coupons:
     get:
       operationId: listCoupons
@@ -572,6 +608,90 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RuntimeInfo'
+  /api/account/profile:
+    get:
+      operationId: getAccountProfile
+      summary: Read the signed-in account profile
+      tags:
+      - Account
+      security:
+      - cookieSession: []
+      responses:
+        '200':
+          description: Profile of the signed-in account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountProfile'
+        '401': *id002
+        '403': *id003
+        '404': *id004
+    put:
+      operationId: updateAccountProfile
+      summary: Update editable fields of the signed-in account profile
+      description: The account ID is derived from the session, never from the request. Email must be unique.
+      tags:
+      - Account
+      security:
+      - cookieSession: []
+      parameters:
+      - *id006
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountProfileRequest'
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountProfile'
+        '400': *id001
+        '401': *id002
+        '403': *id003
+        '404': *id004
+        '409': *id005
+  /api/account/password:
+    post:
+      operationId: changeAccountPassword
+      summary: Change the password of the signed-in account
+      description: Requires the current password and a matching new-password confirmation. The new password must be at least 8 characters and at most 72 UTF-8 bytes. The account ID is derived from the session; passwords are never written to the audit log. The current session remains active.
+      tags:
+      - Account
+      security:
+      - cookieSession: []
+      parameters:
+      - *id006
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [currentPassword, newPassword, confirmPassword]
+              properties:
+                currentPassword:
+                  type: string
+                  format: password
+                newPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+                  description: At most 72 UTF-8 bytes.
+                confirmPassword:
+                  type: string
+                  format: password
+                  description: Must match newPassword.
+      responses:
+        '204':
+          description: Password changed
+        '400': *id001
+        '401': *id002
+        '403': *id003
   /api/account/addresses:
     get:
       operationId: listAccountAddresses
@@ -3605,6 +3725,49 @@ components:
                 message: Installation already recorded with different proof.
                 fieldErrors: {}
   schemas:
+    AdminAccount:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - LOCKED
+          - DISABLED
+        roles:
+          type: array
+          items:
+            type: string
+      required:
+      - id
+      - username
+      - fullName
+      - email
+      - status
+      - roles
+    AdminAccountRoleRequest:
+      type: object
+      properties:
+        roleCode:
+          type: string
+          enum:
+          - STAFF
+          - CUSTOMER
+      required:
+      - roleCode
     ApiError:
       type: object
       properties:
@@ -4397,6 +4560,52 @@ components:
       - addressLine1
       - countryCode
       - isDefault
+    AccountProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+          maxLength: 50
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+          nullable: true
+      required:
+      - id
+      - username
+      - fullName
+      - email
+      - phone
+    AccountProfileRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+          pattern: '^[+0-9 .()\-]*$'
+          nullable: true
+      required:
+      - fullName
+      - email
     AddressBookList:
       type: array
       items:

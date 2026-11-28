@@ -7,12 +7,14 @@ test.beforeEach(async ({ request }) => {
   expect(runtime.application).toBe('tv3-commerce');
   expect(runtime.isolatedData, 'Manual payment demo may only mutate an isolated development/test database').toBe(true);
 });
+// ADMIN accounts land on /admin after login; customers and staff return to the cart.
+const landingAfterLogin = username => username === (process.env.TV3_ADMIN_USER || 'tv3.admin') ? /\/admin$/ : /\/cart$/;
 async function login(page, username) {
   await page.goto('/login');
   await page.getByLabel('Tên đăng nhập', { exact: true }).fill(username);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(process.env.TV3_DEMO_PASSWORD);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
-  await expect(page).toHaveURL(/\/cart$/);
+  await expect(page).toHaveURL(landingAfterLogin(username));
 }
 
 test('demo paid order is cancelled, its unsent refund is replaced and exact refund proof replays before public history updates', async ({ page: customerPage, browser, baseURL }) => {
@@ -190,7 +192,9 @@ test('demo paid order is cancelled, its unsent refund is replaced and exact refu
         const navigation = adminPage.getByRole('navigation', { name: 'Điều hướng chính' });
         const adminMenu = navigation.getByRole('button', { name: 'Quản trị' });
         if (await adminMenu.getAttribute('aria-expanded') !== 'true') await adminMenu.click();
-        await expect(navigation.getByRole('link')).toHaveCount(18);
+        // ADMIN sees only the 14 admin links plus account management; storefront links are hidden.
+        await expect(navigation.getByRole('link')).toHaveCount(15);
+        await expect(navigation.getByRole('link', { name: 'Quản lý tài khoản', exact: true })).toHaveAttribute('href', '/admin/users');
         await expect(navigation.getByRole('link', { name: 'Sản phẩm & catalog', exact: true })).toHaveAttribute('href', '/admin/catalog');
         expect(await adminPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `No overflow at ${path} width ${width}`).toBe(true);
         if ([1440, 390].includes(width)) await adminPage.screenshot({ path: `test-results/tv3-refund-${path === '/admin/refunds' ? 'queue' : path.endsWith('/refunds') ? 'order' : 'detail'}-${width}.png`, fullPage: true });

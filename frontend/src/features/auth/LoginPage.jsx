@@ -9,19 +9,31 @@ export default function LoginPage() {
   const [mergeError, setMergeError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [mergeDestination, setMergeDestination] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const requested = location.state?.returnTo;
   const registeredUsername = location.state?.registeredUsername;
-  const returnTo = typeof requested === 'string' && /^\/(?:checkout|notifications|orders(?:\/\d+(?:\/(?:payments|returns|print))?)?|admin\/(?:(?:orders(?:\/\d+(?:\/(?:refunds|aftercare|print))?)?|payments(?:\/\d+)?|refunds(?:\/\d+)?)|operations|coupons|inventory\/(?:receipts|operations|dispatch|shipments)))(?:\?.*)?$/.test(requested) ? requested : '/cart';
-  async function merge() {
-    try { await api.mergeCart(); navigate(returnTo); }
+  const returnTo = typeof requested === 'string' && /^\/(?:account\/password|checkout|notifications|orders(?:\/\d+(?:\/(?:payments|returns|print))?)?|admin(?:\/(?:(?:orders(?:\/\d+(?:\/(?:refunds|aftercare|print))?)?|payments(?:\/\d+)?|refunds(?:\/\d+)?)|dashboard|content|reviews|users|operations|coupons|inventory\/(?:receipts|operations|dispatch|shipments)))?)(?:\?.*)?$/.test(requested) ? requested : '/cart';
+  async function merge(destination) {
+    try { await api.mergeCart(); navigate(destination); }
     catch (value) { setMergeError(value); }
   }
   async function submit(event) {
     event.preventDefault(); setBusy(true); setError(null); setMergeError(null);
     const form = new FormData(event.currentTarget);
-    try { setSession(await api.login(form.get('username').trim(), form.get('password'))); await merge(); }
+    try {
+      const authenticated = await api.login(form.get('username').trim(), form.get('password'));
+      const roles = authenticated.user?.roles || [];
+      const hasStaffAccess = roles.includes('ADMIN') || roles.includes('STAFF');
+      const destination = returnTo.startsWith('/admin')
+        ? !hasStaffAccess ? '/cart' : returnTo === '/admin/users' && !roles.includes('ADMIN') ? '/admin' : returnTo
+        : roles.includes('ADMIN') ? '/admin' : returnTo;
+      setMergeDestination(destination);
+      setSession(authenticated);
+      if (roles.includes('ADMIN')) navigate(destination);
+      else await merge(destination);
+    }
     catch (value) {
       if (value?.code === 'INVALID_CREDENTIALS') value.message = 'Tên đăng nhập hoặc mật khẩu không đúng.';
       setError(value);
@@ -32,7 +44,7 @@ export default function LoginPage() {
     <div className="login-story"><span className="eyebrow">CHÀO MỪNG VỀ NHÀ</span><h1>Một tài khoản.<br />Cả tổ ấm của bạn.</h1><p>Giữ những lựa chọn yêu thích trong giỏ và tiếp tục hoàn thiện không gian sống theo cách của riêng mình.</p><div className="line-art" aria-hidden="true"><div className="art-window" /><div className="art-lamp" /><div className="art-sofa" /><div className="art-floor" /></div><div className="story-note"><Icon name="leaf" /><span>Không gian đẹp bắt đầu từ những điều giản dị.</span></div></div>
     <div className="login-panel panel"><span className="eyebrow">NẾP NHÀ / TÀI KHOẢN</span><h2>Đăng nhập</h2><p className="muted">Tiếp tục với tài khoản cửa hàng của bạn.</p>
       {registeredUsername && <div className="notice" role="status">Tài khoản đã được tạo. Đăng nhập để tiếp tục.</div>}
-      {mergeError ? <><div className="notice">Đã đăng nhập thành công. Giỏ khách chưa gộp được; các sản phẩm vẫn được giữ lại.</div><ErrorNotice error={mergeError} /><button className="button full" disabled={busy} onClick={async () => { setBusy(true); await merge(); setBusy(false); }}>Thử gộp lại</button><Link to="/cart" className="text-button block-link">Xem giỏ tài khoản để điều chỉnh</Link></> : session.authenticated ? <div className="notice">Bạn đang đăng nhập với tài khoản <strong>{session.user.username}</strong>. Có thể nhập tài khoản khác bên dưới.</div> : null}
+      {mergeError ? <><div className="notice">Đã đăng nhập thành công. Giỏ khách chưa gộp được; các sản phẩm vẫn được giữ lại.</div><ErrorNotice error={mergeError} /><button className="button full" disabled={busy} onClick={async () => { setBusy(true); await merge(mergeDestination || returnTo); setBusy(false); }}>Thử gộp lại</button><Link to="/cart" className="text-button block-link">Xem giỏ tài khoản để điều chỉnh</Link></> : session.authenticated ? <div className="notice">Bạn đang đăng nhập với tài khoản <strong>{session.user.username}</strong>. Có thể nhập tài khoản khác bên dưới.</div> : null}
       {!mergeError && <form onSubmit={submit} className="stack-form"><ErrorNotice error={error} /><label htmlFor="username">Tên đăng nhập</label><input id="username" name="username" autoComplete="username" defaultValue={registeredUsername || ''} required disabled={busy} aria-invalid={!!error?.fieldErrors?.username} aria-describedby={error?.fieldErrors?.username ? 'username-error' : undefined} />{error?.fieldErrors?.username && <span className="field-error" id="username-error">{error.fieldErrors.username}</span>}<label htmlFor="password">Mật khẩu</label><div className="password-field"><input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required disabled={busy} /><button type="button" className="text-button" aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} onClick={() => setShowPassword(value => !value)}><Icon name={showPassword ? 'eye-off' : 'eye'} size={20} /></button></div><button className="button full" disabled={busy}>{busy ? 'Đang đăng nhập và gộp giỏ…' : 'Đăng nhập'}<Icon name="arrow" /></button><p className="form-hint"><Icon name="shield" />Giỏ khách được tự động gộp sau khi đăng nhập.</p></form>}
       {!session.authenticated && <p className="form-hint">Chưa có tài khoản? <Link to="/register" state={{ returnTo: location.state?.returnTo }}>Đăng ký ngay</Link></p>}
       <Link className="back-link" to="/cart">← Trở về giỏ hàng</Link>
