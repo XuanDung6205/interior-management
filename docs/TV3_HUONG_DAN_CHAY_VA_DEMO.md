@@ -77,6 +77,8 @@ Quản lý tài khoản nằm tại `/admin/users` và chỉ ADMIN được mở
 
 Khách đã đăng nhập mở `/account` để sửa họ tên/email/số điện thoại và quản lý sổ địa chỉ: thêm, sửa, đặt mặc định hoặc xóa (có bước xác nhận). API hồ sơ dùng `/api/account/profile`; CRUD và đặt mặc định dùng `/api/account/addresses`. Server tự giới hạn dữ liệu theo tài khoản đang đăng nhập.
 
+Người dùng đã đăng nhập chọn **Đổi mật khẩu** trong menu tài khoản (ADMIN cũng có thể dùng) để xác nhận mật khẩu hiện tại và đặt mật khẩu mới. Mật khẩu mới cần ít nhất 8 ký tự, tối đa 72 byte UTF-8 và phải nhập xác nhận khớp. API `POST /api/account/password` chỉ đổi mật khẩu của phiên hiện tại, yêu cầu CSRF, không ghi mật khẩu vào nhật ký và không đăng xuất phiên hiện tại; quên mật khẩu/email xác nhận chưa thuộc phạm vi này.
+
 Sau khi đăng nhập, ADMIN mặc định vào `/admin` — trang **Tổng quan quản trị** — và chỉ thấy menu/chức năng quản trị; các URL cửa hàng như `/cart`, `/account` hoặc `/` sẽ đưa ADMIN về tổng quan. Phiên ADMIN không gộp giỏ khách. STAFF tiếp tục thấy cả cửa hàng và menu quản trị, còn CUSTOMER chỉ thấy các chức năng cửa hàng. Đăng xuất vẫn có trong menu tài khoản quản trị.
 
 ## Quản trị đơn hàng TV3-07

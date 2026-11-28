@@ -123,6 +123,13 @@ it('lands an admin on the management overview and hides storefront controls', as
   expect(screen.queryByRole('link', { name: 'Giỏ hàng' })).not.toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: 'Quản trị', exact: true }));
   expect(within(document.getElementById('store-menu-admin')).getByRole('link', { name: 'Quản lý tài khoản' })).toHaveAttribute('href', '/admin/users');
+  await user.click(screen.getByRole('button', { name: 'Tài khoản', exact: true }));
+  const account = within(document.getElementById('store-account-panel'));
+  expect(account.getByRole('link', { name: 'Đổi mật khẩu' })).toHaveAttribute('href', '/account/password');
+  expect(account.queryByRole('link', { name: 'Hồ sơ & sổ địa chỉ' })).not.toBeInTheDocument();
+  await user.click(account.getByRole('link', { name: 'Đổi mật khẩu' }));
+  expect(await screen.findByRole('heading', { name: 'Đổi mật khẩu' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Mật khẩu hiện tại')).toBeInTheDocument();
   expect(calls.some(call => call.url === '/api/cart')).toBe(false);
   expect(calls.some(call => call.url === '/api/cart/merge')).toBe(false);
 });

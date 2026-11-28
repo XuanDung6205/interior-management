@@ -6,6 +6,8 @@
 .account-profile-grid .eyebrow { margin-bottom: 0; }
 .account-form { display: grid; gap: 24px; }
 .account-form .button { justify-self: start; }
+.account-password-fields { display: grid; gap: 16px; max-width: 520px; }
+.account-password-fields .form-field { display: grid; gap: 6px; }
 .account-readonly { display: grid !important; grid-template-columns: 1fr; align-content: start; gap: 5px !important; }
 .account-readonly .eyebrow:not(:first-child) { margin-top: 15px; }
 .account-address-list { display: grid; gap: 16px; }

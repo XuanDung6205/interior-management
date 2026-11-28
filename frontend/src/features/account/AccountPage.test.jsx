@@ -26,6 +26,7 @@ function mount() {
         };
         return profile;
       }
+      if (path === '/account/password' && method === 'POST') return undefined;
       if (path === '/account/addresses' && method === 'GET') return addresses.map(address => ({ ...address }));
       if (path === '/account/addresses' && method === 'POST') {
         const address = { id: nextId++, ...options.body, isDefault: addresses.length === 0 };
@@ -74,6 +75,27 @@ it('loads and saves the signed-in customer profile', async () => {
   expect(setSession.mock.calls[0][0]({ user: { id: 7, fullName: 'An Nguyen' } })).toEqual({
     user: { id: 7, fullName: 'An Tran' },
   });
+});
+
+it('changes the signed-in customer password and clears the form after success', async () => {
+  const { api, user } = mount();
+  await user.click(screen.getByRole('tab', { name: 'Đổi mật khẩu' }));
+  await user.type(screen.getByLabelText('Mật khẩu hiện tại'), 'current-secret');
+  await user.type(screen.getByLabelText('Mật khẩu mới'), 'new-secret-123');
+  await user.type(screen.getByLabelText('Nhập lại mật khẩu mới'), 'new-secret-123');
+  await user.click(screen.getByRole('button', { name: 'Đổi mật khẩu' }));
+
+  expect(await screen.findByRole('status')).toHaveTextContent('Mật khẩu đã được cập nhật.');
+  expect(api.request).toHaveBeenCalledWith('/account/password', {
+    method: 'POST',
+    body: {
+      currentPassword: 'current-secret',
+      newPassword: 'new-secret-123',
+      confirmPassword: 'new-secret-123',
+    },
+  });
+  expect(screen.getByLabelText('Mật khẩu hiện tại')).toHaveValue('');
+  expect(screen.getByLabelText('Mật khẩu mới')).toHaveValue('');
 });
 
 it('creates, edits, changes the default and deletes saved addresses', async () => {

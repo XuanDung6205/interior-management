@@ -654,6 +654,44 @@ paths:
         '403': *id003
         '404': *id004
         '409': *id005
+  /api/account/password:
+    post:
+      operationId: changeAccountPassword
+      summary: Change the password of the signed-in account
+      description: Requires the current password and a matching new-password confirmation. The new password must be at least 8 characters and at most 72 UTF-8 bytes. The account ID is derived from the session; passwords are never written to the audit log. The current session remains active.
+      tags:
+      - Account
+      security:
+      - cookieSession: []
+      parameters:
+      - *id006
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [currentPassword, newPassword, confirmPassword]
+              properties:
+                currentPassword:
+                  type: string
+                  format: password
+                newPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+                  description: At most 72 UTF-8 bytes.
+                confirmPassword:
+                  type: string
+                  format: password
+                  description: Must match newPassword.
+      responses:
+        '204':
+          description: Password changed
+        '400': *id001
+        '401': *id002
+        '403': *id003
   /api/account/addresses:
     get:
       operationId: listAccountAddresses

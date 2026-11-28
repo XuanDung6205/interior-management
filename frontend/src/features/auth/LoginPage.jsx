@@ -14,7 +14,7 @@ export default function LoginPage() {
   const location = useLocation();
   const requested = location.state?.returnTo;
   const registeredUsername = location.state?.registeredUsername;
-  const returnTo = typeof requested === 'string' && /^\/(?:checkout|notifications|orders(?:\/\d+(?:\/(?:payments|returns|print))?)?|admin(?:\/(?:(?:orders(?:\/\d+(?:\/(?:refunds|aftercare|print))?)?|payments(?:\/\d+)?|refunds(?:\/\d+)?)|dashboard|content|reviews|users|operations|coupons|inventory\/(?:receipts|operations|dispatch|shipments)))?)(?:\?.*)?$/.test(requested) ? requested : '/cart';
+  const returnTo = typeof requested === 'string' && /^\/(?:account\/password|checkout|notifications|orders(?:\/\d+(?:\/(?:payments|returns|print))?)?|admin(?:\/(?:(?:orders(?:\/\d+(?:\/(?:refunds|aftercare|print))?)?|payments(?:\/\d+)?|refunds(?:\/\d+)?)|dashboard|content|reviews|users|operations|coupons|inventory\/(?:receipts|operations|dispatch|shipments)))?)(?:\?.*)?$/.test(requested) ? requested : '/cart';
   async function merge(destination) {
     try { await api.mergeCart(); navigate(destination); }
     catch (value) { setMergeError(value); }

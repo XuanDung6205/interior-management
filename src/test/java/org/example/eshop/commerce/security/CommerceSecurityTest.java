@@ -52,6 +52,7 @@ class CommerceSecurityTest {
         @PostMapping("/api/cart/merge") Object merge() { return java.util.Map.of("ok",true); }
         @GetMapping("/api/account/addresses") Object addresses() { return java.util.Map.of("ok",true); }
         @PostMapping("/api/account/addresses") Object createAddress() { return java.util.Map.of("ok",true); }
+        @PostMapping("/api/account/password") Object changePassword() { return java.util.Map.of("ok",true); }
     }
     @Autowired WebApplicationContext context;
     @Autowired UserDirectory users;
@@ -88,11 +89,13 @@ class CommerceSecurityTest {
         mvc.perform(post("/api/session/login").param("username","alice").param("password","correct-password")).andExpect(status().isForbidden());
         mvc.perform(get("/api/account/addresses")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/account/addresses")).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("CSRF_INVALID"));
+        mvc.perform(post("/api/account/password")).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("CSRF_INVALID"));
         var token = csrf(new MockHttpSession());
         mvc.perform(post("/api/cart/items").session(token.session()).header(token.header(),token.value())).andExpect(status().isOk());
         mvc.perform(post("/api/cart/merge").session(token.session()).header(token.header(),token.value())).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/account/addresses").session(token.session())).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/account/addresses").session(token.session()).header(token.header(),token.value())).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/account/password").session(token.session()).header(token.header(),token.value())).andExpect(status().isUnauthorized());
     }
     @Test void protectsAllAdminApiRoutesWithoutBlockingPublicApisOrPaymentWebhook() throws Exception {
         mvc.perform(get("/api/admin/future")).andExpect(status().isUnauthorized());

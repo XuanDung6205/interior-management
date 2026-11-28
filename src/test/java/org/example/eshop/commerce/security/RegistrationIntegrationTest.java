@@ -92,6 +92,52 @@ class RegistrationIntegrationTest {
         assertEquals(updatedEmail.toLowerCase(), jdbc.queryForObject("SELECT email FROM users WHERE username=?", String.class, username));
     }
 
+    @Test void signedInCustomerCanChangePasswordAndTheOldPasswordStopsAuthenticating() throws Exception {
+        String username = username();
+        String email = username + "@example.invalid";
+        mvc.perform(post("/api/session/register").with(csrf()).contentType("application/json")
+                        .content(body(username, email, "secret-pass-123", "secret-pass-123")))
+                .andExpect(status().isCreated());
+        var login = mvc.perform(post("/api/session/login").with(csrf())
+                        .param("username", username).param("password", "secret-pass-123"))
+                .andExpect(status().isOk()).andReturn();
+        var session = (org.springframework.mock.web.MockHttpSession) login.getRequest().getSession();
+
+        mvc.perform(post("/api/account/password").session(session).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"currentPassword\":\"wrong-pass-123\",\"newPassword\":\"new-secret-123\",\"confirmPassword\":\"new-secret-123\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.currentPassword").exists());
+        mvc.perform(post("/api/account/password").session(session).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"currentPassword\":\"secret-pass-123\",\"newPassword\":\"secret-pass-123\",\"confirmPassword\":\"secret-pass-123\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.newPassword").exists());
+        mvc.perform(post("/api/account/password").session(session).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"currentPassword\":\"secret-pass-123\",\"newPassword\":\"new-secret-123\",\"confirmPassword\":\"different-pass-123\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.confirmPassword").exists());
+        mvc.perform(post("/api/account/password").session(session).with(csrf())
+                        .contentType("application/json")
+                        .content("{\"currentPassword\":\"secret-pass-123\",\"newPassword\":\"new-secret-123\",\"confirmPassword\":\"new-secret-123\"}"))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(post("/api/session/login").with(csrf())
+                        .param("username", username).param("password", "secret-pass-123"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/session/login").with(csrf())
+                        .param("username", username).param("password", "new-secret-123"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.authenticated").value(true));
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT COUNT(*) FROM audit_logs WHERE entity_type='USER'
+                  AND entity_id=(SELECT CAST(id AS CHAR) FROM users WHERE username=?)
+                  AND action='USER_PASSWORD_CHANGED'
+                """, Integer.class, username));
+        assertEquals(0, jdbc.queryForObject("""
+                SELECT COUNT(*) FROM audit_logs WHERE entity_type='USER'
+                  AND entity_id=(SELECT CAST(id AS CHAR) FROM users WHERE username=?)
+                  AND (before_data LIKE '%secret-pass-123%' OR after_data LIKE '%new-secret-123%')
+                """, Integer.class, username));
+    }
+
     @Test void rejectsInvalidAndDuplicateAccountsWithFieldErrors() throws Exception {
         String username = username();
         String email = username + "@example.invalid";

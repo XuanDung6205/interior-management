@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ErrorNotice, Icon, Loading } from '../../components/ui';
 import { useCommerce } from '../../lib/session';
+import PasswordChangeForm from './PasswordChangeForm';
 import './account.css';
 
 const emptyAddress = () => ({
@@ -210,6 +211,7 @@ export default function AccountPage() {
     <div className="account-tabs" role="tablist" aria-label="Khu vực tài khoản">
       <button id="account-profile-tab" type="button" role="tab" aria-selected={activeTab === 'profile'} aria-controls="account-profile-panel" className={`button ${activeTab === 'profile' ? '' : 'secondary'}`} onClick={() => setActiveTab('profile')}>Hồ sơ</button>
       <button id="account-addresses-tab" type="button" role="tab" aria-selected={activeTab === 'addresses'} aria-controls="account-addresses-panel" className={`button ${activeTab === 'addresses' ? '' : 'secondary'}`} onClick={() => setActiveTab('addresses')}>Sổ địa chỉ</button>
+      <button id="account-password-tab" type="button" role="tab" aria-selected={activeTab === 'password'} aria-controls="account-password-panel" className={`button ${activeTab === 'password' ? '' : 'secondary'}`} onClick={() => setActiveTab('password')}>Đổi mật khẩu</button>
     </div>
     {activeTab === 'profile'
       ? <section id="account-profile-panel" className="panel account-panel" role="tabpanel" aria-labelledby="account-profile-tab">
@@ -247,7 +249,7 @@ export default function AccountPage() {
           </form>}
         </div>
       </section>
-      : <section id="account-addresses-panel" className="panel account-panel" role="tabpanel" aria-labelledby="account-addresses-tab">
+      : activeTab === 'addresses' ? <section id="account-addresses-panel" className="panel account-panel" role="tabpanel" aria-labelledby="account-addresses-tab">
         <div className="panel-heading account-addresses-heading">
           <h2>Sổ địa chỉ</h2>
           <button type="button" className="button" disabled={addressBusy || addressEditorOpen} onClick={() => openAddressForm()}>
@@ -301,6 +303,10 @@ export default function AccountPage() {
             </article>)}
           </div>}
         </div>
+      </section>
+      : <section id="account-password-panel" className="panel account-panel" role="tabpanel" aria-labelledby="account-password-tab">
+        <div className="panel-heading"><h2>Đổi mật khẩu</h2></div>
+        <div className="account-panel-body"><PasswordChangeForm /></div>
       </section>}
   </section>;
 }
